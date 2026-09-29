@@ -7,3 +7,5 @@ npm install
 npm test
 npm run dev
 ```
+
+在线试玩：https://howard-hang.github.io/phaser-platformer/
