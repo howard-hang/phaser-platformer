@@ -37,8 +37,29 @@ const config = {
     touch: true,
     activePointers: 2,
   },
+  fps: {
+    // 不限制渲染帧率，跟浏览器刷新率走。物理仍用上面的 60Hz 固定步长，手感不变。
+    limit: 0,
+  },
   scene: [BootScene, MenuScene, GameScene],
 };
+
+/** 网址带 ?fps 时在左下角显示 Phaser 统计的帧率，方便对照刷新率。 */
+function attachFpsMeter(game) {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('fps')) return;
+
+  document.getElementById('fps-meter')?.remove();
+  const meter = document.createElement('div');
+  meter.id = 'fps-meter';
+  meter.textContent = 'FPS --';
+  document.body.appendChild(meter);
+
+  window.setInterval(() => {
+    if (!game.loop) return;
+    meter.textContent = `FPS ${Math.round(game.loop.actualFps)}`;
+  }, 250);
+}
 
 async function main() {
   if (document.fonts?.load) {
@@ -59,6 +80,7 @@ async function main() {
     window.__PHASER_GAME__.destroy(true);
   }
   window.__PHASER_GAME__ = new Phaser.Game(config);
+  attachFpsMeter(window.__PHASER_GAME__);
 }
 
 main();

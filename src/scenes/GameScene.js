@@ -7,6 +7,7 @@ import Phaser from 'phaser';
 import { LEVEL } from '../game/level.js';
 import { getSynth } from '../game/audio.js';
 import { drawBackdrop } from '../game/backdrop.js';
+import { displayPose } from '../game/motion.js';
 import { THEME, FONT } from '../game/theme.js';
 import { createHud, isUiPointer, showWinPanel } from '../game/hud.js';
 import {
@@ -56,6 +57,37 @@ export class GameScene extends Phaser.Scene {
     this.hud.setStats(this.run);
 
     this.physics.world.on('worldstep', this.onWorldStep, this);
+    // 物理步会把精灵坐标写回刚体位置。渲染前再外推，下一帧开始前先还原，避免外推进碰撞。
+    this.events.on('preupdate', this.restorePhysicsPose, this);
+    this.events.on('postupdate', this.extrapolatePlayerPose, this);
+  }
+
+  /** 把上一帧为了显示而外推的坐标还原成刚体位置。 */
+  restorePhysicsPose() {
+    const pose = this._physicsPose;
+    if (!pose || !this.player) return;
+    this.player.setPosition(pose.x, pose.y);
+    this.player.angle = pose.angle;
+  }
+
+  /** 刚体已经同步完，按剩余时间把方块画到两次物理步之间。 */
+  extrapolatePlayerPose() {
+    const body = this.player?.body;
+    if (!body) return;
+    const pose = {
+      x: this.player.x,
+      y: this.player.y,
+      angle: this.player.angle,
+    };
+    this._physicsPose = pose;
+    const world = this.physics.world;
+    const view = displayPose(pose, body.velocity, world._elapsed, world._frameTimeMS, {
+      rotating: this.rotating,
+      spinMs: this.airTimeMs * 0.92,
+      groundCenter: playerGroundY(),
+    });
+    this.player.setPosition(view.x, view.y);
+    this.player.angle = view.angle;
   }
 
   /** 看不见的地面碰撞体，上面盖一条白线。 */
@@ -132,7 +164,8 @@ export class GameScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, LEVEL.worldWidth, TUNING.viewHeight);
     // 偏移让方块停在画面偏左，前方留出反应距离。垂直方向被边界锁死，跳跃不会把镜头抬起来。
-    this.cameras.main.startFollow(this.player, false, 1, 1, -240, 0);
+    // roundPixels 把滚动对齐到整像素，避免横向移动时贴图发虚、抖动。
+    this.cameras.main.startFollow(this.player, true, 1, 1, -240, 0);
   }
 
   createFinish() {
@@ -237,14 +270,12 @@ export class GameScene extends Phaser.Scene {
     this.run = next;
 
     const checkpoint = pickCheckpoint(LEVEL.checkpoints, this.player.x);
-    if (checkpoint > this.activeCheckpoint) {
+    if (checkpoint !== this.activeCheckpoint) {
+      const advanced = checkpoint > this.activeCheckpoint;
       this.activeCheckpoint = checkpoint;
-      getSynth().play('checkpoint');
-    }
-
-    for (const flag of this.flags) {
-      const lit = flag.x <= this.activeCheckpoint;
-      flag.cloth.setFillStyle(lit ? THEME.checkpointLit : THEME.checkpoint);
+      // 旗子颜色只在存档点变化时改一次，不要每帧重涂。
+      this.refreshCheckpointFlags();
+      if (advanced) getSynth().play('checkpoint');
     }
 
     if (this.isGrounded()) {
@@ -255,6 +286,14 @@ export class GameScene extends Phaser.Scene {
 
     if (reachedFinish(this.player.x, LEVEL.finishX)) {
       this.win();
+    }
+  }
+
+  /** 已经经过的存档点亮黄旗，其余保持青色。 */
+  refreshCheckpointFlags() {
+    for (const flag of this.flags) {
+      const lit = flag.x <= this.activeCheckpoint;
+      flag.cloth.setFillStyle(lit ? THEME.checkpointLit : THEME.checkpoint);
     }
   }
 
