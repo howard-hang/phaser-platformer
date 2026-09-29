@@ -57,6 +57,10 @@ export class GameScene extends Phaser.Scene {
     this.hud.setStats(this.run);
 
     this.physics.world.on('worldstep', this.onWorldStep, this);
+    // 场景对象会复用。再开一局时清掉上一局的显示坐标，并拆掉旧监听，避免把方块拉回终点。
+    this._physicsPose = null;
+    this.events.off('preupdate', this.restorePhysicsPose, this);
+    this.events.off('postupdate', this.extrapolatePlayerPose, this);
     // 物理步会把精灵坐标写回刚体位置。渲染前再外推，下一帧开始前先还原，避免外推进碰撞。
     this.events.on('preupdate', this.restorePhysicsPose, this);
     this.events.on('postupdate', this.extrapolatePlayerPose, this);
