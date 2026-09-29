@@ -64,6 +64,51 @@ npx serve dist
 
 不要直接用 `file://` 打开 `dist/index.html`，模块脚本需要 HTTP。
 
+## 安卓安装包
+
+安卓包用 Capacitor 把上面的 `dist/` 装进全屏 WebView。玩法、画面和网页版是同一份构建结果，资源都在 APK 里，断网也能玩。桌面名称是「方块跑酷」，方向锁在横屏，没有浏览器地址栏。
+
+返回键：关卡里（包括通关面板）回到主页，主页退出应用，不会直接闪退。
+
+本地重新打包需要：
+
+- Node.js 20 或更新版本
+- JDK 21
+- Android SDK，`compileSdk` 36（Capacitor 8）。设置环境变量 `ANDROID_HOME`
+
+```bash
+npm install
+npm test
+npm run android:apk
+```
+
+`npm run android:apk` 会先 `npm run build`，再 `npx cap sync android` 把 `dist/` 拷进安卓工程，最后用 Gradle 打调试签名包：
+
+`android/app/build/outputs/apk/debug/app-debug.apk`
+
+手机打开开发者选项和 USB 调试后：
+
+```bash
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+只改了网页、想更新已有的安卓工程时，也可以分开跑：
+
+```bash
+npm run build
+npx cap sync android
+cd android && ./gradlew assembleDebug
+```
+
+图标是紫底白方块，和游戏里的玩家一样。要重新生成各分辨率图标和启动图：
+
+```bash
+pip install pillow
+python3 scripts/generate-android-icons.py
+```
+
+GitHub Actions 工作流 `.github/workflows/android.yml` 会在拉取请求和推送到 `main` 时构建这个调试 APK，并上传为名为 `fangkuai-paoku-debug` 的 artifact。推送到 `main` 后，还会把同一份包发到 GitHub Release `android-debug`（预发布），文件名是 `fangkuai-paoku-debug.apk`。这是调试签名，不能上架商店。网页测试和 Pages 部署仍走 `.github/workflows/pages.yml`，没有改那个文件。
+
 ## 在线预览
 
 仓库目前是私有的，GitHub Pages 对私有仓库通常不可用，所以工作流只在仓库变为公开后才部署 Pages（`.github/workflows/pages.yml`）。私有状态下请直接使用分支里已经构建好的 `dist/`，按上面的静态服务器方式验收。

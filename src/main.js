@@ -8,6 +8,7 @@ import { THEME } from './game/theme.js';
 import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
+import { bindAndroidBack } from './platform/androidBack.js';
 
 const config = {
   type: Phaser.AUTO,
@@ -81,6 +82,8 @@ async function main() {
   }
   window.__PHASER_GAME__ = new Phaser.Game(config);
   attachFpsMeter(window.__PHASER_GAME__);
+  // 网页版会立刻返回；安卓壳里改成：关卡回主页，主页退出。
+  bindAndroidBack(window.__PHASER_GAME__);
 }
 
 main();
