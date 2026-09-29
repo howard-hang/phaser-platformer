@@ -29,13 +29,17 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: 安装 Android SDK
-        uses: android-actions/setup-android@v3
-
+      # ubuntu 镜像自带 SDK。不再用 setup-android，它会去装已经下架的 tools 包。
       - name: 安装 compileSdk 36
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          if [ -z "${ANDROID_HOME:-}" ]; then
+            echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+            ANDROID_HOME=/usr/local/lib/android/sdk
+          fi
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
 
       - name: 安装依赖并跑现有测试
         run: |
