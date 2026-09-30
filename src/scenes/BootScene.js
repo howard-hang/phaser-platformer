@@ -1,6 +1,6 @@
 /**
- * 启动场景：生成几何贴图后直接进入关卡。
- * 打开页面就能看到方块在跑，不用先点开始。
+ * 启动场景：生成几何贴图后进入标题。
+ * 选关和关卡都复用这里烤好的背景。
  */
 import Phaser from 'phaser';
 import { generateTextures } from '../game/textures.js';
@@ -15,6 +15,6 @@ export class BootScene extends Phaser.Scene {
     generateTextures(this);
     // 背景贴图只烤一次，后面的场景滚动时不再重画。
     bakeBackdropTextures(this);
-    this.scene.start('game');
+    this.scene.start('menu');
   }
 }

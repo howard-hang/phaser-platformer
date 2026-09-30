@@ -33,7 +33,7 @@ export class MenuScene extends Phaser.Scene {
       strokeThickness: 8,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(10);
 
-    this.subtitle = this.add.text(0, 0, '方块会自动向前跑\n点击、空格或上方向键跳跃\n躲开尖刺和方块，捡起星星', {
+    this.subtitle = this.add.text(0, 0, '方块会自动向前跑\n点击、空格或上方向键跳跃\n收集星星，解锁后面的关卡', {
       fontFamily: FONT,
       fontSize: '26px',
       color: '#ffffff',
@@ -44,8 +44,8 @@ export class MenuScene extends Phaser.Scene {
 
     this.start = createStartButton(this, 480, 390, () => {
       getSynth().unlock();
-      this.scene.start('game');
-    });
+      this.scene.start('select');
+    }, '选关');
 
     this.hud = createHud(this, { showStats: false });
     this.scale.on('resize', this.applyViewport, this);

@@ -1,12 +1,14 @@
 /**
  * 安卓返回键。
- * 关卡进行中（含通关面板）回到主页，主页或其他画面退出应用。
+ * 关卡进行中（含通关面板）回到选关，选关回到标题，标题或其他画面退出应用。
  * 网页版没有这个按键。只有安卓 WebView 壳才会注册，普通浏览器不会加载 Capacitor。
  */
 
-/** 根据当前是否在关卡里，决定返回键的下一步。 */
-export function androidBackAction({ gameActive }) {
-  return gameActive ? 'menu' : 'exit';
+/** 根据当前画面决定返回键的下一步。关卡优先于选关。 */
+export function androidBackAction({ gameActive, selectActive }) {
+  if (gameActive) return 'select';
+  if (selectActive) return 'menu';
+  return 'exit';
 }
 
 /** 只有安卓 WebView 壳才继续加载 Capacitor，网页版不会去拉这段代码。 */
@@ -39,12 +41,22 @@ export async function bindAndroidBack(game) {
       try {
         const action = androidBackAction({
           gameActive: !!game.scene?.isActive('game'),
+          selectActive: !!game.scene?.isActive('select'),
         });
-        if (action === 'menu') {
-          // 必须从关卡场景切走。直接用 SceneManager.start 不会停掉正在跑的关卡，画面会盖住主页。
+        if (action === 'select') {
+          // 必须从关卡场景切走。直接用 SceneManager.start 不会停掉正在跑的关卡。
           const gameScene = game.scene.getScene('game');
           if (gameScene) {
-            gameScene.scene.start('menu');
+            gameScene.scene.start('select');
+          } else {
+            game.scene.start('select');
+          }
+          return;
+        }
+        if (action === 'menu') {
+          const selectScene = game.scene.getScene('select');
+          if (selectScene) {
+            selectScene.scene.start('menu');
           } else {
             game.scene.start('menu');
           }

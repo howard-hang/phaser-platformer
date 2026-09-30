@@ -145,3 +145,37 @@ export function layoutHud({
     },
   };
 }
+
+/**
+ * 选关列表。卡片和返回按钮都让开安全区，五关在 16:9 里也能排下。
+ */
+export function layoutLevelSelect({
+  viewWidth,
+  viewHeight,
+  insets = { top: 0, right: 0, bottom: 0, left: 0 },
+  count = 5,
+} = {}) {
+  const top = (insets.top || 0) + 18;
+  const bottom = (insets.bottom || 0) + 16;
+  const leftInset = (insets.left || 0) + 28;
+  const rightInset = (insets.right || 0) + 28;
+  const width = Math.max(280, Math.min(680, viewWidth - leftInset - rightInset));
+  const x = Math.max(leftInset, (viewWidth - width) / 2);
+  const header = 92;
+  const footer = 72;
+  const gap = 8;
+  const available = viewHeight - top - bottom - header - footer;
+  const rowH = Math.max(46, Math.min(68, (available - gap * (count - 1)) / count));
+  const rows = [];
+  let y = top + header;
+  for (let i = 0; i < count; i += 1) {
+    rows.push({ x, y, w: width, h: rowH });
+    y += rowH + gap;
+  }
+  return {
+    title: { x: viewWidth / 2, y: top + 26 },
+    total: { x: viewWidth / 2, y: top + 64 },
+    rows,
+    back: { x: viewWidth / 2, y: Math.max(y + 8, viewHeight - bottom - 32) },
+  };
+}

@@ -3,6 +3,7 @@ import {
   computeExpandSize,
   cssInsetsToGame,
   layoutHud,
+  layoutLevelSelect,
   nextFullscreenAction,
   shouldShowFullscreenButton,
   verticalCameraScroll,
@@ -112,5 +113,25 @@ describe('全屏按钮和安全区', () => {
     const insets = cssInsetsToGame({ top: 0, right: 0, bottom: 0, left: 0 }, { x: Infinity, y: 0 });
     expect(insets.top).toBe(0);
     expect(Number.isFinite(insets.left)).toBe(true);
+  });
+
+  it('选关卡片让开安全区，并且不叠在一起', () => {
+    const layout = layoutLevelSelect({
+      viewWidth: 960,
+      viewHeight: 540,
+      insets: { top: 30, right: 20, bottom: 16, left: 24 },
+      count: 5,
+    });
+    expect(layout.rows).toHaveLength(5);
+    expect(layout.title.y).toBeGreaterThanOrEqual(30);
+    for (const row of layout.rows) {
+      expect(row.x).toBeGreaterThanOrEqual(24);
+      expect(row.x + row.w).toBeLessThanOrEqual(960 - 20);
+      expect(row.y).toBeGreaterThanOrEqual(30);
+      expect(row.h).toBeGreaterThanOrEqual(46);
+    }
+    for (let i = 1; i < layout.rows.length; i += 1) {
+      expect(layout.rows[i].y).toBeGreaterThanOrEqual(layout.rows[i - 1].y + layout.rows[i - 1].h);
+    }
   });
 });

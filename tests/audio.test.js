@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PARALLAX, progressTint } from '../src/game/backdrop.js';
+import { NEAR_SEQUENCE, PARALLAX, nearVariantAt, progressTint } from '../src/game/backdrop.js';
 import {
   audioContextAction,
   loadMutePreference,
@@ -15,8 +15,19 @@ describe('背景视差', () => {
   it('越近的层滚动越快', () => {
     expect(PARALLAX.stars).toBeLessThan(PARALLAX.mountains);
     expect(PARALLAX.mountains).toBeLessThan(PARALLAX.pillars);
-    expect(PARALLAX.pillars).toBeLessThan(PARALLAX.grid);
-    expect(PARALLAX.grid).toBeLessThanOrEqual(1);
+    expect(PARALLAX.pillars).toBeLessThan(PARALLAX.near);
+    expect(PARALLAX.near).toBeLessThanOrEqual(1);
+  });
+
+  it('近景贴图序列有疏密变化，相邻两块不重复', () => {
+    expect(NEAR_SEQUENCE.length).toBeGreaterThanOrEqual(16);
+    expect(new Set(NEAR_SEQUENCE).size).toBeGreaterThanOrEqual(6);
+    for (let i = 0; i < NEAR_SEQUENCE.length; i += 1) {
+      expect(NEAR_SEQUENCE[i]).not.toBe(NEAR_SEQUENCE[(i + 1) % NEAR_SEQUENCE.length]);
+    }
+    expect(nearVariantAt(0)).toBe(NEAR_SEQUENCE[0]);
+    expect(nearVariantAt(NEAR_SEQUENCE.length)).toBe(NEAR_SEQUENCE[0]);
+    expect(nearVariantAt(-1)).toBe(NEAR_SEQUENCE[NEAR_SEQUENCE.length - 1]);
   });
 
   it('关卡推进时背景色调会变', () => {
