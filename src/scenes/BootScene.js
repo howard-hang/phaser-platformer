@@ -4,6 +4,7 @@
  */
 import Phaser from 'phaser';
 import { generateTextures } from '../game/textures.js';
+import { bakeBackdropTextures } from '../game/backdrop.js';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -12,6 +13,8 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     generateTextures(this);
+    // 背景贴图只烤一次，后面的场景滚动时不再重画。
+    bakeBackdropTextures(this);
     this.scene.start('game');
   }
 }

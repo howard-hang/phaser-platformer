@@ -1,6 +1,7 @@
 package com.fangkuai.paoku;
 
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
@@ -20,6 +21,11 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         // 跑酷过程中不让系统把屏幕关掉。
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // 关掉系统给状态栏、导航栏加的半透明底，否则沉浸式全屏还会剩一条灰边。
+            getWindow().setStatusBarContrastEnforced(false);
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
         hideSystemBars();
     }
 
@@ -38,7 +44,7 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
-    /** 藏起状态栏和导航栏。从边缘滑出后会自动再藏回去。 */
+    /** 沉浸式全屏：藏起状态栏和导航栏。从边缘滑出后会自动再藏回去。 */
     private void hideSystemBars() {
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         View decor = getWindow().getDecorView();

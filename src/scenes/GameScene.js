@@ -6,10 +6,16 @@
 import Phaser from 'phaser';
 import { LEVEL } from '../game/level.js';
 import { getSynth } from '../game/audio.js';
-import { drawBackdrop } from '../game/backdrop.js';
+import {
+  createParallax,
+  layoutParallax,
+  scrollParallax,
+  tintParallax,
+} from '../game/backdrop.js';
 import { displayPose } from '../game/motion.js';
 import { THEME, FONT } from '../game/theme.js';
 import { createHud, isUiPointer, showWinPanel } from '../game/hud.js';
+import { cssInsetsToGame, readSafeAreaInsets, verticalCameraScroll } from '../game/viewport.js';
 import {
   TUNING,
   HITBOX,
@@ -45,7 +51,8 @@ export class GameScene extends Phaser.Scene {
     this.airTimeMs = sampleJump().airTime * 1000;
 
     this.cameras.main.setBackgroundColor(THEME.gap);
-    drawBackdrop(this, LEVEL.worldWidth, TUNING.viewHeight);
+    this.parallax = createParallax(this);
+    this._tintBucket = -1;
     this.createGround();
     this.createPlayer();
     this.createCourse();
@@ -55,6 +62,11 @@ export class GameScene extends Phaser.Scene {
       onHome: () => this.scene.start('menu'),
     });
     this.hud.setStats(this.run);
+    this.scale.on('resize', this.applyViewport, this);
+    this.events.once('shutdown', () => {
+      this.scale.off('resize', this.applyViewport, this);
+    });
+    this.applyViewport();
 
     this.physics.world.on('worldstep', this.onWorldStep, this);
     // 场景对象会复用。再开一局时清掉上一局的显示坐标，并拆掉旧监听，避免把方块拉回终点。
@@ -166,9 +178,7 @@ export class GameScene extends Phaser.Scene {
     this.player.body.setVelocityX(TUNING.speed);
     this.physics.add.collider(this.player, this.ground);
 
-    this.cameras.main.setBounds(0, 0, LEVEL.worldWidth, TUNING.viewHeight);
-    // 偏移让方块停在画面偏左，前方留出反应距离。垂直方向被边界锁死，跳跃不会把镜头抬起来。
-    // roundPixels 把滚动对齐到整像素，避免横向移动时贴图发虚、抖动。
+    // 偏移让方块停在画面偏左，前方留出反应距离。垂直方向由边界锁死，跳跃不会把镜头抬起来。
     this.cameras.main.startFollow(this.player, true, 1, 1, -240, 0);
   }
 
@@ -188,8 +198,9 @@ export class GameScene extends Phaser.Scene {
   bindInput() {
     this.input.on('pointerdown', (pointer) => {
       if (this.suppressJump) return;
-      // 右上角是按钮区，点这里只触发按钮，不起跳。
-      if (pointer.x > 740 && pointer.y < 120) return;
+      // 右上角是按钮区，点这里只触发按钮，不起跳。区域随画面宽度和安全区变化。
+      const guard = this.hud.jumpGuard;
+      if (pointer.x > guard.left && pointer.y < guard.bottom) return;
       if (isUiPointer(this, pointer)) return;
       getSynth().unlock();
       this.tryJump();
@@ -248,6 +259,7 @@ export class GameScene extends Phaser.Scene {
     this.player.body.prevFrame.copy(this.player.body.position);
     this.player.body.setVelocity(TUNING.speed, 0);
     getSynth().play('death');
+    // 死亡只播音效。背景音乐继续当前进度，不从头开始。
     this.hud.setStats(this.run);
   }
 
@@ -272,6 +284,7 @@ export class GameScene extends Phaser.Scene {
     const next = noteProgress(this.run, distance, TUNING.pxPerScore);
     if (next.score !== this.run.score) this.hud.setStats(next);
     this.run = next;
+    this.syncBackdrop();
 
     const checkpoint = pickCheckpoint(LEVEL.checkpoints, this.player.x);
     if (checkpoint !== this.activeCheckpoint) {
@@ -309,13 +322,44 @@ export class GameScene extends Phaser.Scene {
     this.player.body.setAllowGravity(false);
     getSynth().play('win');
     this.hud.setStats(this.run);
-    showWinPanel(this, {
+    this.winUi = showWinPanel(this, {
       score: this.run.score,
       deaths: this.run.deaths,
       stars: this.run.stars,
       totalStars: LEVEL.stars.length,
       timeMs: this.elapsedMs,
     }, () => this.scene.restart());
+  }
+
+  /**
+   * 窗口尺寸或旋转之后重排镜头、背景和 HUD。
+   * 地面仍在原来的世界坐标，只是更高的屏幕能看到更多天空。
+   */
+  applyViewport() {
+    const cam = this.cameras.main;
+    const viewW = this.scale.width;
+    const viewH = this.scale.height;
+    const scrollY = verticalCameraScroll(TUNING.viewHeight, viewH);
+    cam.setBounds(0, scrollY, LEVEL.worldWidth, viewH);
+    cam.scrollY = scrollY;
+    const insets = cssInsetsToGame(readSafeAreaInsets(), this.scale.displayScale);
+    layoutParallax(this.parallax, viewW, viewH, scrollY);
+    this.hud?.relayout({ viewWidth: viewW, viewHeight: viewH, insets });
+    this.winUi?.relayout(viewW, viewH);
+    this.syncBackdrop();
+  }
+
+  /** 视差跟着镜头走。色调按最远进度分档，死亡退回存档点也不会闪回。 */
+  syncBackdrop() {
+    const cam = this.cameras.main;
+    scrollParallax(this.parallax, cam.scrollX);
+    const span = Math.max(1, LEVEL.finishX - LEVEL.startX);
+    const progress = Math.max(0, this.run.maxDistance) / span;
+    const bucket = Math.floor(progress * 16);
+    if (bucket !== this._tintBucket) {
+      this._tintBucket = bucket;
+      tintParallax(this.parallax, progress);
+    }
   }
 }
 

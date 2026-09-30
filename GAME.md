@@ -17,16 +17,20 @@
 - `DEATHS` 红色，死亡次数
 - `STARS` 白色，已捡星星
 
-右上角是主页和声音开关。声音开关会同时关掉节奏和音效，再点一次恢复。
+右上角是主页、全屏和声音开关。声音开关会同时关掉背景音乐和音效，再点一次恢复，选择会记在浏览器里，下次打开仍然有效。网页版才有全屏按钮；安卓安装包本身就是沉浸式全屏，不再叠一颗按钮。
 
 ## 操作
 
 - 点击或触摸画面：跳跃
 - 空格或上方向键：跳跃
 - 只有落在地面上才能跳，空中会转满一圈再落地
-- 主页、声音、再玩一次这几个按钮不会触发跳跃
+- 主页、全屏、声音、再玩一次这几个按钮不会触发跳跃
 
-竖屏和横屏都按 16:9 整幅缩放，多出来的区域留空，不会拉伸变形。
+画面会铺满整个窗口，不留黑边，也不会把方块拉扁。设计分辨率仍是 16:9（960×540）。更宽的屏幕向左右多看一截跑道，更高的屏幕在上方多留天空，地面和碰撞位置不变。手机横屏、平板和桌面窗口都这样处理，旋转或改变窗口大小后 HUD 会重新贴边。
+
+刘海、挖孔和圆角用 `env(safe-area-inset-*)` 让开，计数和按钮不会被挡住。网页版右上角的全屏按钮走 Fullscreen API。安卓包隐藏状态栏和导航栏，从屏幕边缘滑出后系统栏会再藏回去。
+
+背景是三层视差：远景几何山影、中景发光方块和光柱、近景网格，底下还有紫色渐变天空。层都是事先烤好的贴图，滚动时只挪平铺位置。跑得越远，背景会略微变亮。
 
 ## 本地运行
 
@@ -66,9 +70,9 @@ npx serve dist
 
 ## 安卓安装包
 
-安卓包用 Capacitor 把上面的 `dist/` 装进全屏 WebView。玩法、画面和网页版是同一份构建结果，资源都在 APK 里，断网也能玩。桌面名称是「方块跑酷」，方向锁在横屏，没有浏览器地址栏。
+安卓包用 Capacitor 把上面的 `dist/` 装进沉浸式全屏 WebView，状态栏和导航栏都隐藏。玩法、画面和网页版是同一份构建结果，资源都在 APK 里，断网也能玩。桌面名称是「方块跑酷」，方向锁在横屏，没有浏览器地址栏。切到后台时背景音乐会暂停，回到游戏后从刚才的位置继续，不会从头播放。
 
-返回键：关卡里（包括通关面板）回到主页，主页退出应用，不会直接闪退。
+返回键：关卡里（包括通关面板）回到主页，主页退出应用，不会直接闪退。死亡或再玩一次也不会把背景音乐拨回开头。
 
 本地重新打包需要：
 
@@ -107,7 +111,29 @@ pip install pillow
 python3 scripts/generate-android-icons.py
 ```
 
-GitHub Actions 工作流 `.github/workflows/android.yml` 会在拉取请求和推送到 `main` 时构建这个调试 APK，并上传为名为 `fangkuai-paoku-debug` 的 artifact。推送到 `main` 后，还会把同一份包发到 GitHub Release `android-debug`（预发布），文件名是 `fangkuai-paoku-debug.apk`。这是调试签名，不能上架商店。网页测试和 Pages 部署仍走 `.github/workflows/pages.yml`，没有改那个文件。
+GitHub Actions 工作流 `.github/workflows/android.yml` 会在拉取请求和推送到 `main` 时构建这个调试 APK，并上传为名为 `fangkuai-paoku-debug` 的 artifact。推送到 `main` 后，还会把同一份包发到 GitHub Release `android-debug`（预发布），文件名是 `fangkuai-paoku-debug.apk`。发布步骤不检出仓库，所以要显式带上 `GH_REPO`，否则 `gh` 会因为找不到 git 仓库而失败。这是调试签名，不能上架商店。网页测试和 Pages 部署仍走 `.github/workflows/pages.yml`，没有改那个文件。
+
+## 背景音乐
+
+标题画面和关卡共用一首循环的电子乐，文件在 `src/assets/music/pulse.ogg`（Vorbis，约几百 KB），会打进网页构建和 APK，断网也能播。死亡、再玩一次、回到标题都接着当前进度，不从头开始。浏览器禁止自动播放，所以要等第一次点击、触摸或按键之后才出声。右上角的声音开关同时管这首曲子和跳跃等音效。
+
+这首曲子是本仓库原创合成的，没有使用第三方采样或曲库：
+
+- 曲名：方块脉冲
+- 来源：`scripts/render-bgm.py`（140 BPM、16 小节，按采样率对齐，循环点无缝）
+- 作者：方块跑酷项目
+- 许可证：[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/deed.zh)（贡献到公共领域，可免费商用，无需署名）
+
+重新生成音频：
+
+```bash
+python3 scripts/render-bgm.py
+ffmpeg -y -i src/assets/music/pulse.wav -c:a libvorbis -q:a 4 \
+  -metadata TITLE="方块脉冲" -metadata ARTIST="方块跑酷" \
+  -metadata LICENSE="CC0-1.0" \
+  src/assets/music/pulse.ogg
+rm src/assets/music/pulse.wav
+```
 
 ## 在线预览
 
