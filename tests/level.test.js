@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { LEVELS, levelTuning } from '../src/game/level.js';
-import { LEVEL_UNLOCKS } from '../src/game/progress.js';
+import { LEVELS, LEVEL_UNLOCKS, levelTuning } from '../src/game/level.js';
+import { levelMetrics } from '../src/game/metrics.js';
 import { TUNING } from '../src/logic/world.js';
 import { auditLevel } from '../src/logic/audit.js';
 import { findClearPath } from '../src/logic/search.js';
 
-describe('五关都能通关', () => {
-  it('一共 5 关，速度小幅递增，跳跃手感不变', () => {
-    expect(LEVELS).toHaveLength(5);
+describe('二十关都能通关', () => {
+  it('一共 20 关，速度递增，跳跃手感不变', () => {
+    expect(LEVELS).toHaveLength(20);
     expect(LEVELS.map((level) => level.id)).toEqual(LEVEL_UNLOCKS.map((row) => row.id));
     expect(TUNING.gravity).toBe(1700);
     expect(TUNING.jumpVelocity).toBe(-740);
@@ -17,22 +17,28 @@ describe('五关都能通关', () => {
       expect(tuning.gravity).toBe(TUNING.gravity);
       expect(tuning.jumpVelocity).toBe(TUNING.jumpVelocity);
       expect(level.stars).toHaveLength(3);
-      expect(level.speed).toBeGreaterThan(290);
+      expect(level.speed).toBeGreaterThan(300);
       if (i > 0) expect(level.speed).toBeGreaterThan(LEVELS[i - 1].speed);
     }
-    expect(LEVELS[4].speed).toBeLessThan(LEVELS[0].speed * 1.25);
-    expect(new Set(LEVELS.map((level) => level.palette)).size).toBe(5);
+    expect(new Set(LEVELS.map((level) => level.palette)).size).toBe(20);
+    // 第 1 关比原来的第 1 关（速度 300、大约 22 个障碍）更密、更快。
+    expect(LEVELS[0].obstacles.length).toBeGreaterThan(22);
   });
 
-  it('越往后障碍越多，尖刺也更密', () => {
-    const density = (level) => {
-      const spikes = level.obstacles.filter((item) => item.type === 'spike').length;
-      return spikes / ((level.finishX - level.startX) / level.speed);
-    };
-    for (let i = 1; i < LEVELS.length; i += 1) {
-      expect(LEVELS[i].obstacles.length).toBeGreaterThan(LEVELS[i - 1].obstacles.length);
-      expect(density(LEVELS[i])).toBeGreaterThan(density(LEVELS[i - 1]));
+  it('障碍变多、间隔变小、种类随关卡展开', () => {
+    const metrics = LEVELS.map((level) => levelMetrics(level));
+    for (let i = 1; i < metrics.length; i += 1) {
+      expect(metrics[i].obstacles).toBeGreaterThan(metrics[i - 1].obstacles);
+      expect(metrics[i].avgGap).toBeLessThan(metrics[i - 1].avgGap);
+      expect(metrics[i].speed).toBeGreaterThan(metrics[i - 1].speed);
     }
+    const typesOf = (index) => new Set(LEVELS[index].obstacles.map((item) => item.type));
+    expect(typesOf(0).has('crumble')).toBe(false);
+    expect(typesOf(4).has('crumble')).toBe(true);
+    expect(typesOf(7).has('gate')).toBe(true);
+    expect(typesOf(11).has('flip')).toBe(true);
+    expect(typesOf(12).has('cspike')).toBe(true);
+    expect(typesOf(19).size).toBeGreaterThan(typesOf(0).size);
   });
 
   it.each(LEVELS.map((level) => [level.id, level]))('%s 结构合格，并且存在能捡完全部星星的路径', (_id, level) => {
@@ -43,7 +49,6 @@ describe('五关都能通关', () => {
     const at = ((result.bestX - level.startX) / level.speed).toFixed(2);
     expect(result.ok, `${JSON.stringify({ ...result, at })}`).toBe(true);
     expect(result.stars).toBe(3);
-    expect(result.t ?? result.bestX).toBeTruthy();
     const duration = (level.finishX - level.startX) / level.speed;
     expect(duration).toBeGreaterThanOrEqual(60);
     expect(duration).toBeLessThanOrEqual(90);
@@ -66,6 +71,7 @@ describe('路径搜索本身', () => {
         { id: 'air', x: xAt(4.15), lift: 80 },
       ],
       checkpoints: [startX],
+      flips: [],
     };
     const result = findClearPath(level, { ...TUNING, speed });
     expect(result.ok, JSON.stringify(result)).toBe(true);
@@ -86,6 +92,7 @@ describe('路径搜索本身', () => {
       obstacles,
       stars: [{ id: 'g', x: 400, lift: 0 }],
       checkpoints: [startX],
+      flips: [],
     };
     const result = findClearPath(level, TUNING);
     expect(result.ok).toBe(false);

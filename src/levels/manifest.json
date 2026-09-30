@@ -1,0 +1,84 @@
+{
+  "levels": [
+    {
+      "file": "level-01.json",
+      "unlockStars": 0
+    },
+    {
+      "file": "level-02.json",
+      "unlockStars": 2
+    },
+    {
+      "file": "level-03.json",
+      "unlockStars": 4
+    },
+    {
+      "file": "level-04.json",
+      "unlockStars": 6
+    },
+    {
+      "file": "level-05.json",
+      "unlockStars": 8
+    },
+    {
+      "file": "level-06.json",
+      "unlockStars": 10
+    },
+    {
+      "file": "level-07.json",
+      "unlockStars": 12
+    },
+    {
+      "file": "level-08.json",
+      "unlockStars": 14
+    },
+    {
+      "file": "level-09.json",
+      "unlockStars": 16
+    },
+    {
+      "file": "level-10.json",
+      "unlockStars": 18
+    },
+    {
+      "file": "level-11.json",
+      "unlockStars": 20
+    },
+    {
+      "file": "level-12.json",
+      "unlockStars": 22
+    },
+    {
+      "file": "level-13.json",
+      "unlockStars": 24
+    },
+    {
+      "file": "level-14.json",
+      "unlockStars": 26
+    },
+    {
+      "file": "level-15.json",
+      "unlockStars": 28
+    },
+    {
+      "file": "level-16.json",
+      "unlockStars": 30
+    },
+    {
+      "file": "level-17.json",
+      "unlockStars": 32
+    },
+    {
+      "file": "level-18.json",
+      "unlockStars": 34
+    },
+    {
+      "file": "level-19.json",
+      "unlockStars": 36
+    },
+    {
+      "file": "level-20.json",
+      "unlockStars": 38
+    }
+  ]
+}

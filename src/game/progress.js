@@ -1,19 +1,17 @@
 /**
  * 关卡解锁和星星存档。
  * 累计星星 = 每一关历史最高星数之和。第 1 关默认开放。
+ * 门槛来自关卡清单，不写死在这里。
  * 这些函数不碰 Phaser，测试可以换一个假的 localStorage。
+ *
+ * 旧存档仍然用同一个 key。前 5 关的 id 还是 level-1 到 level-5，
+ * 已经拿到的星数会原样保留。不认识的 id 忽略，不会把后面的关提前打开。
  */
+import { LEVEL_UNLOCKS } from './level.js';
 
 export const PROGRESS_STORAGE_KEY = 'fangkuai-paoku-progress';
 
-/** 解锁所需的累计星星。顺序和第 1 到第 5 关一致。 */
-export const LEVEL_UNLOCKS = [
-  { id: 'level-1', stars: 0 },
-  { id: 'level-2', stars: 2 },
-  { id: 'level-3', stars: 4 },
-  { id: 'level-4', stars: 7 },
-  { id: 'level-5', stars: 10 },
-];
+export { LEVEL_UNLOCKS };
 
 const STARS_PER_LEVEL = 3;
 

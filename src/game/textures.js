@@ -69,6 +69,48 @@ function drawBlock(ctx) {
   ctx.strokeRect(13, 13, 16, 16);
 }
 
+/** 从天花板垂下来的尖刺，尖端朝下。 */
+function drawSpikeDown(ctx) {
+  ctx.beginPath();
+  ctx.moveTo(18, 34);
+  ctx.lineTo(34, 3);
+  ctx.lineTo(2, 3);
+  ctx.closePath();
+  ctx.fillStyle = '#1a0a22';
+  ctx.fill();
+  ctx.strokeStyle = '#67e8f9';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+/** 周期门。关着的时候挡在地面上，样式和方块区分开。 */
+function drawGate(ctx) {
+  ctx.fillStyle = '#14081c';
+  ctx.fillRect(4, 0, 34, 42);
+  ctx.strokeStyle = '#67e8f9';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(6, 2, 30, 38);
+  ctx.fillStyle = '#67e8f9';
+  ctx.fillRect(8, 18, 26, 4);
+}
+
+/** 会塌掉的平台砖，中间一条裂纹。 */
+function drawCrumble(ctx) {
+  ctx.fillStyle = '#3f2a12';
+  ctx.fillRect(0, 0, 42, 42);
+  ctx.strokeStyle = '#fde68a';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(2, 2, 38, 38);
+  ctx.beginPath();
+  ctx.moveTo(8, 8);
+  ctx.lineTo(22, 20);
+  ctx.lineTo(12, 34);
+  ctx.moveTo(22, 12);
+  ctx.lineTo(34, 30);
+  ctx.stroke();
+}
+
 function drawStar(ctx) {
   starPath(ctx, 18, 18, 16, 7);
   ctx.fillStyle = '#ffc107';
@@ -169,7 +211,10 @@ export function generateTextures(scene) {
 
   make('player', HITBOX.player.w, HITBOX.player.h, drawPlayer);
   make('spike', HITBOX.spike.w, HITBOX.spike.h, drawSpike);
+  make('spike-down', HITBOX.spike.w, HITBOX.spike.h, drawSpikeDown);
   make('block', HITBOX.block.w, HITBOX.block.h, drawBlock);
+  make('gate', HITBOX.block.w, HITBOX.block.h, drawGate);
+  make('crumble', HITBOX.block.w, HITBOX.block.h, drawCrumble);
   make('star', HITBOX.star.w, HITBOX.star.h, drawStar);
   make('icon-home', 64, 64, drawHome);
   make('icon-sound', 64, 64, (ctx) => drawSpeaker(ctx, false));

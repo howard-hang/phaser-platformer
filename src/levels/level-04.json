@@ -1,0 +1,188 @@
+{
+  "id": "level-4",
+  "name": "玫红平台",
+  "speed": 336,
+  "duration": 64,
+  "palette": "rose",
+  "obstacles": [
+    {
+      "t": 2.15,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 2.87,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 4.31,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 5.09,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 8.56,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 9.99,
+      "type": "block"
+    },
+    {
+      "t": 11.43,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 13.23,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 15.02,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 16.45,
+      "type": "block"
+    },
+    {
+      "t": 17.89,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 20.76,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 22.19,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 22.97,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 24.29,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 27.88,
+      "type": "block"
+    },
+    {
+      "t": 29.32,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 30.75,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 32.55,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 34.34,
+      "type": "block"
+    },
+    {
+      "t": 35.77,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 36.49,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 40.08,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 40.86,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 42.18,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 43.62,
+      "type": "block"
+    },
+    {
+      "t": 47.2,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 48.64,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 50.08,
+      "type": "block"
+    },
+    {
+      "t": 53.66,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 54.38,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 55.82,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 56.6,
+      "type": "spike",
+      "count": 2
+    }
+  ],
+  "stars": [
+    {
+      "t": 1.15,
+      "lift": 0
+    },
+    {
+      "t": 23.02,
+      "lift": 70
+    },
+    {
+      "t": 42.24,
+      "lift": 98
+    }
+  ],
+  "checkpoints": [
+    11,
+    25.25,
+    37.25,
+    51.05
+  ]
+}

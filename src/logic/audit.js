@@ -1,22 +1,36 @@
 /**
  * 关卡数据体检：时长、存档点是否安全、星星有没有埋在障碍里。
- * 能不能通关由 simulateRun 另行验证。
+ * 能不能通关由 findClearPath 另行验证。
  */
 import {
   HITBOX,
   TUNING,
   bodyRectFromSprite,
+  courseTime,
   obstacleRect,
+  playerCeilingY,
   playerGroundY,
   rectsOverlap,
   starRect,
 } from './world.js';
 
-/** 站在某个 x 上会不会和障碍重叠。 */
-function standingHits(x, obstacles, tuning) {
+/** 站在某个 x 上会不会和障碍重叠。time 用来判断这时门关没关、平台塌没塌。 */
+function standingHits(x, obstacles, tuning, time) {
   const y = playerGroundY(tuning);
   const prect = bodyRectFromSprite(x, y, HITBOX.player);
-  return obstacles.some((obstacle) => rectsOverlap(prect, obstacleRect(obstacle, tuning)));
+  return obstacles.some((obstacle) => {
+    const rect = obstacleRect(obstacle, tuning, time);
+    return rect ? rectsOverlap(prect, rect) : false;
+  });
+}
+
+/** 体检时把机关当成「会伤人的那一态」，避免星星埋在坑里或关着的门里。 */
+function solidRect(obstacle, tuning) {
+  if (obstacle.type === 'flip') return null;
+  if (obstacle.type === 'gate' || obstacle.type === 'crumble') {
+    return obstacleRect(obstacle, tuning, 0, { forceClosed: true });
+  }
+  return obstacleRect(obstacle, tuning, 0);
 }
 
 /** 返回问题描述数组，空数组表示关卡结构合格。 */
@@ -26,15 +40,31 @@ export function auditLevel(level, tuning = TUNING) {
   if (duration < 60 || duration > 90) {
     problems.push(`关卡时长 ${duration.toFixed(2)} 秒，不在 60 到 90 秒之间`);
   }
+  if (!level.stars || level.stars.length !== 3) {
+    problems.push(`星星应该正好 3 颗，现在是 ${level.stars?.length ?? 0}`);
+  }
 
   const ids = new Set();
   for (const obstacle of level.obstacles) {
     if (ids.has(obstacle.id)) problems.push(`障碍 id 重复: ${obstacle.id}`);
     ids.add(obstacle.id);
+    if (obstacle.type === 'cspike') {
+      const inside = (level.flips || []).some((zone) => obstacle.x >= zone.x0 && obstacle.x <= zone.x1);
+      if (!inside) problems.push(`天花板尖刺 ${obstacle.id} 不在重力反转区里`);
+    }
   }
-  for (const star of level.stars) {
+  for (const star of level.stars || []) {
     if (ids.has(star.id)) problems.push(`星星 id 重复: ${star.id}`);
     ids.add(star.id);
+  }
+
+  const flips = level.flips || [];
+  for (let i = 0; i < flips.length; i += 1) {
+    for (let j = i + 1; j < flips.length; j += 1) {
+      const a = flips[i];
+      const b = flips[j];
+      if (a.x0 < b.x1 && b.x0 < a.x1) problems.push('重力反转区互相重叠');
+    }
   }
 
   let prev = -Infinity;
@@ -44,10 +74,24 @@ export function auditLevel(level, tuning = TUNING) {
     if (point < level.startX || point >= level.finishX) {
       problems.push(`存档点 ${point} 不在跑道内`);
     }
+    const time = courseTime(point, level, tuning);
     // 重生点左右留出半个身位，避免刚复活就卡在尖刺里。
     for (const x of [point - 8, point, point + 24]) {
-      if (standingHits(x, level.obstacles, tuning)) {
+      if (standingHits(x, level.obstacles, tuning, time)) {
         problems.push(`存档点 ${point} 附近站立会碰到障碍`);
+        break;
+      }
+    }
+    for (const zone of flips) {
+      if (point > zone.x0 - 30 && point < zone.x1 + 30) {
+        problems.push(`存档点 ${point} 离重力反转区太近`);
+        break;
+      }
+    }
+    for (const obstacle of level.obstacles) {
+      if (obstacle.type !== 'crumble') continue;
+      if (point > obstacle.x0 - 36 && point < obstacle.x1 + 36) {
+        problems.push(`存档点 ${point} 落在坠落平台上`);
         break;
       }
     }
@@ -59,7 +103,18 @@ export function auditLevel(level, tuning = TUNING) {
   let firstX = Infinity;
   let lastX = -Infinity;
   for (const obstacle of level.obstacles) {
-    const rect = obstacleRect(obstacle, tuning);
+    if (obstacle.type === 'flip') {
+      firstX = Math.min(firstX, obstacle.x0);
+      lastX = Math.max(lastX, obstacle.x1);
+      continue;
+    }
+    if (obstacle.type === 'crumble') {
+      firstX = Math.min(firstX, obstacle.x0);
+      lastX = Math.max(lastX, obstacle.x1);
+      continue;
+    }
+    const rect = solidRect(obstacle, tuning);
+    if (!rect) continue;
     firstX = Math.min(firstX, rect.x);
     lastX = Math.max(lastX, rect.x + rect.w);
     if (obstacle.type === 'overhead') {
@@ -68,21 +123,35 @@ export function auditLevel(level, tuning = TUNING) {
         problems.push(`头顶障碍 ${obstacle.id} 太低，站立就会撞上`);
       }
     }
+    if (obstacle.type === 'cspike') {
+      const head = bodyRectFromSprite(0, playerCeilingY(), HITBOX.player).y;
+      if (rect.y > head + 8) {
+        problems.push(`天花板尖刺 ${obstacle.id} 没有贴着天花板`);
+      }
+    }
   }
-  const reactSeconds = (firstX - level.startX) / tuning.speed;
-  if (reactSeconds < 1.5) {
-    problems.push(`第一个障碍出现太早（${reactSeconds.toFixed(2)} 秒）`);
-  }
-  const finishGap = (level.finishX - lastX) / tuning.speed;
-  if (finishGap < 1) {
-    problems.push('终点离最后一个障碍太近');
+  if (Number.isFinite(firstX)) {
+    const reactSeconds = (firstX - level.startX) / tuning.speed;
+    if (reactSeconds < 1.5) {
+      problems.push(`第一个障碍出现太早（${reactSeconds.toFixed(2)} 秒）`);
+    }
+    const finishGap = (level.finishX - lastX) / tuning.speed;
+    if (finishGap < 1) {
+      problems.push('终点离最后一个障碍太近');
+    }
   }
 
-  for (const star of level.stars) {
+  for (const star of level.stars || []) {
     const srect = starRect(star, tuning);
     for (const obstacle of level.obstacles) {
-      if (rectsOverlap(srect, obstacleRect(obstacle, tuning))) {
+      const rect = solidRect(obstacle, tuning);
+      if (rect && rectsOverlap(srect, rect)) {
         problems.push(`星星 ${star.id} 和障碍 ${obstacle.id} 重叠`);
+      }
+    }
+    for (const zone of flips) {
+      if (star.x > zone.x0 && star.x < zone.x1) {
+        problems.push(`星星 ${star.id} 放在了重力反转区里`);
       }
     }
   }

@@ -3,6 +3,7 @@ import {
   computeExpandSize,
   cssInsetsToGame,
   layoutHud,
+  layoutLevelBoard,
   layoutLevelSelect,
   nextFullscreenAction,
   shouldShowFullscreenButton,
@@ -133,5 +134,36 @@ describe('全屏按钮和安全区', () => {
     for (let i = 1; i < layout.rows.length; i += 1) {
       expect(layout.rows[i].y).toBeGreaterThanOrEqual(layout.rows[i - 1].y + layout.rows[i - 1].h);
     }
+  });
+
+  it('二十关分页后卡片仍让开安全区，并且够手指点', () => {
+    const layout = layoutLevelBoard({
+      viewWidth: 960,
+      viewHeight: 540,
+      insets: { top: 28, right: 24, bottom: 18, left: 32 },
+      count: 20,
+      page: 0,
+    });
+    expect(layout.pages).toBeGreaterThan(1);
+    expect(layout.cells.length).toBeGreaterThan(0);
+    expect(layout.cells.length).toBeLessThan(20);
+    for (const cell of layout.cells) {
+      expect(cell.x).toBeGreaterThanOrEqual(32);
+      expect(cell.x + cell.w).toBeLessThanOrEqual(960 - 24);
+      expect(cell.y).toBeGreaterThanOrEqual(28);
+      expect(cell.h).toBeGreaterThanOrEqual(64);
+    }
+    const next = layoutLevelBoard({
+      viewWidth: 960,
+      viewHeight: 540,
+      insets: { top: 28, right: 24, bottom: 18, left: 32 },
+      count: 20,
+      page: 1,
+    });
+    const seen = new Set(layout.cells.map((cell) => cell.index));
+    for (const cell of next.cells) expect(seen.has(cell.index)).toBe(false);
+    expect(layout.back.y).toBeLessThanOrEqual(540 - 18);
+    expect(layout.prev.x).toBeGreaterThanOrEqual(32);
+    expect(layout.next.x).toBeLessThanOrEqual(960 - 24);
   });
 });

@@ -1,88 +1,59 @@
 /**
- * 把剧本展开成障碍、星星和存档点。
- * 坐标按每一关自己的速度换算，跳跃高度和重力仍用 TUNING，不在这里改。
+ * 按清单加载每一关的 JSON，展开成运行时关卡。
+ * 新增一关只需要放入 src/levels/level-XX.json，并在 manifest.json 里登记。
+ * 这里用 Vite 的 glob 把 JSON 打进包里，网页和 APK 离线都能读到。
  */
-import { LEVEL_DEFS } from './levelData.js';
-import { HITBOX, TUNING } from '../logic/world.js';
+import manifest from '../levels/manifest.json';
+import { compileLevel } from './compileLevel.js';
+import { validateLevel, validateManifest } from './levelSchema.js';
+import { TUNING } from '../logic/world.js';
 
-const START_X = 240;
+const modules = import.meta.glob('../levels/level-*.json', {
+  eager: true,
+  import: 'default',
+});
 
-function buildLevel(def, index) {
-  const speed = def.speed;
-  const xAt = (t) => Math.round(START_X + t * speed);
-  const obstacles = [];
-  const stars = [];
-  const checkpoints = [START_X];
-
-  def.script.forEach((event, order) => {
-    if (event.type === 'spike') {
-      const spec = HITBOX.spike;
-      const left = xAt(event.t);
-      const count = event.count || 1;
-      for (let i = 0; i < count; i += 1) {
-        obstacles.push({
-          id: `${def.id}-spike-${order}-${i}`,
-          type: 'spike',
-          x: left + spec.w / 2 + i * spec.w,
-        });
+function loadCampaign() {
+  try {
+    const files = {};
+    for (const [path, data] of Object.entries(modules)) {
+      const name = path.split('/').pop();
+      files[name] = data;
+    }
+    validateManifest(manifest, files);
+    const levels = [];
+    const unlocks = [];
+    manifest.levels.forEach((row, index) => {
+      const def = validateLevel(files[row.file], row.file);
+      const expectedId = `level-${index + 1}`;
+      if (def.id !== expectedId) {
+        throw new Error(`关卡配置错误 ${row.file}: id 应该是 ${expectedId}，实际是 ${def.id}`);
       }
-      return;
-    }
-    if (event.type === 'block') {
-      const spec = HITBOX.block;
-      obstacles.push({
-        id: `${def.id}-block-${order}`,
-        type: 'block',
-        x: xAt(event.t) + spec.w / 2,
-      });
-      return;
-    }
-    if (event.type === 'overhead') {
-      const spec = HITBOX.block;
-      obstacles.push({
-        id: `${def.id}-over-${order}`,
-        type: 'overhead',
-        x: xAt(event.t) + spec.w / 2,
-        // 底边离地的空隙。站着能钻过去，跳起来会撞上。
-        gap: event.gap ?? 58,
-      });
-      return;
-    }
-    if (event.type === 'star') {
-      stars.push({
-        id: `${def.id}-star-${stars.length + 1}`,
-        x: xAt(event.t) + (event.dx || 0),
-        lift: event.lift || 0,
-      });
-      return;
-    }
-    if (event.type === 'checkpoint') {
-      checkpoints.push(xAt(event.t));
-    }
-  });
-
-  checkpoints.sort((a, b) => a - b);
-  const finishX = xAt(def.duration);
-  return {
-    id: def.id,
-    name: def.name,
-    index,
-    speed,
-    palette: def.palette,
-    startX: START_X,
-    finishX,
-    // 终点后再留一屏，摄像机不会把终点门卡在边缘。
-    worldWidth: finishX + TUNING.viewWidth,
-    checkpoints,
-    obstacles,
-    stars,
-  };
+      levels.push(compileLevel(def, index + 1));
+      unlocks.push({ id: def.id, stars: row.unlockStars });
+    });
+    return { error: null, levels, unlocks };
+  } catch (error) {
+    return {
+      error: error?.message || String(error),
+      levels: [],
+      unlocks: [],
+    };
+  }
 }
 
-export const LEVELS = LEVEL_DEFS.map((def, index) => buildLevel(def, index + 1));
+export const CAMPAIGN = loadCampaign();
+
+/** 配置不合法时是一段中文说明。游戏会把它画出来，而不是白屏。 */
+export const CONFIG_ERROR = CAMPAIGN.error;
+
+export const LEVELS = CAMPAIGN.levels;
+
+/** 和清单顺序一致的解锁门槛。进度模块按这个表累计星星。 */
+export const LEVEL_UNLOCKS = CAMPAIGN.unlocks;
 
 /** 第一关。旧调用点还能用它。 */
-export const LEVEL = LEVELS[0];
+export const LEVEL = LEVELS[0] || null;
 
 export function getLevel(id) {
   return LEVELS.find((level) => level.id === id) || null;
@@ -96,5 +67,5 @@ export function nextLevel(id) {
 
 /** 只替换水平速度。重力和起跳速度保持全局手感。 */
 export function levelTuning(level) {
-  return { ...TUNING, speed: level.speed ?? TUNING.speed };
+  return { ...TUNING, speed: level?.speed ?? TUNING.speed };
 }

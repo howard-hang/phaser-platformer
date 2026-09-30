@@ -36,6 +36,52 @@ export function playerGroundY(tuning = TUNING) {
 }
 
 /**
+ * 重力反转区的天花板下沿（世界 Y，越小越高）。
+ * 比普通跳跃的最高点再高一截，正常起跳碰不到。
+ */
+export const FLIP_CEILING_Y = 182;
+
+/** 贴在天花板上时，方块精灵的中心 Y。碰撞盒顶边贴着天花板下沿。 */
+export function playerCeilingY() {
+  return FLIP_CEILING_Y + HITBOX.player.h / 2 - HITBOX.player.offsetY;
+}
+
+/** 玩家中心 x 落在反转区里时重力向上，否则向下。 */
+export function gravitySignAt(x, level) {
+  const zones = level?.flips;
+  if (!zones) return 1;
+  for (let i = 0; i < zones.length; i += 1) {
+    const zone = zones[i];
+    if (x >= zone.x0 && x <= zone.x1) return -1;
+  }
+  return 1;
+}
+
+/** 从起点匀速跑到 x 时的关卡时间（秒）。死亡重生后也按这个时间对齐机关。 */
+export function courseTime(x, level, tuning = TUNING) {
+  return (x - level.startX) / tuning.speed;
+}
+
+/** 周期门在这个时间点是否关着。关着时要跳过去，开着时可以跑过去。 */
+export function isGateClosed(obstacle, time) {
+  const period = obstacle.period;
+  const open = obstacle.open;
+  let local = (time + (obstacle.phase || 0)) % period;
+  if (local < 0) local += period;
+  return local >= open;
+}
+
+/** 坠落平台塌掉之后的地面杀伤矩形。塌掉之前没有碰撞。 */
+export function crumblePitRect(obstacle, tuning = TUNING) {
+  return {
+    x: obstacle.x0,
+    y: tuning.groundY - 46,
+    w: Math.max(1, obstacle.x1 - obstacle.x0),
+    h: 46,
+  };
+}
+
+/**
  * 把“精灵中心 + 碰撞盒描述”换成世界坐标里的矩形。
  * 公式与 Phaser 动态刚体 updateFromGameObject 一致：
  * left = centerX - 贴图宽/2 + offsetX
@@ -57,8 +103,12 @@ export function rectsOverlap(a, b) {
     && a.y + a.h > b.y;
 }
 
-/** 障碍物精灵中心、使用的碰撞盒和贴图 key。x 是障碍物中心。 */
-export function obstaclePose(obstacle, tuning = TUNING) {
+/**
+ * 障碍物精灵中心、碰撞盒和贴图 key。
+ * time 是从起点算的秒数。门开着、平台还没塌时返回 null，表示这一帧没有碰撞。
+ * options.forceClosed 用来做关卡体检，把周期门当成关着的。
+ */
+export function obstaclePose(obstacle, tuning = TUNING, time = 0, options = {}) {
   if (obstacle.type === 'spike') {
     const spec = HITBOX.spike;
     return {
@@ -68,13 +118,27 @@ export function obstaclePose(obstacle, tuning = TUNING) {
       key: 'spike',
     };
   }
-  if (obstacle.type === 'block') {
+  if (obstacle.type === 'cspike') {
+    const spec = HITBOX.spike;
+    // 贴图朝下，碰撞盒改到贴图上沿，尖端从天花板垂下来。
+    return {
+      cx: obstacle.x,
+      cy: FLIP_CEILING_Y + spec.h / 2,
+      spec: { ...spec, offsetY: 0 },
+      key: 'spike-down',
+    };
+  }
+  if (obstacle.type === 'block' || obstacle.type === 'gate') {
+    if (obstacle.type === 'gate') {
+      const closed = options.forceClosed || isGateClosed(obstacle, time);
+      if (!closed) return null;
+    }
     const spec = HITBOX.block;
     return {
       cx: obstacle.x,
       cy: tuning.groundY - spec.h / 2,
       spec,
-      key: 'block',
+      key: obstacle.type === 'gate' ? 'gate' : 'block',
     };
   }
   if (obstacle.type === 'overhead') {
@@ -87,12 +151,19 @@ export function obstaclePose(obstacle, tuning = TUNING) {
       key: 'block',
     };
   }
+  // 反转区本身不挡人，只改变重力。坠落平台用坑的矩形，不走精灵中心。
+  if (obstacle.type === 'flip' || obstacle.type === 'crumble') return null;
   throw new Error(`未知障碍类型: ${obstacle.type}`);
 }
 
-/** 障碍物的碰撞矩形。 */
-export function obstacleRect(obstacle, tuning = TUNING) {
-  const pose = obstaclePose(obstacle, tuning);
+/** 障碍物的碰撞矩形。没有碰撞时返回 null。 */
+export function obstacleRect(obstacle, tuning = TUNING, time = 0, options = {}) {
+  if (obstacle.type === 'crumble') {
+    if (!options.forceClosed && time + 1e-6 < obstacle.collapse) return null;
+    return crumblePitRect(obstacle, tuning);
+  }
+  const pose = obstaclePose(obstacle, tuning, time, options);
+  if (!pose) return null;
   return bodyRectFromSprite(pose.cx, pose.cy, pose.spec);
 }
 
@@ -113,10 +184,12 @@ export function starRect(star, tuning = TUNING) {
   return bodyRectFromSprite(pose.cx, pose.cy, pose.spec);
 }
 
-/** 玩家中心与某个障碍是否重叠。 */
-export function playerHitsObstacle(px, py, obstacle, tuning = TUNING) {
+/** 玩家中心与某个障碍是否重叠。time 用来判断周期门和坠落平台。 */
+export function playerHitsObstacle(px, py, obstacle, tuning = TUNING, time = 0) {
+  const rect = obstacleRect(obstacle, tuning, time);
+  if (!rect) return false;
   const prect = bodyRectFromSprite(px, py, HITBOX.player);
-  return rectsOverlap(prect, obstacleRect(obstacle, tuning));
+  return rectsOverlap(prect, rect);
 }
 
 /** 玩家中心与某颗星星是否重叠。 */

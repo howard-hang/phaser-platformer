@@ -9,6 +9,7 @@ import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { SelectScene } from './scenes/SelectScene.js';
 import { GameScene } from './scenes/GameScene.js';
+import { ErrorScene } from './scenes/ErrorScene.js';
 import { bindAndroidBack } from './platform/androidBack.js';
 import { bindAudioLifecycle, getSynth } from './game/audio.js';
 
@@ -45,7 +46,7 @@ const config = {
     // 不限制渲染帧率，跟浏览器刷新率走。物理仍用上面的 60Hz 固定步长，手感不变。
     limit: 0,
   },
-  scene: [BootScene, MenuScene, SelectScene, GameScene],
+  scene: [BootScene, MenuScene, SelectScene, GameScene, ErrorScene],
 };
 
 /** 网址带 ?fps 时在左下角显示 Phaser 统计的帧率，方便对照刷新率。 */

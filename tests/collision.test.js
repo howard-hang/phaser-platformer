@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FLIP_CEILING_Y,
   HITBOX,
   TUNING,
   bodyRectFromSprite,
+  isGateClosed,
   obstacleRect,
+  playerCeilingY,
   playerGroundY,
   playerHitsObstacle,
   playerHitsStar,
@@ -62,6 +65,31 @@ describe('碰撞盒', () => {
     expect(jump.height).toBeGreaterThan(HITBOX.block.bodyH + 40);
     expect(jump.airTime).toBeGreaterThan(0.6);
     expect(jump.airTime).toBeLessThan(1.2);
+  });
+
+  it('周期门关着才有碰撞，开着可以跑过去', () => {
+    const gate = { id: 'g', type: 'gate', x: 400, period: 1.4, open: 0.6, phase: 0 };
+    expect(isGateClosed(gate, 0.2)).toBe(false);
+    expect(obstacleRect(gate, TUNING, 0.2)).toBeNull();
+    expect(isGateClosed(gate, 1.0)).toBe(true);
+    expect(playerHitsObstacle(400, playerGroundY(), gate, TUNING, 1.0)).toBe(true);
+    expect(playerHitsObstacle(400, playerGroundY() - 180, gate, TUNING, 1.0)).toBe(false);
+  });
+
+  it('坠落平台在塌掉之前不伤人', () => {
+    const crumble = { id: 'c', type: 'crumble', x: 300, x0: 280, x1: 700, collapse: 2 };
+    expect(obstacleRect(crumble, TUNING, 1.5)).toBeNull();
+    expect(playerHitsObstacle(400, playerGroundY(), crumble, TUNING, 1.5)).toBe(false);
+    expect(playerHitsObstacle(400, playerGroundY(), crumble, TUNING, 2.2)).toBe(true);
+    expect(playerHitsObstacle(400, playerGroundY() - 160, crumble, TUNING, 2.2)).toBe(false);
+  });
+
+  it('倒挂刺贴着天花板，站在地面上碰不到', () => {
+    const spike = { id: 'c', type: 'cspike', x: 500 };
+    const rect = obstacleRect(spike);
+    expect(rect.y).toBe(FLIP_CEILING_Y);
+    expect(playerHitsObstacle(500, playerGroundY(), spike)).toBe(false);
+    expect(playerHitsObstacle(500, playerCeilingY(), spike)).toBe(true);
   });
 
   it('星星矩形落在抬高后的空中', () => {

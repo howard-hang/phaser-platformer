@@ -1,0 +1,162 @@
+{
+  "id": "level-1",
+  "name": "紫色冲刺",
+  "speed": 318,
+  "duration": 64,
+  "palette": "magenta",
+  "obstacles": [
+    {
+      "t": 2.15,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 2.87,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 4.39,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 8.06,
+      "type": "block"
+    },
+    {
+      "t": 9.58,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 10.3,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 13.97,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 15.49,
+      "type": "block"
+    },
+    {
+      "t": 17.01,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 19.88,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 21.4,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 22.92,
+      "type": "block"
+    },
+    {
+      "t": 26.59,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 27.31,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 28.83,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 32.5,
+      "type": "block"
+    },
+    {
+      "t": 34.02,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 34.74,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 38.41,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 39.93,
+      "type": "block"
+    },
+    {
+      "t": 41.45,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 44.32,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 45.84,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 47.36,
+      "type": "block"
+    },
+    {
+      "t": 51.03,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 51.75,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 53.27,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 56.94,
+      "type": "block"
+    }
+  ],
+  "stars": [
+    {
+      "t": 1.15,
+      "lift": 0
+    },
+    {
+      "t": 21.45,
+      "lift": 70
+    },
+    {
+      "t": 44.38,
+      "lift": 98
+    }
+  ],
+  "checkpoints": [
+    11.45,
+    23.9,
+    35.9,
+    48.35
+  ]
+}
