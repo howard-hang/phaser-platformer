@@ -1,9 +1,9 @@
 /**
- * 三层视差背景，外加一张铺满画面的天空渐变。
- * 图形只在进游戏时画进贴图。滚动时改 TileSprite 的 tilePosition，不每帧重画。
- * 关卡走得越远，色调略微变亮，用着色器乘色完成，也不重画贴图。
+ * 三层视差背景：远景山、中景光柱、近景光带，底下还有天空渐变。
+ * 近景不再铺等距网格，改成透视地平线和疏密不一的线段、颗粒。
+ * 图形只在进游戏时烤进贴图。滚动时改坐标和贴图序号，不每帧重画。
  */
-import { THEME } from './theme.js';
+import { LEVEL_PALETTES } from './theme.js';
 import { TUNING } from '../logic/world.js';
 
 /** 越靠前的层跟镜头越紧。数字必须递增，远景才真的更慢。 */
@@ -11,7 +11,7 @@ export const PARALLAX = {
   stars: 0.08,
   mountains: 0.24,
   pillars: 0.46,
-  grid: 0.84,
+  near: 0.8,
 };
 
 const TEX = {
@@ -20,11 +20,33 @@ const TEX = {
   mountains: { w: 1024, h: 192 },
   beam: { w: 32, h: 256 },
   glow: { w: 48, h: 48 },
-  grid: { w: 512, h: 128 },
 };
+
+export const NEAR_W = 1024;
+export const NEAR_H = 176;
+const NEAR_VARIANTS = 8;
+
+/**
+ * 近景贴图的播放顺序。24 张才循环一次，单关镜头走不完一整圈，避免一眼看出重复。
+ * 相邻两张不是同一张，疏的和密的也不按固定节拍交替。
+ */
+export const NEAR_SEQUENCE = [
+  0, 3, 7, 1, 4, 2, 6, 5,
+  1, 5, 2, 7, 0, 4, 3, 6,
+  2, 6, 1, 5, 3, 0, 7, 4,
+];
 
 const BEAM_SPAN = 420;
 const GLOW_SPAN = 420;
+/** 近景底边离地面的空隙，避开尖刺和方块。 */
+const NEAR_CLEARANCE = 50;
+
+/** 第几块近景用哪一张变体。负数坐标也能对上。 */
+export function nearVariantAt(tileIndex) {
+  const span = NEAR_SEQUENCE.length;
+  const index = ((tileIndex % span) + span) % span;
+  return NEAR_SEQUENCE[index];
+}
 
 function canvasOf(width, height) {
   const canvas = document.createElement('canvas');
@@ -43,11 +65,22 @@ export function progressTint(progress) {
   return (r << 16) | (g << 8) | b;
 }
 
-function drawSky(ctx, w, h) {
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function drawSky(ctx, w, h, palette) {
   const gradient = ctx.createLinearGradient(0, 0, 0, h);
-  gradient.addColorStop(0, '#2a0840');
-  gradient.addColorStop(0.55, '#6d128c');
-  gradient.addColorStop(1, THEME.bg);
+  gradient.addColorStop(0, palette.skyTop);
+  gradient.addColorStop(0.55, palette.skyMid);
+  gradient.addColorStop(1, palette.skyBottom);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, w, h);
 }
@@ -66,37 +99,37 @@ function drawStar(ctx, w, h) {
   ctx.fillRect(w / 2 - 3, h / 2 - 3, 6, 6);
 }
 
-function drawBeam(ctx, w, h) {
+function drawBeam(ctx, w, h, palette) {
   ctx.clearRect(0, 0, w, h);
   const beam = ctx.createLinearGradient(0, 0, 0, h);
   beam.addColorStop(0, 'rgba(224, 247, 255, 0)');
-  beam.addColorStop(0.25, 'rgba(232, 121, 249, 0.45)');
-  beam.addColorStop(0.7, 'rgba(103, 232, 249, 0.28)');
+  beam.addColorStop(0.25, palette.beam);
+  beam.addColorStop(0.7, palette.beamCore);
   beam.addColorStop(1, 'rgba(192, 38, 211, 0)');
   ctx.fillStyle = beam;
   ctx.fillRect(8, 0, 16, h);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
   ctx.fillRect(14, 0, 4, h);
 }
 
-function drawGlow(ctx, w, h) {
+function drawGlow(ctx, w, h, palette) {
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = 'rgba(240, 171, 252, 0.72)';
+  ctx.fillStyle = palette.glow;
   ctx.fillRect(4, 4, w - 8, h - 8);
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
   ctx.lineWidth = 3;
   ctx.strokeRect(6, 6, w - 12, h - 12);
 }
 
-function drawMountains(ctx, w, h) {
+function drawMountains(ctx, w, h, palette) {
   ctx.clearRect(0, 0, w, h);
   // 步长都能整除宽度，左右边缘接得上，横着平铺没有断口。
   const ridges = [
-    { color: '#3b0764', step: 256, peak: 0.78, base: 0.28 },
-    { color: '#6b21a8', step: 160, peak: 0.58, base: 0.18 },
-    { color: '#a21caf', step: 128, peak: 0.36, base: 0.08 },
+    { color: palette.ridge[0], step: 256, peak: 0.78, base: 0.28 },
+    { color: palette.ridge[1], step: 160, peak: 0.58, base: 0.18 },
+    { color: palette.ridge[2], step: 128, peak: 0.36, base: 0.08 },
   ];
-  ridges.forEach((ridge, layer) => {
+  ridges.forEach((ridge) => {
     ctx.beginPath();
     ctx.moveTo(0, h);
     for (let x = 0; x < w; x += ridge.step) {
@@ -111,25 +144,83 @@ function drawMountains(ctx, w, h) {
     ctx.fillStyle = ridge.color;
     ctx.fill();
   });
-  // 地平线一条窄光，把山和跑道分开。
-  ctx.fillStyle = 'rgba(253, 224, 71, 0.35)';
+  ctx.fillStyle = palette.horizon;
   ctx.fillRect(0, h - 6, w, 3);
 }
 
-function drawGrid(ctx, w, h) {
-  ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let x = 0; x <= w; x += 128) {
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, h);
+/** 每张近景共用的横线高度，拼在一起是连续的透视地平线。越靠上越密、越淡。 */
+function horizonLines(height) {
+  const lines = [];
+  const count = 8;
+  for (let i = 0; i < count; i += 1) {
+    const t = i / (count - 1);
+    lines.push({
+      y: Math.round(10 + (t ** 1.55) * (height - 28)),
+      alpha: 0.08 + (1 - t) * 0.16,
+      width: i === count - 1 ? 2 : 1,
+    });
   }
-  ctx.moveTo(0, 0);
-  ctx.lineTo(w, 0);
-  ctx.stroke();
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-  for (let x = 0; x < w; x += 128) ctx.fillRect(x, 0, 4, 4);
+  return lines;
+}
+
+const HORIZON = horizonLines(NEAR_H);
+
+/**
+ * 变体决定这一段有多疏、多密。线段和颗粒都烤死在贴图里。
+ * 0 几乎只有地平线，后面几张逐渐出现成团的亮线。
+ */
+function drawNear(ctx, w, h, variant) {
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineCap = 'round';
+  for (const line of HORIZON) {
+    ctx.strokeStyle = `rgba(255, 255, 255, ${line.alpha})`;
+    ctx.lineWidth = line.width;
+    ctx.beginPath();
+    ctx.moveTo(0, line.y);
+    ctx.lineTo(w, line.y);
+    ctx.stroke();
+  }
+
+  const rng = mulberry32(variant * 9973 + 41);
+  const segmentBudget = [1, 3, 5, 4, 8, 2, 11, 6][variant] || 4;
+  const dotBudget = [0, 2, 1, 7, 3, 10, 4, 14][variant] || 3;
+  for (let i = 0; i < segmentBudget; i += 1) {
+    const x = 12 + rng() * (w - 24);
+    const y = 16 + rng() * (h - 36);
+    const len = 16 + rng() * (variant % 3 === 0 ? 36 : 78);
+    const vertical = rng() < (variant === 6 ? 0.75 : 0.28);
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.22 + rng() * 0.28})`;
+    ctx.lineWidth = rng() < 0.18 ? 2.5 : 1.25;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    if (vertical) ctx.lineTo(x + (rng() - 0.5) * 14, y + len * 0.55);
+    else ctx.lineTo(Math.min(w - 8, x + len), y + (rng() - 0.5) * 12);
+    ctx.stroke();
+  }
+  for (let i = 0; i < dotBudget; i += 1) {
+    const x = 8 + rng() * (w - 16);
+    const y = 12 + rng() * (h - 24);
+    const s = rng() < 0.5 ? 3 : 4;
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.28 + rng() * 0.35})`;
+    ctx.beginPath();
+    ctx.moveTo(x, y - s);
+    ctx.lineTo(x + s, y);
+    ctx.lineTo(x, y + s);
+    ctx.lineTo(x - s, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 上下边缘淡出，近景不会切出一条硬边，也不会压到地面障碍。
+  ctx.globalCompositeOperation = 'destination-in';
+  const fade = ctx.createLinearGradient(0, 0, 0, h);
+  fade.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  fade.addColorStop(0.16, 'rgba(0, 0, 0, 0.9)');
+  fade.addColorStop(0.78, 'rgba(0, 0, 0, 0.9)');
+  fade.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalCompositeOperation = 'source-over';
 }
 
 function bake(scene, key, width, height, draw) {
@@ -139,30 +230,37 @@ function bake(scene, key, width, height, draw) {
   scene.textures.addCanvas(key, canvas);
 }
 
-/** 进关卡前把背景烤成贴图。场景重启时直接复用。 */
+/** 进关卡前把背景烤成贴图。每种关卡色调各一套，近景变体全关共用。 */
 export function bakeBackdropTextures(scene) {
-  bake(scene, 'bg-sky', TEX.sky.w, TEX.sky.h, drawSky);
   bake(scene, 'bg-star', TEX.star.w, TEX.star.h, drawStar);
-  bake(scene, 'bg-mountains', TEX.mountains.w, TEX.mountains.h, drawMountains);
-  bake(scene, 'bg-beam', TEX.beam.w, TEX.beam.h, drawBeam);
-  bake(scene, 'bg-glow', TEX.glow.w, TEX.glow.h, drawGlow);
-  bake(scene, 'bg-grid', TEX.grid.w, TEX.grid.h, drawGrid);
+  LEVEL_PALETTES.forEach((palette, index) => {
+    bake(scene, `bg-sky-${index}`, TEX.sky.w, TEX.sky.h, (ctx, w, h) => drawSky(ctx, w, h, palette));
+    bake(scene, `bg-mountains-${index}`, TEX.mountains.w, TEX.mountains.h, (ctx, w, h) => drawMountains(ctx, w, h, palette));
+    bake(scene, `bg-beam-${index}`, TEX.beam.w, TEX.beam.h, (ctx, w, h) => drawBeam(ctx, w, h, palette));
+    bake(scene, `bg-glow-${index}`, TEX.glow.w, TEX.glow.h, (ctx, w, h) => drawGlow(ctx, w, h, palette));
+  });
+  for (let variant = 0; variant < NEAR_VARIANTS; variant += 1) {
+    bake(scene, `bg-near-${variant}`, NEAR_W, NEAR_H, (ctx, w, h) => drawNear(ctx, w, h, variant));
+  }
 }
 
 function pool(scene, key, depth) {
   return { scene, key, depth, images: [], used: 0 };
 }
 
-function take(group, index) {
+function take(group, index, textureKey) {
+  const key = textureKey || group.key;
   while (group.images.length <= index) {
     group.images.push(
-      group.scene.add.image(0, 0, group.key)
+      group.scene.add.image(0, 0, key)
         .setOrigin(0, 0)
         .setScrollFactor(0)
         .setDepth(group.depth),
     );
   }
-  return group.images[index];
+  const image = group.images[index];
+  if (textureKey && image.texture.key !== textureKey) image.setTexture(textureKey);
+  return image;
 }
 
 function hideRest(group, used) {
@@ -182,19 +280,33 @@ function placeRow(group, offset, span, viewWidth, y, nudge) {
   hideRest(group, count);
 }
 
-/** 创建跟镜头走的背景层。远景山、中景光柱、近景网格各一层，都是烤好的贴图。 */
-export function createParallax(scene) {
-  const sky = scene.add.image(0, 0, 'bg-sky')
+/** 近景按变体序列换贴图。同一屏上相邻的几块图案不一样。 */
+function placeNear(group, offset, viewWidth, y) {
+  const span = NEAR_W;
+  const count = Math.ceil(viewWidth / span) + 2;
+  const origin = Math.floor(offset / span);
+  for (let i = 0; i < count; i += 1) {
+    const tile = origin + i;
+    const image = take(group, i, `bg-near-${nearVariantAt(tile)}`);
+    image.setPosition(Math.round(tile * span - offset), Math.round(y));
+  }
+  hideRest(group, count);
+}
+
+/** 创建跟镜头走的背景层。palette 是 LEVEL_PALETTES 的下标。 */
+export function createParallax(scene, palette = 0) {
+  const index = ((palette % LEVEL_PALETTES.length) + LEVEL_PALETTES.length) % LEVEL_PALETTES.length;
+  const sky = scene.add.image(0, 0, `bg-sky-${index}`)
     .setOrigin(0, 0)
     .setScrollFactor(0)
     .setDepth(-40);
   return {
     sky,
     stars: pool(scene, 'bg-star', -30),
-    mountains: pool(scene, 'bg-mountains', -20),
-    beams: pool(scene, 'bg-beam', -12),
-    glows: pool(scene, 'bg-glow', -11),
-    grid: pool(scene, 'bg-grid', -5),
+    mountains: pool(scene, `bg-mountains-${index}`, -20),
+    beams: pool(scene, `bg-beam-${index}`, -12),
+    glows: pool(scene, `bg-glow-${index}`, -11),
+    near: pool(scene, 'bg-near-0', -4),
     scrollX: 0,
     viewWidth: 0,
     viewHeight: 0,
@@ -226,13 +338,11 @@ export function scrollParallax(layers, scrollX) {
     groundScreen - TEX.mountains.h + 8,
     0,
   );
-  placeRow(
-    layers.grid,
-    scrollX * PARALLAX.grid,
-    TEX.grid.w,
+  placeNear(
+    layers.near,
+    scrollX * PARALLAX.near,
     viewWidth,
-    groundScreen - TEX.grid.h + 24,
-    0,
+    groundScreen - NEAR_CLEARANCE - NEAR_H,
   );
   placeRow(layers.beams, scrollX * PARALLAX.pillars, BEAM_SPAN, viewWidth, groundScreen - TEX.beam.h - 8, 0);
   placeRow(layers.glows, scrollX * PARALLAX.pillars, GLOW_SPAN, viewWidth, groundScreen - 200, 150);
@@ -242,11 +352,9 @@ export function scrollParallax(layers, scrollX) {
 export function tintParallax(layers, progress) {
   const tint = progressTint(progress);
   layers.sky.setTint(tint);
-  const groups = [layers.stars, layers.mountains, layers.beams, layers.glows, layers.grid];
+  const groups = [layers.stars, layers.mountains, layers.beams, layers.glows, layers.near];
   for (let g = 0; g < groups.length; g += 1) {
     const images = groups[g].images;
     for (let i = 0; i < images.length; i += 1) images[i].setTint(tint);
   }
 }
-
-
