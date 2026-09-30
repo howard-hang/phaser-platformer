@@ -2,7 +2,7 @@
   "id": "level-8",
   "name": "闸门初开",
   "speed": 360,
-  "duration": 64,
+  "duration": 46.64,
   "palette": "crimson",
   "obstacles": [
     {
@@ -213,7 +213,6 @@
   "checkpoints": [
     13.8,
     27.4,
-    35.4,
-    47
+    35.4
   ]
 }

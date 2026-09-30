@@ -2,7 +2,7 @@
   "id": "level-20",
   "name": "夜紫终章",
   "speed": 432,
-  "duration": 64,
+  "duration": 53.49,
   "palette": "ice",
   "obstacles": [
     {
@@ -349,7 +349,6 @@
     }
   ],
   "checkpoints": [
-    12.6,
-    53.4
+    12.6
   ]
 }

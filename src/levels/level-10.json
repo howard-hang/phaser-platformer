@@ -2,7 +2,7 @@
   "id": "level-10",
   "name": "双闸窄道",
   "speed": 372,
-  "duration": 64,
+  "duration": 50.56,
   "palette": "lime",
   "obstacles": [
     {

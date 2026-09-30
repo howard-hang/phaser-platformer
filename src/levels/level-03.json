@@ -2,7 +2,7 @@
   "id": "level-3",
   "name": "靛色窄缝",
   "speed": 330,
-  "duration": 64,
+  "duration": 55.6,
   "palette": "indigo",
   "obstacles": [
     {

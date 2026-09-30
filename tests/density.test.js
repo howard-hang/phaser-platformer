@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { LEVELS, LEVEL_UNLOCKS, levelTuning } from '../src/game/level.js';
-import { eventBreathCount, eventComboStats, levelMetrics } from '../src/game/metrics.js';
+import { FINISH_APPROACH_MAX, FINISH_APPROACH_MIN, eventBreathCount, eventComboStats, finishApproachSeconds, levelMetrics } from '../src/game/metrics.js';
 import { TUNING } from '../src/logic/world.js';
 import { auditLevel } from '../src/logic/audit.js';
 import { findClearPath } from '../src/logic/search.js';
@@ -15,7 +15,7 @@ function loadDef(index) {
 }
 
 describe('障碍加密', () => {
-  it('跑速、时长、重力和起跳都没变，解锁门槛也没变', () => {
+  it('跑速、重力和起跳都没变，解锁门槛也没变', () => {
     expect(TUNING.gravity).toBe(1700);
     expect(TUNING.jumpVelocity).toBe(-740);
     expect(baseline).toHaveLength(20);
@@ -28,8 +28,10 @@ describe('障碍加密', () => {
       expect(tuning.speed).toBe(before.speed);
       expect(tuning.gravity).toBe(TUNING.gravity);
       expect(tuning.jumpVelocity).toBe(TUNING.jumpVelocity);
-      expect(loadDef(i + 1).duration).toBe(before.duration);
       expect(loadDef(i + 1).name).toBe(before.name);
+      const approach = finishApproachSeconds(level, tuning);
+      expect(approach).toBeGreaterThanOrEqual(FINISH_APPROACH_MIN);
+      expect(approach).toBeLessThanOrEqual(FINISH_APPROACH_MAX);
     }
   });
 

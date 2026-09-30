@@ -51,6 +51,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    // 上一局的通关面板还挂在这个场景对象上。不丢掉的话，重排会打到已销毁的图形。
+    this.winUi = null;
     this.events.off('preupdate', this.restorePhysicsPose, this);
     this.events.off('preupdate', this.syncCourse, this);
     this.events.off('postupdate', this.extrapolatePlayerPose, this);
@@ -95,12 +97,15 @@ export class GameScene extends Phaser.Scene {
     this.scale.on('resize', this.applyViewport, this);
     this.events.once('shutdown', () => {
       this.scale.off('resize', this.applyViewport, this);
+      this.physics.world?.off('worldstep', this.onWorldStep, this);
+      this.winUi = null;
       // 场景拆掉时不要再重生，避免回调打到已经销毁的刚体上。
       this._deathToken += 1;
       this.deathFx?.cancel();
     });
     this.applyViewport();
 
+    this.physics.world.off('worldstep', this.onWorldStep, this);
     this.physics.world.on('worldstep', this.onWorldStep, this);
     // 场景对象会复用。再开一局时清掉上一局的显示坐标，并拆掉旧监听，避免把方块拉回终点。
     this._physicsPose = null;
@@ -123,7 +128,7 @@ export class GameScene extends Phaser.Scene {
 
   /** 刚体已经同步完，按剩余时间把方块画到两次物理步之间。 */
   extrapolatePlayerPose() {
-    if (this.dying) return;
+    if (this.dying || this.won) return;
     const body = this.player?.body;
     if (!body) return;
     const pose = {
@@ -539,8 +544,13 @@ export class GameScene extends Phaser.Scene {
     this.won = true;
     this.rotating = false;
     this.player.angle = 0;
-    this.player.body.setVelocity(0, 0);
-    this.player.body.setAllowGravity(false);
+    this._physicsPose = null;
+    // 过线后立刻停住。镜头不再跟着冲，弹框就在这一帧出现。
+    this.cameras.main.stopFollow();
+    const body = this.player.body;
+    body.setVelocity(0, 0);
+    body.setAllowGravity(false);
+    body.enable = false;
     getSynth().play('win');
     this.hud.setStats(this.run);
     // 先记下这一关的最高星，再判断下一关够不够解锁。

@@ -2,7 +2,7 @@
   "id": "level-2",
   "name": "紫晶连跳",
   "speed": 324,
-  "duration": 64,
+  "duration": 56.93,
   "palette": "violet",
   "obstacles": [
     {

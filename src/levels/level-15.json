@@ -2,7 +2,7 @@
   "id": "level-15",
   "name": "反转尖刺",
   "speed": 402,
-  "duration": 64,
+  "duration": 53.94,
   "palette": "sea",
   "obstacles": [
     {
@@ -327,7 +327,7 @@
       "lift": 0
     },
     {
-      "t": 60.6,
+      "t": 53.14,
       "lift": 0
     }
   ],

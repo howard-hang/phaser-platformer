@@ -2,7 +2,7 @@
   "id": "level-7",
   "name": "坠台连跳",
   "speed": 354,
-  "duration": 64,
+  "duration": 50.68,
   "palette": "amber",
   "obstacles": [
     {

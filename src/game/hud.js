@@ -2,7 +2,6 @@
  * 左上角计数和右上角按钮。按钮是圆形糖果键，图标用矢量贴图，不用 emoji。
  * 数字放在固定格子里，变长时不左右跳。位置按画面和刘海重排。
  */
-import Phaser from 'phaser';
 import { getSynth } from './audio.js';
 import { isNativeShell } from '../platform/androidBack.js';
 import { layoutHud, layoutWinPanel, nextFullscreenAction, shouldShowFullscreenButton } from './viewport.js';
@@ -181,14 +180,14 @@ function formatTime(ms) {
  * 星星按拿到的颗数逐个弹出。下一关还锁着时中间按钮不可点。
  */
 export function showWinPanel(scene, stats, actions) {
-  const panel = scene.add.graphics().setScrollFactor(0).setDepth(200);
+  const panel = scene.add.graphics().setScrollFactor(0).setDepth(200).setData('ui', true);
   const title = addCandyText(scene, 0, 0, `第 ${stats.index} 关通关`, {
     size: 36,
     color: PANEL.title,
     stroke: '#ffffff',
     strokeThickness: 5,
     shadow: true,
-  }).setDepth(210);
+  }).setScrollFactor(0).setDepth(210).setData('ui', true);
   const body = scene.add.text(0, 0, '', textStyle({
     size: 24,
     color: PANEL.body,
@@ -197,13 +196,14 @@ export function showWinPanel(scene, stats, actions) {
     align: 'center',
     lineSpacing: 6,
     shadow: false,
-  })).setOrigin(0.5).setScrollFactor(0).setDepth(210);
+  })).setOrigin(0.5).setScrollFactor(0).setDepth(210).setData('ui', true);
   const starIcons = [0, 1, 2].map((index) => {
     const earned = index < stats.stars;
     const icon = scene.add.image(0, 0, earned ? 'star' : 'ui-star-empty')
       .setDisplaySize(36, 36)
       .setScrollFactor(0)
-      .setDepth(212);
+      .setDepth(212)
+      .setData('ui', true);
     const targetScale = icon.scaleX;
     icon.setScale(0);
     scene.tweens.add({
@@ -248,17 +248,11 @@ export function showWinPanel(scene, stats, actions) {
     body,
     buttons,
     relayout(viewWidth, viewHeight, insets = { top: 0, right: 0, bottom: 0, left: 0 }) {
+      // 重开一局时面板图形已经拆掉，再 setInteractive 会读到空的 scene.sys，整关起不来。
+      if (!panel.scene?.sys || !panel.active) return;
       const layout = layoutWinPanel({ viewWidth, viewHeight, insets });
       paintCandyPanel(panel, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
-      if (!panel.input) {
-        panel.setInteractive(
-          new Phaser.Geom.Rectangle(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h),
-          Phaser.Geom.Rectangle.Contains,
-        );
-        panel.setData('ui', true);
-      } else {
-        panel.input.hitArea.setTo(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
-      }
+      // 面板本身不接点击。它一旦可点，会盖住按钮；通关后起跳已经被 won 挡住。
       title.setPosition(layout.title.x, layout.title.y);
       starIcons.forEach((icon, index) => {
         icon.setPosition(layout.stars.x + (index - 1) * 52, layout.stars.y);

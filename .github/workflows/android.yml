@@ -44,6 +44,9 @@ jobs:
       - name: 安装依赖并跑现有测试
         run: |
           npm ci
+          wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt-get update
+          sudo apt-get install -y /tmp/chrome.deb || (sudo apt-get install -y -f && sudo apt-get install -y /tmp/chrome.deb)
           npm test
 
       - name: 构建网页并同步进安卓工程

@@ -2,7 +2,7 @@
   "id": "level-9",
   "name": "开合之间",
   "speed": 366,
-  "duration": 64,
+  "duration": 49.88,
   "palette": "cyan",
   "obstacles": [
     {
@@ -260,7 +260,6 @@
   ],
   "checkpoints": [
     14.6,
-    35.4,
-    49.8
+    35.4
   ]
 }

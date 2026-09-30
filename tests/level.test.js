@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LEVELS, LEVEL_UNLOCKS, levelTuning } from '../src/game/level.js';
-import { levelMetrics } from '../src/game/metrics.js';
+import { FINISH_APPROACH_MAX, FINISH_APPROACH_MIN, finishApproachSeconds, levelMetrics } from '../src/game/metrics.js';
 import { TUNING } from '../src/logic/world.js';
 import { auditLevel } from '../src/logic/audit.js';
 import { findClearPath } from '../src/logic/search.js';
@@ -50,8 +50,11 @@ describe('二十关都能通关', () => {
     expect(result.ok, `${JSON.stringify({ ...result, at })}`).toBe(true);
     expect(result.stars).toBe(3);
     const duration = (level.finishX - level.startX) / level.speed;
-    expect(duration).toBeGreaterThanOrEqual(60);
+    expect(duration).toBeGreaterThanOrEqual(40);
     expect(duration).toBeLessThanOrEqual(90);
+    const approach = finishApproachSeconds(level, tuning);
+    expect(approach).toBeGreaterThanOrEqual(FINISH_APPROACH_MIN);
+    expect(approach).toBeLessThanOrEqual(FINISH_APPROACH_MAX);
   });
 });
 

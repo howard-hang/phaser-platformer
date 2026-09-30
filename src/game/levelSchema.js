@@ -45,7 +45,7 @@ export function validateLevel(level, file = 'level.json') {
     fail(file, 'name', '关卡名不能为空');
   }
   expectNumber(file, 'speed', level.speed, { min: 0, max: 520, exclusiveMin: true });
-  expectNumber(file, 'duration', level.duration, { min: 60, max: 90 });
+  expectNumber(file, 'duration', level.duration, { min: 40, max: 90 });
   if (typeof level.palette !== 'string' || !LEVEL_PALETTES.some((item) => item.id === level.palette)) {
     const known = LEVEL_PALETTES.map((item) => item.id).join('、');
     fail(file, 'palette', `未知配色 ${JSON.stringify(level.palette)}。可用：${known}`);

@@ -2,6 +2,11 @@
  * 给难度曲线用的指标。障碍物按展开后的个数计，三连尖刺算 3 个。
  * 平均间隔是相邻障碍中心的时间差，越密越小。
  */
+import { obstacleRect } from '../logic/world.js';
+
+/** 最后一个障碍右缘到终点的时间。大约 1 秒，给玩家看清终点门。 */
+export const FINISH_APPROACH_MIN = 1;
+export const FINISH_APPROACH_MAX = 1.25;
 
 const TYPE_LABEL = {
   spike: '尖刺',
@@ -12,6 +17,23 @@ const TYPE_LABEL = {
   crumble: '坠落平台',
   flip: '重力反转',
 };
+
+/** 终点门离最后一个障碍右缘还有几秒。反转区按出口算，门按关着的碰撞盒算。 */
+export function finishApproachSeconds(level, tuning) {
+  let lastX = -Infinity;
+  for (const obstacle of level.obstacles) {
+    if (obstacle.type === 'flip' || obstacle.type === 'crumble') {
+      lastX = Math.max(lastX, obstacle.x1);
+      continue;
+    }
+    const rect = obstacle.type === 'gate'
+      ? obstacleRect(obstacle, tuning, 0, { forceClosed: true })
+      : obstacleRect(obstacle, tuning, 0);
+    if (rect) lastX = Math.max(lastX, rect.x + rect.w);
+  }
+  if (!Number.isFinite(lastX)) return (level.finishX - level.startX) / tuning.speed;
+  return (level.finishX - lastX) / tuning.speed;
+}
 
 export function levelMetrics(level) {
   const duration = (level.finishX - level.startX) / level.speed;

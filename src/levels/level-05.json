@@ -2,7 +2,7 @@
   "id": "level-5",
   "name": "夜紫疾走",
   "speed": 342,
-  "duration": 64,
+  "duration": 56.17,
   "palette": "night",
   "obstacles": [
     {
