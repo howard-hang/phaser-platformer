@@ -8,177 +8,177 @@
     {
       "t": 2.15,
       "type": "spike",
-      "count": 1
+      "count": 3
     },
     {
-      "t": 3.64,
+      "t": 3.65,
       "type": "spike",
-      "count": 2
+      "count": 3
     },
     {
-      "t": 5.13,
+      "t": 5.15,
       "type": "block"
     },
     {
-      "t": 8.78,
+      "t": 8.68,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 9.5,
+      "t": 9.23,
       "type": "spike",
-      "count": 2
+      "count": 3
     },
     {
-      "t": 10.99,
+      "t": 10.73,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 11.77,
+      "t": 11.28,
       "type": "spike",
-      "count": 2
+      "count": 3
     },
     {
-      "t": 15.29,
+      "t": 14.69,
       "type": "spike",
-      "count": 2
+      "count": 3
     },
     {
-      "t": 16.78,
+      "t": 16.19,
       "type": "block"
     },
     {
-      "t": 18.27,
+      "t": 17.69,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 21.14,
+      "t": 20.47,
       "type": "spike",
-      "count": 2
+      "count": 3
     },
     {
-      "t": 22.64,
+      "t": 21.97,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 23.42,
+      "t": 22.75,
       "type": "spike",
-      "count": 2
+      "count": 3
     },
     {
-      "t": 24.79,
+      "t": 23.86,
       "type": "spike",
-      "count": 2
+      "count": 3
     },
     {
-      "t": 28.43,
+      "t": 27.38,
       "type": "block"
     },
     {
-      "t": 29.92,
+      "t": 28.88,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 30.64,
+      "t": 29.6,
       "type": "spike",
-      "count": 2
+      "count": 3
     },
     {
-      "t": 34.29,
+      "t": 33.13,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 35.07,
+      "t": 33.91,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 35.02,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 36.44,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 37.93,
+      "t": 36.52,
       "type": "block"
     },
     {
-      "t": 41.57,
+      "t": 40.04,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 42.29,
+      "t": 40.76,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 43.78,
+      "t": 42.26,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 44.56,
+      "t": 43.04,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 48.09,
+      "t": 46.45,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 49.58,
+      "t": 47.95,
       "type": "block"
     },
     {
-      "t": 51.07,
+      "t": 49.45,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 53.94,
+      "t": 52.23,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 55.43,
+      "t": 53.73,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 56.21,
+      "t": 54.51,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 57.59,
+      "t": 55.63,
       "type": "spike",
       "count": 2
     }
   ],
   "stars": [
     {
-      "t": 1.15,
+      "t": 3.1,
       "lift": 0
     },
     {
-      "t": 23.47,
-      "lift": 70
+      "t": 26.85,
+      "lift": 0
     },
     {
-      "t": 44.62,
-      "lift": 98
+      "t": 45.85,
+      "lift": 0
     }
   ],
   "checkpoints": [
-    12.8,
-    24.35,
-    35.9,
-    47
+    12.2,
+    24.6,
+    35.8,
+    47.4
   ]
 }

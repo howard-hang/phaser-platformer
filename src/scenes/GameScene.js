@@ -1,7 +1,7 @@
 /**
  * 自动跑酷关卡。
  * 方块匀速向右，点按或空格起跳，空中转满一圈后落地。
- * 碰到尖刺或方块立刻回到最近的存档点。
+ * 碰到尖刺或方块会碎开，镜头轻震、画面白闪，半秒内回到最近的存档点。
  */
 import Phaser from 'phaser';
 import { LEVELS, getLevel, levelTuning, nextLevel } from '../game/level.js';
@@ -12,6 +12,7 @@ import {
   scrollParallax,
   tintParallax,
 } from '../game/backdrop.js';
+import { createDeathFx } from '../game/deathFx.js';
 import { displayPose } from '../game/motion.js';
 import { THEME, LEVEL_PALETTES } from '../game/theme.js';
 import { textStyle } from '../game/candy.js';
@@ -65,6 +66,8 @@ export class GameScene extends Phaser.Scene {
     this.airMs = 0;
     this.elapsedMs = 0;
     this.invulnUntil = 0;
+    this.dying = false;
+    this._deathToken = 0;
     this.activeCheckpoint = this.level.checkpoints[0];
     this.airTimeMs = sampleJump().airTime * 1000;
     this._insets = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -81,6 +84,7 @@ export class GameScene extends Phaser.Scene {
     this.hud = createHud(this, {
       onHome: () => this.scene.start('select'),
     });
+    this.deathFx = createDeathFx(this);
     this.levelLabel = this.add.text(0, 0, `第 ${this.level.index} 关  ${this.level.name}`, textStyle({
       size: 20,
       color: '#ffffff',
@@ -91,6 +95,9 @@ export class GameScene extends Phaser.Scene {
     this.scale.on('resize', this.applyViewport, this);
     this.events.once('shutdown', () => {
       this.scale.off('resize', this.applyViewport, this);
+      // 场景拆掉时不要再重生，避免回调打到已经销毁的刚体上。
+      this._deathToken += 1;
+      this.deathFx?.cancel();
     });
     this.applyViewport();
 
@@ -116,6 +123,7 @@ export class GameScene extends Phaser.Scene {
 
   /** 刚体已经同步完，按剩余时间把方块画到两次物理步之间。 */
   extrapolatePlayerPose() {
+    if (this.dying) return;
     const body = this.player?.body;
     if (!body) return;
     const pose = {
@@ -397,7 +405,7 @@ export class GameScene extends Phaser.Scene {
 
   /** 只有贴着地面或天花板才起跳。反转区里起跳速度反过来，大小不变。 */
   tryJump() {
-    if (this.won || this.time.now < this.invulnUntil) return;
+    if (this.won || this.dying || this.time.now < this.invulnUntil) return;
     if (!this.isGrounded()) return;
     const launch = this._inFlip ? -TUNING.jumpVelocity : TUNING.jumpVelocity;
     this.player.body.setVelocityY(launch);
@@ -425,14 +433,38 @@ export class GameScene extends Phaser.Scene {
   }
 
   onHazard() {
-    if (this.won || this.time.now < this.invulnUntil) return;
-    this.invulnUntil = this.time.now + 80;
+    if (this.won || this.dying || this.time.now < this.invulnUntil) return;
+    this.dying = true;
     this.run = noteDeath(this.run);
     this.activeCheckpoint = pickCheckpoint(this.level.checkpoints, this.player.x);
     this.rotating = false;
     this.airMs = 0;
     this.player.angle = 0;
+    const x = this.player.x;
+    const y = this.player.y;
+    // 方块先藏起来，碎片从原来的位置炸开。刚体停住，避免特效期间又撞上别的障碍。
+    this.player.setVisible(false);
+    this.player.body.enable = false;
+    this.player.body.setVelocity(0, 0);
+    this.player.body.setAllowGravity(false);
+    getSynth().play('death');
+    // 死亡只播碎裂音效。背景音乐继续当前进度，不从头开始。
+    this.hud.setStats(this.run);
+    const token = this._deathToken;
+    const started = this.deathFx.play(x, y, () => {
+      if (token !== this._deathToken || !this.player?.body) return;
+      this.finishDeath();
+    });
+    // 特效没播起来就不要把人留在半空，直接重生。
+    if (!started) this.finishDeath();
+  }
+
+  /** 碎裂结束，立刻回到死亡时选好的存档点。 */
+  finishDeath() {
     const y = playerGroundY();
+    this.player.setVisible(true);
+    this.player.body.enable = true;
+    this.player.body.setAllowGravity(true);
     this.player.body.reset(this.activeCheckpoint, y);
     // reset 把碰撞盒放在贴图左上角，这里再对齐偏移，并清掉本帧位移，避免落地后被挤穿地面。
     this.player.body.updateFromGameObject();
@@ -441,9 +473,12 @@ export class GameScene extends Phaser.Scene {
     this.player.body.setVelocity(this.tuning.speed, 0);
     this.player.body.setGravityY(0);
     this._inFlip = false;
-    getSynth().play('death');
-    // 死亡只播音效。背景音乐继续当前进度，不从头开始。
-    this.hud.setStats(this.run);
+    this.rotating = false;
+    this.airMs = 0;
+    this.player.angle = 0;
+    this._physicsPose = null;
+    this.dying = false;
+    this.invulnUntil = this.time.now + 120;
   }
 
   onStar(star) {
@@ -458,7 +493,9 @@ export class GameScene extends Phaser.Scene {
 
   update(_time, delta) {
     this.suppressJump = false;
-    if (!this.player || this.won) return;
+    this.deathFx?.update(delta);
+    // 碎裂的这半秒里方块停在原地，特效结束再继续跑。
+    if (!this.player || this.won || this.dying) return;
 
     this.elapsedMs += delta;
     this.stickToCeiling();
@@ -556,6 +593,7 @@ export class GameScene extends Phaser.Scene {
     this._insets = insets;
     layoutParallax(this.parallax, viewW, viewH, scrollY);
     this.hud?.relayout({ viewWidth: viewW, viewHeight: viewH, insets });
+    this.deathFx?.layoutFlash();
     this.levelLabel?.setPosition(viewW / 2, viewH - (insets.bottom || 0) - 18);
     this.winUi?.relayout(viewW, viewH, insets);
     this.syncBackdrop();

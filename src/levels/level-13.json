@@ -14,7 +14,7 @@
     {
       "t": 3.01,
       "type": "spike",
-      "count": 1
+      "count": 4
     },
     {
       "t": 3.88,
@@ -31,273 +31,319 @@
     {
       "t": 5.89,
       "type": "spike",
-      "count": 1
+      "count": 4
     },
     {
       "t": 6.71,
       "type": "spike",
-      "count": 1
+      "count": 4
     },
     {
-      "t": 7.54,
+      "t": 7.26,
       "type": "spike",
-      "count": 2
+      "count": 4
     },
     {
-      "t": 8.36,
+      "t": 8.08,
       "type": "flip",
       "span": 3.55
     },
     {
-      "t": 9.55,
+      "t": 9.27,
       "type": "spike",
-      "count": 1
+      "count": 4
     },
     {
-      "t": 9.56,
-      "type": "spike",
-      "anchor": "ceiling",
-      "count": 1
-    },
-    {
-      "t": 10.71,
+      "t": 9.28,
       "type": "spike",
       "anchor": "ceiling",
       "count": 1
     },
     {
-      "t": 11.8,
+      "t": 10.43,
       "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 12.88,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 14.07,
-      "type": "block"
-    },
-    {
-      "t": 15.25,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 15.97,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 17.15,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 17.93,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 18.74,
-      "type": "spike",
+      "anchor": "ceiling",
       "count": 1
     },
     {
-      "t": 19.55,
+      "t": 11.52,
       "type": "spike",
-      "count": 2
+      "count": 4
     },
     {
-      "t": 20.36,
-      "type": "spike",
-      "count": 1
-    },
-    {
-      "t": 21.17,
+      "t": 12.6,
       "type": "spike",
       "count": 3
     },
     {
-      "t": 22.36,
+      "t": 13.05,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 13.6,
       "type": "block"
     },
     {
-      "t": 23.54,
+      "t": 14.05,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 14.6,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 15.15,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 15.6,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 16.15,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 16.7,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 17.51,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 18.32,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 19.13,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 19.94,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 20.39,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 21.13,
+      "type": "block"
+    },
+    {
+      "t": 21.58,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 22.31,
       "type": "crumble",
       "span": 1.18,
       "delay": 0.52
     },
     {
-      "t": 24.41,
+      "t": 23.18,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 25.27,
+      "t": 24.04,
       "type": "gate",
       "period": 1.4,
       "open": 0.62,
       "phase": 0.98
     },
     {
-      "t": 26.46,
+      "t": 25.23,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 27.32,
+      "t": 26.09,
       "type": "gate",
       "period": 1.4,
       "open": 0.62,
       "phase": 0.33
     },
     {
-      "t": 28.13,
+      "t": 26.9,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 28.94,
+      "t": 27.71,
       "type": "spike",
       "count": 1
     },
     {
-      "t": 30.55,
+      "t": 29.21,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 31.33,
+      "t": 29.99,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 32.42,
+      "t": 31.08,
       "type": "spike",
       "count": 1
     },
     {
-      "t": 33.61,
+      "t": 31.53,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 32.27,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 34.79,
+      "t": 32.72,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 33.45,
       "type": "block"
     },
     {
-      "t": 35.98,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 37.42,
+      "t": 33.9,
       "type": "spike",
       "count": 1
     },
     {
-      "t": 38.85,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 40.03,
+      "t": 34.64,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 40.81,
+      "t": 36.14,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 37.64,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 41.9,
+      "t": 38.09,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 38.82,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 39.6,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 40.69,
       "type": "spike",
       "count": 3
     },
     {
-      "t": 43.08,
+      "t": 41.87,
       "type": "block"
     },
     {
-      "t": 44.27,
+      "t": 43.06,
       "type": "crumble",
       "span": 1.18,
       "delay": 0.52
     },
     {
-      "t": 45.24,
+      "t": 44.03,
       "type": "spike",
       "count": 1
     },
     {
-      "t": 46.21,
+      "t": 45,
       "type": "spike",
       "count": 1
     },
     {
-      "t": 47.18,
+      "t": 45.97,
       "type": "spike",
       "count": 1
     },
     {
-      "t": 48.15,
+      "t": 46.94,
       "type": "gate",
       "period": 1.4,
       "open": 0.62,
-      "phase": 0.5
+      "phase": 0.48
     },
     {
-      "t": 49.33,
+      "t": 48.12,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 50.19,
+      "t": 48.98,
       "type": "gate",
       "period": 1.4,
       "open": 0.62,
-      "phase": -0.14
+      "phase": -0.16
     },
     {
-      "t": 51.28,
+      "t": 50.07,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 52.06,
+      "t": 50.85,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 53.15,
+      "t": 51.94,
       "type": "spike",
       "count": 1
     },
     {
-      "t": 54.33,
+      "t": 53.12,
       "type": "spike",
       "count": 2
     }
   ],
   "stars": [
     {
-      "t": 1.15,
+      "t": 1.6,
       "lift": 0
     },
     {
-      "t": 32.47,
-      "lift": 70
+      "t": 28.6,
+      "lift": 0
     },
     {
-      "t": 41.96,
-      "lift": 98
+      "t": 54.1,
+      "lift": 0
     }
   ],
   "checkpoints": [
-    29.75,
-    36.8
+    28.6,
+    35.4,
+    54.2
   ]
 }

@@ -7,6 +7,7 @@ import {
   playbackPositionAfterRetry,
   readMutedFlag,
   saveMutePreference,
+  canPlaySfx,
   shouldCreateAudio,
   writeMutedFlag,
 } from '../src/game/audioPolicy.js';
@@ -62,6 +63,13 @@ describe('音乐和声音开关', () => {
   it('死亡重来不把音乐拨回开头', () => {
     expect(playbackPositionAfterRetry(12.5)).toBe(12.5);
     expect(playbackPositionAfterRetry(0)).toBe(0);
+  });
+
+  it('静音时碎裂音效和其他音效一起关掉', () => {
+    expect(canPlaySfx({ muted: true, appActive: true, hasContext: true })).toBe(false);
+    expect(canPlaySfx({ muted: false, appActive: false, hasContext: true })).toBe(false);
+    expect(canPlaySfx({ muted: false, appActive: true, hasContext: false })).toBe(false);
+    expect(canPlaySfx({ muted: false, appActive: true, hasContext: true })).toBe(true);
   });
 
   it('第一次交互之前不创建音频', () => {
