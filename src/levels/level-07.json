@@ -1,0 +1,216 @@
+{
+  "id": "level-7",
+  "name": "坠台连跳",
+  "speed": 354,
+  "duration": 64,
+  "palette": "amber",
+  "obstacles": [
+    {
+      "t": 2.15,
+      "type": "crumble",
+      "span": 1.18,
+      "delay": 0.52
+    },
+    {
+      "t": 3.88,
+      "type": "block"
+    },
+    {
+      "t": 5.23,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 5.95,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 9.45,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 10.23,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 11.48,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 12.83,
+      "type": "block"
+    },
+    {
+      "t": 14.18,
+      "type": "crumble",
+      "span": 1.18,
+      "delay": 0.52
+    },
+    {
+      "t": 16.12,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 18.06,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 19.41,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 20.77,
+      "type": "block"
+    },
+    {
+      "t": 22.12,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 24.99,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 26.34,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 27.12,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 28.36,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 29.72,
+      "type": "block"
+    },
+    {
+      "t": 31.47,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 33.22,
+      "type": "crumble",
+      "span": 1.18,
+      "delay": 0.52
+    },
+    {
+      "t": 34.95,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 36.3,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 37.65,
+      "type": "block"
+    },
+    {
+      "t": 39.4,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 41.15,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 41.87,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 43.23,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 44.01,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 45.25,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 47,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 48.75,
+      "type": "block"
+    },
+    {
+      "t": 50.1,
+      "type": "crumble",
+      "span": 1.18,
+      "delay": 0.52
+    },
+    {
+      "t": 51.83,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 53.19,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 56.69,
+      "type": "block"
+    },
+    {
+      "t": 58.04,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 58.76,
+      "type": "spike",
+      "count": 2
+    }
+  ],
+  "stars": [
+    {
+      "t": 1.15,
+      "lift": 0
+    },
+    {
+      "t": 27.17,
+      "lift": 70
+    },
+    {
+      "t": 45.31,
+      "lift": 98
+    }
+  ],
+  "checkpoints": [
+    11,
+    23,
+    38.6,
+    47.9
+  ]
+}

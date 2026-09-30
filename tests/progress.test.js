@@ -21,13 +21,20 @@ function memoryStorage() {
 }
 
 describe('星星解锁', () => {
-  it('解锁门槛是 0、2、4、7、10', () => {
-    expect(LEVEL_UNLOCKS.map((row) => row.stars)).toEqual([0, 2, 4, 7, 10]);
+  it('解锁门槛按前面关卡满星的三分之二递增', () => {
+    expect(LEVEL_UNLOCKS).toHaveLength(20);
+    expect(LEVEL_UNLOCKS[0].stars).toBe(0);
+    for (let i = 1; i < LEVEL_UNLOCKS.length; i += 1) {
+      const previousCap = i * 3;
+      const need = LEVEL_UNLOCKS[i].stars;
+      expect(need).toBeGreaterThan(LEVEL_UNLOCKS[i - 1].stars);
+      expect(need / previousCap).toBeGreaterThanOrEqual(0.6);
+      expect(need / previousCap).toBeLessThanOrEqual(0.7);
+    }
     expect(starsRequired('level-1')).toBe(0);
     expect(starsRequired('level-2')).toBe(2);
-    expect(starsRequired('level-3')).toBe(4);
-    expect(starsRequired('level-4')).toBe(7);
-    expect(starsRequired('level-5')).toBe(10);
+    expect(starsRequired('level-5')).toBe(8);
+    expect(starsRequired('level-20')).toBe(38);
   });
 
   it('新存档只能进第 1 关', () => {
@@ -35,7 +42,7 @@ describe('星星解锁', () => {
     expect(isLevelUnlocked(progress, 'level-1')).toBe(true);
     expect(isLevelUnlocked(progress, 'level-2')).toBe(false);
     expect(starsToUnlock(progress, 'level-2')).toBe(2);
-    expect(starsToUnlock(progress, 'level-5')).toBe(10);
+    expect(starsToUnlock(progress, 'level-5')).toBe(8);
     expect(totalBestStars(progress)).toBe(0);
   });
 
@@ -58,14 +65,14 @@ describe('星星解锁', () => {
     expect(isLevelUnlocked(progress, 'level-3')).toBe(true);
     expect(isLevelUnlocked(progress, 'level-4')).toBe(false);
 
-    progress = recordClear(progress, 'level-3', 3);
-    expect(totalBestStars(progress)).toBe(7);
+    progress = recordClear(progress, 'level-3', 2);
+    expect(totalBestStars(progress)).toBe(6);
     expect(isLevelUnlocked(progress, 'level-4')).toBe(true);
     expect(isLevelUnlocked(progress, 'level-5')).toBe(false);
-    expect(starsToUnlock(progress, 'level-5')).toBe(3);
+    expect(starsToUnlock(progress, 'level-5')).toBe(2);
 
-    progress = recordClear(progress, 'level-4', 3);
-    expect(totalBestStars(progress)).toBe(10);
+    progress = recordClear(progress, 'level-4', 2);
+    expect(totalBestStars(progress)).toBe(8);
     expect(isLevelUnlocked(progress, 'level-5')).toBe(true);
   });
 
@@ -74,6 +81,7 @@ describe('星星解锁', () => {
     progress = recordClear(progress, 'level-1', 3);
     expect(totalBestStars(progress)).toBe(3);
     expect(isLevelUnlocked(progress, 'level-5')).toBe(false);
+    expect(isLevelUnlocked(progress, 'level-20')).toBe(false);
   });
 
   it('单关最多记 3 颗，非法星数忽略', () => {
@@ -115,11 +123,24 @@ describe('星星存档', () => {
     expect(loadProgress(junk)).toEqual({ best: {} });
 
     const dirty = {
-      getItem: () => JSON.stringify({ best: { 'level-1': 2.8, 'level-9': 3, nope: 5 } }),
+      getItem: () => JSON.stringify({ best: { 'level-1': 2.8, 'level-99': 3, nope: 5 } }),
       setItem() {},
     };
     const loaded = loadProgress(dirty);
     expect(bestStars(loaded, 'level-1')).toBe(2);
     expect(totalBestStars(loaded)).toBe(2);
+  });
+
+  it('旧的五关存档还能读，星数不会丢', () => {
+    const storage = memoryStorage();
+    storage.setItem('fangkuai-paoku-progress', JSON.stringify({
+      best: { 'level-1': 3, 'level-2': 2, 'level-3': 1, 'level-4': 3, 'level-5': 2 },
+    }));
+    const loaded = loadProgress(storage);
+    expect(bestStars(loaded, 'level-1')).toBe(3);
+    expect(bestStars(loaded, 'level-5')).toBe(2);
+    expect(totalBestStars(loaded)).toBe(11);
+    expect(isLevelUnlocked(loaded, 'level-6')).toBe(true);
+    expect(isLevelUnlocked(loaded, 'level-7')).toBe(false);
   });
 });

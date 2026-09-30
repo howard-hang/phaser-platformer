@@ -1,0 +1,325 @@
+{
+  "id": "level-17",
+  "name": "三重机关",
+  "speed": 414,
+  "duration": 64,
+  "palette": "slate",
+  "obstacles": [
+    {
+      "t": 2.15,
+      "type": "crumble",
+      "span": 1.18,
+      "delay": 0.52
+    },
+    {
+      "t": 3.01,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 3.88,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": -0.03
+    },
+    {
+      "t": 4.95,
+      "type": "flip",
+      "span": 2.35
+    },
+    {
+      "t": 5.78,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 6.6,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 7.43,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 8.25,
+      "type": "flip",
+      "span": 3.55
+    },
+    {
+      "t": 9.32,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 9.45,
+      "type": "spike",
+      "anchor": "ceiling",
+      "count": 1
+    },
+    {
+      "t": 9.8,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 10.4,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 10.6,
+      "type": "spike",
+      "anchor": "ceiling",
+      "count": 2
+    },
+    {
+      "t": 11.18,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 12.75,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 14.31,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 15.38,
+      "type": "block"
+    },
+    {
+      "t": 16.46,
+      "type": "crumble",
+      "span": 1.18,
+      "delay": 0.52
+    },
+    {
+      "t": 17.33,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 18.19,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": -0.34
+    },
+    {
+      "t": 19.26,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 20.12,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": 0.53
+    },
+    {
+      "t": 21.1,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 21.88,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 23.45,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 25.02,
+      "type": "crumble",
+      "span": 1.18,
+      "delay": 0.52
+    },
+    {
+      "t": 25.89,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 26.75,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 27.61,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": 0.04
+    },
+    {
+      "t": 28.6,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 29.67,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 30.74,
+      "type": "block"
+    },
+    {
+      "t": 31.81,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 33.24,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 34.68,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 35.75,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 36.53,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 37.52,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 38.59,
+      "type": "block"
+    },
+    {
+      "t": 39.67,
+      "type": "crumble",
+      "span": 1.18,
+      "delay": 0.52
+    },
+    {
+      "t": 40.53,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 41.4,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": 0.25
+    },
+    {
+      "t": 42.21,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 43.01,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 44.62,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 45.48,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": 0.37
+    },
+    {
+      "t": 46.46,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 47.24,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 48.23,
+      "type": "crumble",
+      "span": 1.18,
+      "delay": 0.52
+    },
+    {
+      "t": 49.1,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 49.96,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 50.82,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": 0.63
+    },
+    {
+      "t": 51.81,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 52.88,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 54.49,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 56.1,
+      "type": "block"
+    }
+  ],
+  "stars": [
+    {
+      "t": 1.15,
+      "lift": 0
+    },
+    {
+      "t": 34.73,
+      "lift": 70
+    },
+    {
+      "t": 47.3,
+      "lift": 98
+    }
+  ],
+  "checkpoints": [
+    12.35,
+    23,
+    53.75
+  ]
+}

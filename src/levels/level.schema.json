@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://phaser-platformer.local/level.schema.json",
+  "title": "方块跑酷关卡",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "speed", "duration", "palette", "obstacles", "stars", "checkpoints"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^level-[1-9][0-9]*$" },
+    "name": { "type": "string", "minLength": 1 },
+    "speed": { "type": "number", "exclusiveMinimum": 0, "maximum": 520 },
+    "duration": { "type": "number", "minimum": 60, "maximum": 90 },
+    "palette": { "type": "string", "minLength": 1 },
+    "obstacles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/obstacle" }
+    },
+    "stars": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/star" }
+    },
+    "checkpoints": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0 }
+    }
+  },
+  "$defs": {
+    "obstacle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["t", "type"],
+      "properties": {
+        "t": { "type": "number", "minimum": 0 },
+        "type": { "enum": ["spike", "block", "overhead", "crumble", "gate", "flip"] },
+        "count": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "anchor": { "enum": ["floor", "ceiling"] },
+        "gap": { "type": "number", "minimum": 48, "maximum": 120 },
+        "span": { "type": "number", "exclusiveMinimum": 0, "maximum": 8 },
+        "delay": { "type": "number", "exclusiveMinimum": 0, "maximum": 3 },
+        "period": { "type": "number", "exclusiveMinimum": 0.2, "maximum": 6 },
+        "open": { "type": "number", "exclusiveMinimum": 0, "maximum": 6 },
+        "phase": { "type": "number" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "crumble" } } },
+          "then": { "required": ["span", "delay"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "gate" } } },
+          "then": { "required": ["period", "open"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "flip" } } },
+          "then": { "required": ["span"] }
+        }
+      ]
+    },
+    "star": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["t"],
+      "properties": {
+        "t": { "type": "number", "minimum": 0 },
+        "lift": { "type": "number", "minimum": 0, "maximum": 200 },
+        "dx": { "type": "number" }
+      }
+    }
+  }
+}

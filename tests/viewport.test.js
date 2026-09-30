@@ -3,6 +3,7 @@ import {
   computeExpandSize,
   cssInsetsToGame,
   layoutHud,
+  layoutLevelBoard,
   layoutLevelSelect,
   nextFullscreenAction,
   shouldShowFullscreenButton,
@@ -157,4 +158,119 @@ describe('全屏按钮和安全区', () => {
       expect(layout.rows[i].y).toBeGreaterThanOrEqual(layout.rows[i - 1].y + layout.rows[i - 1].h);
     }
   });
+
+  it('二十关分页后卡片仍让开安全区，并且够手指点', () => {
+    const layout = layoutLevelBoard({
+      viewWidth: 960,
+      viewHeight: 540,
+      insets: { top: 28, right: 24, bottom: 18, left: 32 },
+      count: 20,
+      page: 0,
+    });
+    expect(layout.pages).toBeGreaterThan(1);
+    expect(layout.cells.length).toBeGreaterThan(0);
+    expect(layout.cells.length).toBeLessThan(20);
+    for (const cell of layout.cells) {
+      expect(cell.x).toBeGreaterThanOrEqual(32);
+      expect(cell.x + cell.w).toBeLessThanOrEqual(960 - 24);
+      expect(cell.y).toBeGreaterThanOrEqual(28);
+      expect(cell.h).toBeGreaterThanOrEqual(64);
+    }
+    const next = layoutLevelBoard({
+      viewWidth: 960,
+      viewHeight: 540,
+      insets: { top: 28, right: 24, bottom: 18, left: 32 },
+      count: 20,
+      page: 1,
+    });
+    const seen = new Set(layout.cells.map((cell) => cell.index));
+    for (const cell of next.cells) expect(seen.has(cell.index)).toBe(false);
+    expect(layout.back.y).toBeLessThanOrEqual(540 - 18);
+    expect(layout.prev.x).toBeGreaterThanOrEqual(32);
+    expect(layout.next.x).toBeLessThanOrEqual(960 - 24);
+  });
+
+  it('页码在上一页和下一页之间，并且不压到标题、星星、卡片和按钮', () => {
+    const screens = [
+      [1280, 720],
+      [2400, 1080],
+      [1024, 768],
+      [800, 700],
+      [800, 800],
+    ];
+    for (const [screenW, screenH] of screens) {
+      const size = computeExpandSize(960, 540, screenW, screenH);
+      const layout = layoutLevelBoard({
+        viewWidth: size.gameWidth,
+        viewHeight: size.gameHeight,
+        count: 20,
+        page: 0,
+      });
+      const hud = layoutHud({
+        viewWidth: size.gameWidth,
+        viewHeight: size.gameHeight,
+        showHome: true,
+        showFullscreen: true,
+        showFps: true,
+      });
+      const title = centerBox(layout.title);
+      const total = centerBox(layout.total);
+      const page = centerBox(layout.pageLabel);
+      const prev = centerBox(layout.prev);
+      const next = centerBox(layout.next);
+      const back = centerBox(layout.back);
+      const fps = cornerBox(hud.fps);
+      expect(overlaps(title, total), `${screenW}x${screenH} 标题和星星`).toBe(false);
+      expect(overlaps(page, title), `${screenW}x${screenH} 页码和标题`).toBe(false);
+      expect(overlaps(page, total), `${screenW}x${screenH} 页码和星星`).toBe(false);
+      expect(overlaps(page, prev), `${screenW}x${screenH} 页码和上一页`).toBe(false);
+      expect(overlaps(page, next), `${screenW}x${screenH} 页码和下一页`).toBe(false);
+      expect(overlaps(page, back), `${screenW}x${screenH} 页码和返回`).toBe(false);
+      expect(page.l).toBeGreaterThan(prev.r);
+      expect(page.r).toBeLessThan(next.l);
+      expect(page.b).toBeLessThan(back.t);
+      for (const cell of layout.cells) {
+        const card = cornerBox(cell);
+        expect(overlaps(card, page), `${screenW}x${screenH} 卡片和页码`).toBe(false);
+        expect(overlaps(card, prev), `${screenW}x${screenH} 卡片和上一页`).toBe(false);
+        expect(overlaps(card, next), `${screenW}x${screenH} 卡片和下一页`).toBe(false);
+        expect(overlaps(card, back), `${screenW}x${screenH} 卡片和返回`).toBe(false);
+        expect(overlaps(card, title), `${screenW}x${screenH} 卡片和标题`).toBe(false);
+        expect(overlaps(card, total), `${screenW}x${screenH} 卡片和星星`).toBe(false);
+      }
+      expect(overlaps(fps, prev), `${screenW}x${screenH} fps 和上一页`).toBe(false);
+      expect(overlaps(fps, next), `${screenW}x${screenH} fps 和下一页`).toBe(false);
+      expect(overlaps(fps, back), `${screenW}x${screenH} fps 和返回`).toBe(false);
+      expect(overlaps(fps, page), `${screenW}x${screenH} fps 和页码`).toBe(false);
+      expect(overlaps(fps, title), `${screenW}x${screenH} fps 和标题`).toBe(false);
+      const score = cornerBox({ ...hud.score, w: 180, h: 28 });
+      expect(overlaps(fps, score), `${screenW}x${screenH} fps 和分数`).toBe(false);
+      for (const button of [hud.sound, hud.fullscreen, hud.home]) {
+        const box = centerBox({ ...button, w: 88, h: 88 });
+        expect(overlaps(fps, box), `${screenW}x${screenH} fps 和右上角按钮`).toBe(false);
+      }
+    }
+  });
 });
+
+function centerBox(item) {
+  return {
+    l: item.x - item.w / 2,
+    r: item.x + item.w / 2,
+    t: item.y - item.h / 2,
+    b: item.y + item.h / 2,
+  };
+}
+
+function cornerBox(item) {
+  return {
+    l: item.x,
+    r: item.x + item.w,
+    t: item.y,
+    b: item.y + item.h,
+  };
+}
+
+function overlaps(a, b) {
+  return a.l < b.r - 0.5 && a.r > b.l + 0.5 && a.t < b.b - 0.5 && a.b > b.t + 0.5;
+}

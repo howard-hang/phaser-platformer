@@ -1,0 +1,184 @@
+{
+  "id": "level-2",
+  "name": "紫晶连跳",
+  "speed": 324,
+  "duration": 64,
+  "palette": "violet",
+  "obstacles": [
+    {
+      "t": 2.15,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 3.64,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 5.13,
+      "type": "block"
+    },
+    {
+      "t": 8.78,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 9.5,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 10.99,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 11.77,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 15.29,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 16.78,
+      "type": "block"
+    },
+    {
+      "t": 18.27,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 21.14,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 22.64,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 23.42,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 24.79,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 28.43,
+      "type": "block"
+    },
+    {
+      "t": 29.92,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 30.64,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 34.29,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 35.07,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 36.44,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 37.93,
+      "type": "block"
+    },
+    {
+      "t": 41.57,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 42.29,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 43.78,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 44.56,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 48.09,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 49.58,
+      "type": "block"
+    },
+    {
+      "t": 51.07,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 53.94,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 55.43,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 56.21,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 57.59,
+      "type": "spike",
+      "count": 2
+    }
+  ],
+  "stars": [
+    {
+      "t": 1.15,
+      "lift": 0
+    },
+    {
+      "t": 23.47,
+      "lift": 70
+    },
+    {
+      "t": 44.62,
+      "lift": 98
+    }
+  ],
+  "checkpoints": [
+    12.8,
+    24.35,
+    35.9,
+    47
+  ]
+}

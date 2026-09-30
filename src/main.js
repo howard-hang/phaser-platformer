@@ -9,9 +9,10 @@ import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { SelectScene } from './scenes/SelectScene.js';
 import { GameScene } from './scenes/GameScene.js';
+import { ErrorScene } from './scenes/ErrorScene.js';
 import { bindAndroidBack } from './platform/androidBack.js';
 import { bindAudioLifecycle, getSynth } from './game/audio.js';
-import { applyViewportFill } from './game/viewport.js';
+import { applyViewportFill, cssInsetsToGame, layoutHud, readSafeAreaInsets } from './game/viewport.js';
 
 const config = {
   type: Phaser.AUTO,
@@ -47,10 +48,33 @@ const config = {
     // 不限制渲染帧率，跟浏览器刷新率走。物理仍用上面的 60Hz 固定步长，手感不变。
     limit: 0,
   },
-  scene: [BootScene, MenuScene, SelectScene, GameScene],
+  scene: [BootScene, MenuScene, SelectScene, GameScene, ErrorScene],
 };
 
-/** 网址带 ?fps 时在左下角显示 Phaser 统计的帧率，方便对照刷新率。 */
+/** 把帧率徽章钉进左上角预留的游戏像素槽，避开选关底栏和右上角按钮。 */
+function placeFpsMeter(game, meter) {
+  const canvas = game.canvas;
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const viewW = game.scale?.width;
+  const viewH = game.scale?.height;
+  if (!rect.width || !rect.height || !viewW || !viewH) return;
+  const insets = cssInsetsToGame(readSafeAreaInsets(), game.scale.displayScale);
+  const slot = layoutHud({
+    viewWidth: viewW,
+    viewHeight: viewH,
+    insets,
+    showFps: true,
+  }).fps;
+  const scaleX = rect.width / viewW;
+  const scaleY = rect.height / viewH;
+  meter.style.left = `${rect.left + slot.x * scaleX}px`;
+  meter.style.top = `${rect.top + slot.y * scaleY}px`;
+  meter.style.bottom = 'auto';
+  meter.style.fontSize = `${Math.max(11, Math.round(slot.h * scaleY * 0.62))}px`;
+}
+
+/** 网址带 ?fps 时在左上角显示 Phaser 统计的帧率，方便对照刷新率。 */
 function attachFpsMeter(game) {
   const params = new URLSearchParams(window.location.search);
   if (!params.has('fps')) return;
@@ -61,9 +85,16 @@ function attachFpsMeter(game) {
   meter.textContent = 'FPS --';
   document.body.appendChild(meter);
 
+  const place = () => placeFpsMeter(game, meter);
+  place();
+  game.scale?.on('resize', place);
+  window.addEventListener('resize', place);
+  window.visualViewport?.addEventListener('resize', place);
+
   window.setInterval(() => {
     if (!game.loop) return;
     meter.textContent = `FPS ${Math.round(game.loop.actualFps)}`;
+    place();
   }, 250);
 }
 

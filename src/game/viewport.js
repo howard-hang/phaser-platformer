@@ -153,6 +153,7 @@ export function layoutHud({
   insets = { top: 0, right: 0, bottom: 0, left: 0 },
   showHome = false,
   showFullscreen = false,
+  showFps = false,
 } = {}) {
   const top = (insets.top || 0) + HUD_MARGIN_Y;
   const left = (insets.left || 0) + HUD_MARGIN_X;
@@ -163,11 +164,15 @@ export function layoutHud({
   if (showFullscreen) cursor -= BUTTON_GAP;
   const home = showHome ? { x: cursor, y: top + 32 } : null;
 
+  // ?fps 计数器占左上角一条，计数文字往下让，避免盖住 SCORE。
+  const fps = showFps ? { x: left, y: top, w: 96, h: 26 } : null;
+  const statsTop = top + (fps ? fps.h + 10 : 0);
   const leftmost = home?.x ?? fullscreen?.x ?? sound.x;
   return {
-    score: { x: left, y: top },
-    deaths: { x: left, y: top + HUD_LINE },
-    stars: { x: left, y: top + HUD_LINE * 2 },
+    score: { x: left, y: statsTop },
+    deaths: { x: left, y: statsTop + HUD_LINE },
+    stars: { x: left, y: statsTop + HUD_LINE * 2 },
+    fps,
     sound,
     fullscreen,
     home,
@@ -212,5 +217,73 @@ export function layoutLevelSelect({
     total: { x: viewWidth / 2, y: top + 64 },
     rows,
     back: { x: viewWidth / 2, y: Math.max(y + 8, viewHeight - bottom - 32) },
+  };
+}
+
+/**
+ * 二十关选关板。按屏幕能放下的行列分页，卡片让开安全区。
+ * 卡片高度至少 64，方便手指点。page 从 0 开始。
+ */
+export function layoutLevelBoard({
+  viewWidth,
+  viewHeight,
+  insets = { top: 0, right: 0, bottom: 0, left: 0 },
+  count = 20,
+  page = 0,
+} = {}) {
+  const top = (insets.top || 0) + 12;
+  const bottom = (insets.bottom || 0) + 12;
+  const left = (insets.left || 0) + 18;
+  const right = (insets.right || 0) + 18;
+  // 标题区只放关卡名和累计星星。页码改到翻页按钮上方，两行不再叠在一起。
+  const header = 92;
+  // 底栏要同时放下页码和 72 像素高的「返回标题」。
+  const footer = 116;
+  const gapX = 12;
+  const gapY = 10;
+  const innerW = Math.max(120, viewWidth - left - right);
+  const columns = Math.max(1, Math.min(4, Math.floor((innerW + gapX) / (240 + gapX))));
+  const availH = Math.max(80, viewHeight - top - bottom - header - footer);
+  let rows = Math.max(2, Math.min(5, Math.floor((availH + gapY) / (68 + gapY))));
+  let cardH = (availH - gapY * (rows - 1)) / rows;
+  while (rows > 2 && cardH < 64) {
+    rows -= 1;
+    cardH = (availH - gapY * (rows - 1)) / rows;
+  }
+  const pageSize = columns * rows;
+  const pages = Math.max(1, Math.ceil(Math.max(1, count) / pageSize));
+  const safePage = Math.max(0, Math.min(pages - 1, page));
+  const cardW = (innerW - gapX * (columns - 1)) / columns;
+  const cells = [];
+  const start = safePage * pageSize;
+  const shown = Math.min(pageSize, Math.max(0, count - start));
+  for (let i = 0; i < shown; i += 1) {
+    const col = i % columns;
+    const row = Math.floor(i / columns);
+    cells.push({
+      index: start + i,
+      x: left + col * (cardW + gapX),
+      y: top + header + row * (cardH + gapY),
+      w: cardW,
+      h: cardH,
+    });
+  }
+  // 返回标题高 72，翻页按钮高 52。中心抬高，底边刚好停在安全区上沿。
+  const buttonY = viewHeight - bottom - 36;
+  // 页码夹在上一页和下一页之间，单独一行，不压到「返回标题」。
+  const pageY = buttonY - 58;
+  return {
+    title: { x: viewWidth / 2, y: top + 22, w: 220, h: 46 },
+    total: { x: viewWidth / 2, y: top + 66, w: 280, h: 26 },
+    cells,
+    page: safePage,
+    pages,
+    pageSize,
+    columns,
+    rows,
+    prev: { x: left + 78, y: buttonY, w: 148, h: 52 },
+    next: { x: viewWidth - right - 78, y: buttonY, w: 148, h: 52 },
+    back: { x: viewWidth / 2, y: buttonY, w: 200, h: 72 },
+    pageLabel: { x: viewWidth / 2, y: pageY, w: 180, h: 28 },
   };
 }

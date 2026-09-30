@@ -1,18 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FLIP_CEILING_Y,
   HITBOX,
-  PAD_JUMP_VELOCITY,
   TUNING,
   bodyRectFromSprite,
-  laserActive,
-  moverUnit,
+  isGateClosed,
   obstacleRect,
-  phaseForLaser,
-  phaseForMover,
+  playerCeilingY,
   playerGroundY,
   playerHitsObstacle,
   playerHitsStar,
-  playerOnPad,
   rectsOverlap,
   sampleJump,
   starRect,
@@ -70,54 +67,29 @@ describe('碰撞盒', () => {
     expect(jump.airTime).toBeLessThan(1.2);
   });
 
-  it('倒挂刺不挡站立，起跳会撞上', () => {
-    const ceiling = { id: 'c', type: 'ceiling', x: 500, hang: 48 };
-    const groundY = playerGroundY();
-    expect(playerHitsObstacle(500, groundY, ceiling)).toBe(false);
-    expect(playerHitsObstacle(500, groundY - 80, ceiling)).toBe(true);
+  it('周期门关着才有碰撞，开着可以跑过去', () => {
+    const gate = { id: 'g', type: 'gate', x: 400, period: 1.4, open: 0.6, phase: 0 };
+    expect(isGateClosed(gate, 0.2)).toBe(false);
+    expect(obstacleRect(gate, TUNING, 0.2)).toBeNull();
+    expect(isGateClosed(gate, 1.0)).toBe(true);
+    expect(playerHitsObstacle(400, playerGroundY(), gate, TUNING, 1.0)).toBe(true);
+    expect(playerHitsObstacle(400, playerGroundY() - 180, gate, TUNING, 1.0)).toBe(false);
   });
 
-  it('跳板不致命，但站在上面算踩中', () => {
-    const pad = { id: 'p', x: 640 };
-    expect(playerHitsObstacle(640, playerGroundY(), { ...pad, type: 'pad' })).toBe(false);
-    expect(playerOnPad(640, playerGroundY(), pad)).toBe(true);
-    expect(playerOnPad(500, playerGroundY(), pad)).toBe(false);
-    expect(PAD_JUMP_VELOCITY).toBeLessThan(TUNING.jumpVelocity);
-    expect(TUNING.jumpVelocity).toBe(-740);
-    expect(TUNING.gravity).toBe(1700);
+  it('坠落平台在塌掉之前不伤人', () => {
+    const crumble = { id: 'c', type: 'crumble', x: 300, x0: 280, x1: 700, collapse: 2 };
+    expect(obstacleRect(crumble, TUNING, 1.5)).toBeNull();
+    expect(playerHitsObstacle(400, playerGroundY(), crumble, TUNING, 1.5)).toBe(false);
+    expect(playerHitsObstacle(400, playerGroundY(), crumble, TUNING, 2.2)).toBe(true);
+    expect(playerHitsObstacle(400, playerGroundY() - 160, crumble, TUNING, 2.2)).toBe(false);
   });
 
-  it('移动刺贴地时要跳，升起来时可以贴地跑过去', () => {
-    const period = 1.8;
-    const downPhase = phaseForMover(2, period, 'down');
-    const upPhase = phaseForMover(2, period, 'up');
-    const down = { id: 'd', type: 'mover', x: 800, amplitude: 96, period, phase: downPhase };
-    const up = { id: 'u', type: 'mover', x: 800, style: 'block', amplitude: 118, period, phase: upPhase };
-    const groundY = playerGroundY();
-    expect(moverUnit(2, period, downPhase)).toBe(0);
-    expect(moverUnit(2, period, upPhase)).toBe(1);
-    expect(playerHitsObstacle(800, groundY, down, TUNING, 2)).toBe(true);
-    expect(playerHitsObstacle(800, groundY, up, TUNING, 2)).toBe(false);
-    expect(playerHitsObstacle(800, groundY - 130, up, TUNING, 2)).toBe(true);
-  });
-
-  it('低激光张开时挡住地面，高激光张开时只挡跳跃，关掉就没有碰撞', () => {
-    const period = 1.8;
-    const duty = 0.62;
-    const onPhase = phaseForLaser(3, period, true, duty);
-    const offPhase = phaseForLaser(3, period, false, duty);
-    const low = { id: 'l', type: 'laser', x: 900, band: 'low', period, duty, phase: onPhase };
-    const high = { id: 'h', type: 'laser', x: 900, band: 'high', period, duty, phase: onPhase, lift: 112 };
-    const off = { ...low, id: 'off', phase: offPhase };
-    const groundY = playerGroundY();
-    expect(laserActive(3, period, onPhase, duty)).toBe(true);
-    expect(laserActive(3, period, offPhase, duty)).toBe(false);
-    expect(playerHitsObstacle(900, groundY, low, TUNING, 3)).toBe(true);
-    expect(playerHitsObstacle(900, groundY - 120, low, TUNING, 3)).toBe(false);
-    expect(playerHitsObstacle(900, groundY, high, TUNING, 3)).toBe(false);
-    expect(playerHitsObstacle(900, groundY - 90, high, TUNING, 3)).toBe(true);
-    expect(obstacleRect(off, TUNING, 3)).toBeNull();
-    expect(playerHitsObstacle(900, groundY, off, TUNING, 3)).toBe(false);
+  it('倒挂刺贴着天花板，站在地面上碰不到', () => {
+    const spike = { id: 'c', type: 'cspike', x: 500 };
+    const rect = obstacleRect(spike);
+    expect(rect.y).toBe(FLIP_CEILING_Y);
+    expect(playerHitsObstacle(500, playerGroundY(), spike)).toBe(false);
+    expect(playerHitsObstacle(500, playerCeilingY(), spike)).toBe(true);
   });
 
   it('星星矩形落在抬高后的空中', () => {

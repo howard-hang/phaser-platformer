@@ -5,7 +5,7 @@
 
 /** 手感参数。改这里会同时影响关卡时长和自动测试。 */
 export const TUNING = {
-  // 水平速度（像素/秒）。各关会换成自己的速度，重力和起跳不变。
+  // 水平速度（像素/秒）。配合 75 秒关卡，总路程约 22500 像素。
   speed: 300,
   // 重力（像素/秒²），屏幕向下为正。
   gravity: 1700,
@@ -19,12 +19,6 @@ export const TUNING = {
 };
 
 /**
- * 跳板把人弹起来时用的垂直速度。
- * 只在踩到跳板的那一下替换起跳速度，平时的跳跃高度不变。
- */
-export const PAD_JUMP_VELOCITY = -980;
-
-/**
  * 贴图尺寸和 Arcade 碰撞盒。
  * offset 相对贴图左上角，和 Phaser Body.setOffset 一致。
  * 玩家、尖刺、方块的碰撞盒底边贴着贴图底边，避免角色踩进地里。
@@ -34,18 +28,57 @@ export const HITBOX = {
   spike: { w: 36, h: 36, bodyW: 32, bodyH: 22, offsetX: 2, offsetY: 14 },
   block: { w: 42, h: 42, bodyW: 36, bodyH: 38, offsetX: 3, offsetY: 4 },
   star: { w: 36, h: 36, bodyW: 24, bodyH: 24, offsetX: 6, offsetY: 6 },
-  // 倒挂刺：尖朝下，碰撞盒盖住整条长刺，站立钻得过，起跳会撞上。
-  ceiling: { w: 40, h: 170, bodyW: 26, bodyH: 152, offsetX: 7, offsetY: 16 },
-  // 跳板贴地，不致命，踩上去才换更高的起跳速度。
-  pad: { w: 54, h: 18, bodyW: 50, bodyH: 14, offsetX: 2, offsetY: 4 },
-  // 激光开着时才有碰撞。低的要从上面跳过，高的要贴地钻过去。
-  laserLow: { w: 18, h: 72, bodyW: 14, bodyH: 68, offsetX: 2, offsetY: 2 },
-  laserHigh: { w: 18, h: 86, bodyW: 14, bodyH: 82, offsetX: 2, offsetY: 2 },
 };
 
 /** 站在地面上时，方块精灵的中心 Y（原点在中心）。 */
 export function playerGroundY(tuning = TUNING) {
   return tuning.groundY - HITBOX.player.h / 2;
+}
+
+/**
+ * 重力反转区的天花板下沿（世界 Y，越小越高）。
+ * 比普通跳跃的最高点再高一截，正常起跳碰不到。
+ */
+export const FLIP_CEILING_Y = 182;
+
+/** 贴在天花板上时，方块精灵的中心 Y。碰撞盒顶边贴着天花板下沿。 */
+export function playerCeilingY() {
+  return FLIP_CEILING_Y + HITBOX.player.h / 2 - HITBOX.player.offsetY;
+}
+
+/** 玩家中心 x 落在反转区里时重力向上，否则向下。 */
+export function gravitySignAt(x, level) {
+  const zones = level?.flips;
+  if (!zones) return 1;
+  for (let i = 0; i < zones.length; i += 1) {
+    const zone = zones[i];
+    if (x >= zone.x0 && x <= zone.x1) return -1;
+  }
+  return 1;
+}
+
+/** 从起点匀速跑到 x 时的关卡时间（秒）。死亡重生后也按这个时间对齐机关。 */
+export function courseTime(x, level, tuning = TUNING) {
+  return (x - level.startX) / tuning.speed;
+}
+
+/** 周期门在这个时间点是否关着。关着时要跳过去，开着时可以跑过去。 */
+export function isGateClosed(obstacle, time) {
+  const period = obstacle.period;
+  const open = obstacle.open;
+  let local = (time + (obstacle.phase || 0)) % period;
+  if (local < 0) local += period;
+  return local >= open;
+}
+
+/** 坠落平台塌掉之后的地面杀伤矩形。塌掉之前没有碰撞。 */
+export function crumblePitRect(obstacle, tuning = TUNING) {
+  return {
+    x: obstacle.x0,
+    y: tuning.groundY - 46,
+    w: Math.max(1, obstacle.x1 - obstacle.x0),
+    h: 46,
+  };
 }
 
 /**
@@ -70,80 +103,42 @@ export function rectsOverlap(a, b) {
     && a.y + a.h > b.y;
 }
 
-/** 周期相位，结果落在 0 到 1。phase 也是 0 到 1 的偏移。 */
-export function cyclePosition(time, period, phase = 0) {
-  const span = Math.max(0.05, period || 0);
-  let unit = (time / span + phase) % 1;
-  if (unit < 0) unit += 1;
-  return unit;
-}
-
 /**
- * 上下移动的进度。0 是贴地，1 是升到最高。
- * 两头各停一段，中间才移动，避免玩家刚跑到就赶上下落。
+ * 障碍物精灵中心、碰撞盒和贴图 key。
+ * time 是从起点算的秒数。门开着、平台还没塌时返回 null，表示这一帧没有碰撞。
+ * options.forceClosed 用来做关卡体检，把周期门当成关着的。
  */
-export function moverUnit(time, period, phase = 0) {
-  const unit = cyclePosition(time, period, phase);
-  if (unit < 0.35) return 0;
-  if (unit < 0.5) return (unit - 0.35) / 0.15;
-  if (unit < 0.85) return 1;
-  return 1 - (unit - 0.85) / 0.15;
-}
-
-/** 激光在这个时刻是否张开。duty 是一个周期里张开的比例。 */
-export function laserActive(time, period, phase = 0, duty = 0.55) {
-  const unit = cyclePosition(time, period, phase);
-  const open = Math.min(0.9, Math.max(0.1, duty));
-  return unit < open;
-}
-
-/**
- * 让移动刺在 meet 这一秒停在高处或贴地。
- * at 为 up 时人可以从下面跑过去，为 down 时要跳。
- */
-export function phaseForMover(time, period, at) {
-  const target = at === 'up' ? 0.67 : 0.15;
-  const span = Math.max(0.05, period || 0);
-  let phase = target - (time / span) % 1;
-  phase = ((phase % 1) + 1) % 1;
-  return Math.round(phase * 1000) / 1000;
-}
-
-/** 让激光在 meet 这一秒处于张开或关掉。 */
-export function phaseForLaser(time, period, active, duty = 0.55) {
-  const open = Math.min(0.9, Math.max(0.1, duty));
-  const target = active ? open * 0.5 : open + (1 - open) * 0.5;
-  const span = Math.max(0.05, period || 0);
-  let phase = target - (time / span) % 1;
-  phase = ((phase % 1) + 1) % 1;
-  return Math.round(phase * 1000) / 1000;
-}
-
-/** 碰撞盒底边离地 bottomAboveGround 像素时，精灵中心的 y。 */
-function centerAboveGround(spec, bottomAboveGround) {
-  return bottomAboveGround + spec.offsetY + spec.bodyH - spec.h / 2;
-}
-
-/** 障碍物精灵中心、使用的碰撞盒和贴图 key。time 是从起跑算起的秒。 */
-export function obstaclePose(obstacle, tuning = TUNING, time = 0) {
+export function obstaclePose(obstacle, tuning = TUNING, time = 0, options = {}) {
   if (obstacle.type === 'spike') {
     const spec = HITBOX.spike;
     return {
       cx: obstacle.x,
-      cy: tuning.groundY - centerAboveGround(spec, 0),
+      cy: tuning.groundY - spec.h / 2,
       spec,
       key: 'spike',
-      solid: true,
     };
   }
-  if (obstacle.type === 'block') {
+  if (obstacle.type === 'cspike') {
+    const spec = HITBOX.spike;
+    // 贴图朝下，碰撞盒改到贴图上沿，尖端从天花板垂下来。
+    return {
+      cx: obstacle.x,
+      cy: FLIP_CEILING_Y + spec.h / 2,
+      spec: { ...spec, offsetY: 0 },
+      key: 'spike-down',
+    };
+  }
+  if (obstacle.type === 'block' || obstacle.type === 'gate') {
+    if (obstacle.type === 'gate') {
+      const closed = options.forceClosed || isGateClosed(obstacle, time);
+      if (!closed) return null;
+    }
     const spec = HITBOX.block;
     return {
       cx: obstacle.x,
-      cy: tuning.groundY - centerAboveGround(spec, 0),
+      cy: tuning.groundY - spec.h / 2,
       spec,
-      key: 'block',
-      solid: true,
+      key: obstacle.type === 'gate' ? 'gate' : 'block',
     };
   }
   if (obstacle.type === 'overhead') {
@@ -154,62 +149,21 @@ export function obstaclePose(obstacle, tuning = TUNING, time = 0) {
       cy: tuning.groundY - gap - spec.h / 2,
       spec,
       key: 'block',
-      solid: true,
     };
   }
-  if (obstacle.type === 'ceiling') {
-    const spec = HITBOX.ceiling;
-    const hang = obstacle.hang ?? 48;
-    return {
-      cx: obstacle.x,
-      cy: tuning.groundY - centerAboveGround(spec, hang),
-      spec,
-      key: 'ceiling',
-      solid: true,
-    };
-  }
-  if (obstacle.type === 'mover') {
-    const spec = obstacle.style === 'block' ? HITBOX.block : HITBOX.spike;
-    const lift = (obstacle.amplitude ?? 96) * moverUnit(time, obstacle.period ?? 1.8, obstacle.phase ?? 0);
-    return {
-      cx: obstacle.x,
-      cy: tuning.groundY - centerAboveGround(spec, lift),
-      spec,
-      key: obstacle.style === 'block' ? 'block' : 'spike',
-      solid: true,
-      lift,
-    };
-  }
-  if (obstacle.type === 'laser') {
-    const high = obstacle.band === 'high';
-    const spec = high ? HITBOX.laserHigh : HITBOX.laserLow;
-    const active = laserActive(time, obstacle.period ?? 1.8, obstacle.phase ?? 0, obstacle.duty ?? 0.55);
-    const bottom = high ? (obstacle.lift ?? 112) : 0;
-    return {
-      cx: obstacle.x,
-      cy: tuning.groundY - centerAboveGround(spec, bottom),
-      spec,
-      key: high ? 'laser-high' : 'laser-low',
-      solid: active,
-    };
-  }
-  if (obstacle.type === 'pad') {
-    const spec = HITBOX.pad;
-    return {
-      cx: obstacle.x,
-      cy: tuning.groundY - centerAboveGround(spec, 0),
-      spec,
-      key: 'pad',
-      solid: false,
-    };
-  }
+  // 反转区本身不挡人，只改变重力。坠落平台用坑的矩形，不走精灵中心。
+  if (obstacle.type === 'flip' || obstacle.type === 'crumble') return null;
   throw new Error(`未知障碍类型: ${obstacle.type}`);
 }
 
-/** 障碍物的碰撞矩形。激光关掉时没有矩形。 */
-export function obstacleRect(obstacle, tuning = TUNING, time = 0) {
-  const pose = obstaclePose(obstacle, tuning, time);
-  if (!pose.solid) return null;
+/** 障碍物的碰撞矩形。没有碰撞时返回 null。 */
+export function obstacleRect(obstacle, tuning = TUNING, time = 0, options = {}) {
+  if (obstacle.type === 'crumble') {
+    if (!options.forceClosed && time + 1e-6 < obstacle.collapse) return null;
+    return crumblePitRect(obstacle, tuning);
+  }
+  const pose = obstaclePose(obstacle, tuning, time, options);
+  if (!pose) return null;
   return bodyRectFromSprite(pose.cx, pose.cy, pose.spec);
 }
 
@@ -230,24 +184,12 @@ export function starRect(star, tuning = TUNING) {
   return bodyRectFromSprite(pose.cx, pose.cy, pose.spec);
 }
 
-/** 玩家中心与某个障碍是否重叠。time 用来算上下移动和激光开合。 */
+/** 玩家中心与某个障碍是否重叠。time 用来判断周期门和坠落平台。 */
 export function playerHitsObstacle(px, py, obstacle, tuning = TUNING, time = 0) {
   const rect = obstacleRect(obstacle, tuning, time);
   if (!rect) return false;
   const prect = bodyRectFromSprite(px, py, HITBOX.player);
   return rectsOverlap(prect, rect);
-}
-
-/** 跳板的碰撞矩形。跳板不致命。 */
-export function padRect(pad, tuning = TUNING) {
-  const pose = obstaclePose({ ...pad, type: 'pad' }, tuning, 0);
-  return bodyRectFromSprite(pose.cx, pose.cy, pose.spec);
-}
-
-/** 站在地上的玩家是否踩到这块跳板。 */
-export function playerOnPad(px, py, pad, tuning = TUNING) {
-  const prect = bodyRectFromSprite(px, py, HITBOX.player);
-  return rectsOverlap(prect, padRect(pad, tuning));
 }
 
 /** 玩家中心与某颗星星是否重叠。 */

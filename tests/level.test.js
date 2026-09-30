@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { LEVELS, levelTuning } from '../src/game/level.js';
-import { LEVEL_UNLOCKS } from '../src/game/progress.js';
+import { LEVELS, LEVEL_UNLOCKS, levelTuning } from '../src/game/level.js';
+import { levelMetrics } from '../src/game/metrics.js';
 import { TUNING } from '../src/logic/world.js';
 import { auditLevel } from '../src/logic/audit.js';
 import { findClearPath } from '../src/logic/search.js';
 
-describe('五关都能通关', () => {
-  it('一共 5 关，速度小幅递增，跳跃手感不变', () => {
-    expect(LEVELS).toHaveLength(5);
+describe('二十关都能通关', () => {
+  it('一共 20 关，速度递增，跳跃手感不变', () => {
+    expect(LEVELS).toHaveLength(20);
     expect(LEVELS.map((level) => level.id)).toEqual(LEVEL_UNLOCKS.map((row) => row.id));
     expect(TUNING.gravity).toBe(1700);
     expect(TUNING.jumpVelocity).toBe(-740);
@@ -17,22 +17,28 @@ describe('五关都能通关', () => {
       expect(tuning.gravity).toBe(TUNING.gravity);
       expect(tuning.jumpVelocity).toBe(TUNING.jumpVelocity);
       expect(level.stars).toHaveLength(3);
-      expect(level.speed).toBeGreaterThan(290);
+      expect(level.speed).toBeGreaterThan(300);
       if (i > 0) expect(level.speed).toBeGreaterThan(LEVELS[i - 1].speed);
     }
-    expect(LEVELS[4].speed).toBeLessThan(LEVELS[0].speed * 1.25);
-    expect(new Set(LEVELS.map((level) => level.palette)).size).toBe(5);
+    expect(new Set(LEVELS.map((level) => level.palette)).size).toBe(20);
+    // 第 1 关比原来的第 1 关（速度 300、大约 22 个障碍）更密、更快。
+    expect(LEVELS[0].obstacles.length).toBeGreaterThan(22);
   });
 
-  it('越往后障碍越多，尖刺也更密', () => {
-    const density = (level) => {
-      const spikes = level.obstacles.filter((item) => item.type === 'spike').length;
-      return spikes / ((level.finishX - level.startX) / level.speed);
-    };
-    for (let i = 1; i < LEVELS.length; i += 1) {
-      expect(LEVELS[i].obstacles.length).toBeGreaterThan(LEVELS[i - 1].obstacles.length);
-      expect(density(LEVELS[i])).toBeGreaterThan(density(LEVELS[i - 1]));
+  it('障碍变多、间隔变小、种类随关卡展开', () => {
+    const metrics = LEVELS.map((level) => levelMetrics(level));
+    for (let i = 1; i < metrics.length; i += 1) {
+      expect(metrics[i].obstacles).toBeGreaterThan(metrics[i - 1].obstacles);
+      expect(metrics[i].avgGap).toBeLessThan(metrics[i - 1].avgGap);
+      expect(metrics[i].speed).toBeGreaterThan(metrics[i - 1].speed);
     }
+    const typesOf = (index) => new Set(LEVELS[index].obstacles.map((item) => item.type));
+    expect(typesOf(0).has('crumble')).toBe(false);
+    expect(typesOf(4).has('crumble')).toBe(true);
+    expect(typesOf(7).has('gate')).toBe(true);
+    expect(typesOf(11).has('flip')).toBe(true);
+    expect(typesOf(12).has('cspike')).toBe(true);
+    expect(typesOf(19).size).toBeGreaterThan(typesOf(0).size);
   });
 
   it.each(LEVELS.map((level) => [level.id, level]))('%s 结构合格，并且存在能捡完全部星星的路径', (_id, level) => {
@@ -43,63 +49,9 @@ describe('五关都能通关', () => {
     const at = ((result.bestX - level.startX) / level.speed).toFixed(2);
     expect(result.ok, `${JSON.stringify({ ...result, at })}`).toBe(true);
     expect(result.stars).toBe(3);
-    expect(result.t ?? result.bestX).toBeTruthy();
     const duration = (level.finishX - level.startX) / level.speed;
     expect(duration).toBeGreaterThanOrEqual(60);
     expect(duration).toBeLessThanOrEqual(90);
-  });
-});
-
-describe('新障碍先单独教，再和其他障碍组合', () => {
-  function nearestGap(level, x) {
-    let best = Infinity;
-    for (const obstacle of level.obstacles) {
-      const gap = Math.abs(obstacle.x - x) / level.speed;
-      if (gap > 0.05 && gap < best) best = gap;
-    }
-    for (const pad of level.pads) {
-      const gap = Math.abs(pad.x - x) / level.speed;
-      if (gap > 0.05 && gap < best) best = gap;
-    }
-    return best;
-  }
-
-  it('第 1 关只教倒挂刺和跳板，第 2 关才出现移动障碍，第 3 关才出现激光', () => {
-    const types = (level) => new Set(level.obstacles.map((item) => item.type));
-    expect(types(LEVELS[0]).has('ceiling')).toBe(true);
-    expect(LEVELS[0].pads.length).toBeGreaterThan(0);
-    expect(types(LEVELS[0]).has('mover')).toBe(false);
-    expect(types(LEVELS[0]).has('laser')).toBe(false);
-    expect(types(LEVELS[1]).has('mover')).toBe(true);
-    expect(types(LEVELS[1]).has('laser')).toBe(false);
-    expect(types(LEVELS[2]).has('laser')).toBe(true);
-    expect(types(LEVELS[3]).has('laser')).toBe(true);
-    expect(types(LEVELS[3]).has('mover')).toBe(true);
-    expect(types(LEVELS[4]).has('ceiling')).toBe(true);
-    expect(LEVELS[4].pads.length).toBeGreaterThan(0);
-  });
-
-  it('每种新障碍第一次出现时，前后都留出认识它的空档', () => {
-    const firstCeiling = LEVELS[0].obstacles.find((item) => item.type === 'ceiling');
-    const firstMover = LEVELS[1].obstacles.find((item) => item.type === 'mover');
-    const firstLaser = LEVELS[2].obstacles.find((item) => item.type === 'laser');
-    expect(nearestGap(LEVELS[0], firstCeiling.x)).toBeGreaterThan(1.6);
-    expect(nearestGap(LEVELS[0], LEVELS[0].pads[0].x)).toBeGreaterThan(1.6);
-    expect(nearestGap(LEVELS[1], firstMover.x)).toBeGreaterThan(1.6);
-    expect(nearestGap(LEVELS[2], firstLaser.x)).toBeGreaterThan(1.6);
-  });
-
-  it('后面的关卡会把不同的新障碍排在同一次冲刺里', () => {
-    const mixed = LEVELS[4].obstacles.filter((item) => item.type === 'laser' || item.type === 'mover' || item.type === 'ceiling');
-    let close = false;
-    for (let i = 0; i < mixed.length; i += 1) {
-      for (let j = i + 1; j < mixed.length; j += 1) {
-        if (mixed[i].type === mixed[j].type) continue;
-        const gap = Math.abs(mixed[i].x - mixed[j].x) / LEVELS[4].speed;
-        if (gap < 2.2) close = true;
-      }
-    }
-    expect(close).toBe(true);
   });
 });
 
@@ -119,6 +71,7 @@ describe('路径搜索本身', () => {
         { id: 'air', x: xAt(4.15), lift: 80 },
       ],
       checkpoints: [startX],
+      flips: [],
     };
     const result = findClearPath(level, { ...TUNING, speed });
     expect(result.ok, JSON.stringify(result)).toBe(true);
@@ -139,6 +92,7 @@ describe('路径搜索本身', () => {
       obstacles,
       stars: [{ id: 'g', x: 400, lift: 0 }],
       checkpoints: [startX],
+      flips: [],
     };
     const result = findClearPath(level, TUNING);
     expect(result.ok).toBe(false);
