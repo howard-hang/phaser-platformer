@@ -1,0 +1,117 @@
+name: android-apk
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # ubuntu 镜像自带 SDK。不再用 setup-android，它会去装已经下架的 tools 包。
+      - name: 安装 compileSdk 36
+        run: |
+          if [ -z "${ANDROID_HOME:-}" ]; then
+            echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+            ANDROID_HOME=/usr/local/lib/android/sdk
+          fi
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: 安装依赖并跑现有测试
+        run: |
+          npm ci
+          npm test
+
+      - name: 构建网页并同步进安卓工程
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: 打包调试签名 APK
+        working-directory: android
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: 整理 APK 文件名
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk fangkuai-paoku-debug.apk
+
+      - name: 检查包名、名称、横屏和离线资源
+        run: |
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)"
+          test -x "$AAPT"
+          "$AAPT" dump badging fangkuai-paoku-debug.apk | tee badging.txt
+          grep -q "package: name='com.fangkuai.paoku'" badging.txt
+          grep -q "application-label:'方块跑酷'" badging.txt
+          "$AAPT" dump xmltree fangkuai-paoku-debug.apk AndroidManifest.xml | tee manifest.txt
+          # aapt 把 sensorLandscape 编成整数 6（SCREEN_ORIENTATION_SENSOR_LANDSCAPE）。
+          grep -q 'android:screenOrientation(0x0101001e)=(type 0x10)0x6' manifest.txt
+          unzip -l fangkuai-paoku-debug.apk > apk-list.txt
+          grep -q "assets/public/index.html" apk-list.txt
+          grep -q "assets/public/assets/game-font" apk-list.txt
+          grep -q "ic_launcher.png" apk-list.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fangkuai-paoku-debug
+          path: fangkuai-paoku-debug.apk
+          if-no-files-found: error
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: apk
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: fangkuai-paoku-debug
+          path: dist-apk
+
+      - name: 发布调试 APK 到 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 同一个标签反复更新，下载地址保持稳定。旧文件先删掉再挂上新的包。
+          if gh release view android-debug >/dev/null 2>&1; then
+            gh release delete android-debug --yes --cleanup-tag
+          fi
+          gh release create android-debug dist-apk/fangkuai-paoku-debug.apk \
+            --target "${{ github.sha }}" \
+            --title "方块跑酷 Android 调试包" \
+            --prerelease \
+            --notes "$(cat <<'EOF'
+          调试签名 APK，可以直接安装，不能上架商店。
+
+          - 桌面名称：方块跑酷
+          - 包名：com.fangkuai.paoku
+          - 横屏全屏，游戏内容与网页版同一份构建
+          - 资源打进安装包，断网可玩
+          - 返回键：关卡中回到主页，主页退出应用
+
+          文件：fangkuai-paoku-debug.apk
+          EOF
+          )"

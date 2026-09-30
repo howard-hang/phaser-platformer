@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 和关卡背景同一紫色。 -->
+    <color name="ic_launcher_background">#C026D3</color>
+</resources>

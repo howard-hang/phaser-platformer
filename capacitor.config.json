@@ -1,0 +1,16 @@
+{
+  "appId": "com.fangkuai.paoku",
+  "appName": "方块跑酷",
+  "webDir": "dist",
+  "backgroundColor": "#c026d3",
+  "android": {
+    "backgroundColor": "#c026d3",
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "hostname": "localhost",
+    "cleartext": false
+  }
+}

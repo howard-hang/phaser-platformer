@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">方块跑酷</string>
+    <string name="title_activity_main">方块跑酷</string>
+    <string name="package_name">com.fangkuai.paoku</string>
+    <string name="custom_url_scheme">com.fangkuai.paoku</string>
+</resources>
