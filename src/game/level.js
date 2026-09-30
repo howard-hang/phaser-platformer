@@ -3,7 +3,7 @@
  * 坐标按每一关自己的速度换算，跳跃高度和重力仍用 TUNING，不在这里改。
  */
 import { LEVEL_DEFS } from './levelData.js';
-import { HITBOX, TUNING } from '../logic/world.js';
+import { HITBOX, TUNING, phaseForLaser, phaseForMover } from '../logic/world.js';
 
 const START_X = 240;
 
@@ -12,6 +12,7 @@ function buildLevel(def, index) {
   const xAt = (t) => Math.round(START_X + t * speed);
   const obstacles = [];
   const stars = [];
+  const pads = [];
   const checkpoints = [START_X];
 
   def.script.forEach((event, order) => {
@@ -48,6 +49,59 @@ function buildLevel(def, index) {
       });
       return;
     }
+    if (event.type === 'ceiling') {
+      const spec = HITBOX.ceiling;
+      obstacles.push({
+        id: `${def.id}-ceil-${order}`,
+        type: 'ceiling',
+        x: xAt(event.t) + spec.w / 2,
+        hang: event.hang ?? 48,
+      });
+      return;
+    }
+    if (event.type === 'mover') {
+      const spec = event.style === 'block' ? HITBOX.block : HITBOX.spike;
+      const period = event.period ?? 1.8;
+      const x = xAt(event.t) + spec.w / 2;
+      const meet = (x - START_X) / speed;
+      obstacles.push({
+        id: `${def.id}-move-${order}`,
+        type: 'mover',
+        x,
+        style: event.style === 'block' ? 'block' : 'spike',
+        amplitude: event.amplitude ?? 96,
+        period,
+        phase: phaseForMover(meet, period, event.at === 'up' ? 'up' : 'down'),
+      });
+      return;
+    }
+    if (event.type === 'laser') {
+      const high = event.band === 'high';
+      const spec = high ? HITBOX.laserHigh : HITBOX.laserLow;
+      const period = event.period ?? 1.8;
+      const duty = event.duty ?? 0.62;
+      const x = xAt(event.t) + spec.w / 2;
+      const meet = (x - START_X) / speed;
+      obstacles.push({
+        id: `${def.id}-laser-${order}`,
+        type: 'laser',
+        x,
+        band: high ? 'high' : 'low',
+        period,
+        duty,
+        phase: phaseForLaser(meet, period, event.on !== false, duty),
+        lift: event.lift ?? 112,
+      });
+      return;
+    }
+    if (event.type === 'pad') {
+      const spec = HITBOX.pad;
+      pads.push({
+        id: `${def.id}-pad-${pads.length + 1}`,
+        x: xAt(event.t) + spec.w / 2,
+      });
+      return;
+    }
     if (event.type === 'star') {
       stars.push({
         id: `${def.id}-star-${stars.length + 1}`,
@@ -75,6 +129,7 @@ function buildLevel(def, index) {
     worldWidth: finishX + TUNING.viewWidth,
     checkpoints,
     obstacles,
+    pads,
     stars,
   };
 }
