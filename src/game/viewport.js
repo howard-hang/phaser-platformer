@@ -76,10 +76,10 @@ export function readSafeAreaInsets(doc = document) {
     'top:0',
     'visibility:hidden',
     'pointer-events:none',
-    'padding-top:env(safe-area-inset-top)',
-    'padding-right:env(safe-area-inset-right)',
-    'padding-bottom:env(safe-area-inset-bottom)',
-    'padding-left:env(safe-area-inset-left)',
+    'padding-top:var(--safe-area-inset-top, env(safe-area-inset-top, 0px))',
+    'padding-right:var(--safe-area-inset-right, env(safe-area-inset-right, 0px))',
+    'padding-bottom:var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))',
+    'padding-left:var(--safe-area-inset-left, env(safe-area-inset-left, 0px))',
   ].join(';');
   (doc.body || doc.documentElement).appendChild(probe);
   const view = doc.defaultView || window;
@@ -96,6 +96,41 @@ export function readSafeAreaInsets(doc = document) {
   };
   probe.remove();
   return insets;
+}
+
+/**
+ * 画布要盖住视觉视口，而不是缩在安全区里面。
+ * 左右留白如果来自安卓窗口没伸进挖孔，页面本身涂不到那一块，得在原生层关掉内缩。
+ */
+export function viewportFillBox(metrics = {}) {
+  const pick = (value, fallback) => (Number.isFinite(value) && value > 0 ? value : fallback);
+  const width = pick(metrics.visualWidth, pick(metrics.innerWidth, 1));
+  const height = pick(metrics.visualHeight, pick(metrics.innerHeight, 1));
+  const left = Number.isFinite(metrics.offsetLeft) ? metrics.offsetLeft : 0;
+  const top = Number.isFinite(metrics.offsetTop) ? metrics.offsetTop : 0;
+  return { left, top, width, height };
+}
+
+/** 把游戏容器钉在视觉视口上，旋转和浏览器工具栏收起时跟着变。 */
+export function applyViewportFill(element, view = window) {
+  if (!element || !view) return null;
+  const visual = view.visualViewport;
+  const box = viewportFillBox({
+    innerWidth: view.innerWidth,
+    innerHeight: view.innerHeight,
+    visualWidth: visual?.width,
+    visualHeight: visual?.height,
+    offsetLeft: visual?.offsetLeft,
+    offsetTop: visual?.offsetTop,
+  });
+  element.style.position = 'fixed';
+  element.style.left = `${box.left}px`;
+  element.style.top = `${box.top}px`;
+  element.style.width = `${box.width}px`;
+  element.style.height = `${box.height}px`;
+  element.style.margin = '0';
+  element.style.padding = '0';
+  return box;
 }
 
 /** 安卓壳已经是沉浸式全屏，网页才显示全屏按钮。 */
@@ -118,6 +153,7 @@ export function layoutHud({
   insets = { top: 0, right: 0, bottom: 0, left: 0 },
   showHome = false,
   showFullscreen = false,
+  showFps = false,
 } = {}) {
   const top = (insets.top || 0) + HUD_MARGIN_Y;
   const left = (insets.left || 0) + HUD_MARGIN_X;
@@ -128,11 +164,15 @@ export function layoutHud({
   if (showFullscreen) cursor -= BUTTON_GAP;
   const home = showHome ? { x: cursor, y: top + 32 } : null;
 
+  // ?fps 计数器占左上角一条，计数文字往下让，避免盖住 SCORE。
+  const fps = showFps ? { x: left, y: top, w: 96, h: 26 } : null;
+  const statsTop = top + (fps ? fps.h + 10 : 0);
   const leftmost = home?.x ?? fullscreen?.x ?? sound.x;
   return {
-    score: { x: left, y: top },
-    deaths: { x: left, y: top + HUD_LINE },
-    stars: { x: left, y: top + HUD_LINE * 2 },
+    score: { x: left, y: statsTop },
+    deaths: { x: left, y: statsTop + HUD_LINE },
+    stars: { x: left, y: statsTop + HUD_LINE * 2 },
+    fps,
     sound,
     fullscreen,
     home,
@@ -195,8 +235,10 @@ export function layoutLevelBoard({
   const bottom = (insets.bottom || 0) + 12;
   const left = (insets.left || 0) + 18;
   const right = (insets.right || 0) + 18;
-  const header = 76;
-  const footer = 70;
+  // 标题区只放关卡名和累计星星。页码改到翻页按钮上方，两行不再叠在一起。
+  const header = 92;
+  // 底栏要同时放下页码和 72 像素高的「返回标题」。
+  const footer = 116;
   const gapX = 12;
   const gapY = 10;
   const innerW = Math.max(120, viewWidth - left - right);
@@ -226,19 +268,22 @@ export function layoutLevelBoard({
       h: cardH,
     });
   }
-  const footerY = viewHeight - bottom - 28;
+  // 返回标题高 72，翻页按钮高 52。中心抬高，底边刚好停在安全区上沿。
+  const buttonY = viewHeight - bottom - 36;
+  // 页码夹在上一页和下一页之间，单独一行，不压到「返回标题」。
+  const pageY = buttonY - 58;
   return {
-    title: { x: viewWidth / 2, y: top + 20 },
-    total: { x: viewWidth / 2, y: top + 52 },
+    title: { x: viewWidth / 2, y: top + 22, w: 220, h: 46 },
+    total: { x: viewWidth / 2, y: top + 66, w: 280, h: 26 },
     cells,
     page: safePage,
     pages,
     pageSize,
     columns,
     rows,
-    prev: { x: left + 78, y: footerY },
-    next: { x: viewWidth - right - 78, y: footerY },
-    back: { x: viewWidth / 2, y: footerY },
-    pageLabel: { x: viewWidth / 2, y: top + header - 16 },
+    prev: { x: left + 78, y: buttonY, w: 148, h: 52 },
+    next: { x: viewWidth - right - 78, y: buttonY, w: 148, h: 52 },
+    back: { x: viewWidth / 2, y: buttonY, w: 200, h: 72 },
+    pageLabel: { x: viewWidth / 2, y: pageY, w: 180, h: 28 },
   };
 }

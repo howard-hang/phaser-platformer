@@ -51,13 +51,14 @@ export class SelectScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(12);
 
+    // 页码画在底栏按钮之上，避免被关卡卡片盖住。
     this.pageText = this.add.text(0, 0, '', {
       fontFamily: FONT,
       fontSize: '18px',
       color: '#f5d0fe',
       stroke: THEME.stroke,
       strokeThickness: 3,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(12);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(22);
 
     this.cards = LEVELS.map((level) => this.createCard(level));
     this.prev = this.createPager('上一页', () => this.turnPage(-1));

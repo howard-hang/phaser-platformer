@@ -137,6 +137,9 @@ export function createHud(scene, { onHome = null, showStats = true } = {}) {
         insets,
         showHome: !!onHome,
         showFullscreen,
+        // 计数器出现时，左上角分数往下让一截。
+        showFps: typeof window !== 'undefined'
+          && new URLSearchParams(window.location.search).has('fps'),
       });
       if (showStats) {
         score.setPosition(layout.score.x, layout.score.y);
