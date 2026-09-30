@@ -10,11 +10,15 @@ export function androidBackAction({ gameActive }) {
 }
 
 /** 只有安卓 WebView 壳才继续加载 Capacitor，网页版不会去拉这段代码。 */
-function maybeAndroidShell() {
+export function isNativeShell() {
   if (typeof window === 'undefined') return false;
   if (window.androidBridge) return true;
   const ua = navigator.userAgent || '';
   return /Android/i.test(ua) && /; wv\)/.test(ua);
+}
+
+function maybeAndroidShell() {
+  return isNativeShell();
 }
 
 /**

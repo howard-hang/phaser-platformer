@@ -71,6 +71,7 @@ jobs:
           unzip -l fangkuai-paoku-debug.apk > apk-list.txt
           grep -q "assets/public/index.html" apk-list.txt
           grep -q "assets/public/assets/game-font" apk-list.txt
+          grep -q "assets/public/assets/.*\.ogg" apk-list.txt
           grep -q "ic_launcher.png" apk-list.txt
 
       - uses: actions/upload-artifact@v4
@@ -94,12 +95,16 @@ jobs:
       - name: 发布调试 APK 到 GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          # 这个 job 没有 checkout，本地不是 git 仓库。不写 GH_REPO 的话 gh 会去跑 git 并失败。
+          GH_REPO: ${{ github.repository }}
         run: |
+          REPO="${{ github.repository }}"
           # 同一个标签反复更新，下载地址保持稳定。旧文件先删掉再挂上新的包。
-          if gh release view android-debug >/dev/null 2>&1; then
-            gh release delete android-debug --yes --cleanup-tag
+          if gh release view android-debug --repo "$REPO" >/dev/null 2>&1; then
+            gh release delete android-debug --yes --cleanup-tag --repo "$REPO"
           fi
           gh release create android-debug dist-apk/fangkuai-paoku-debug.apk \
+            --repo "$REPO" \
             --target "${{ github.sha }}" \
             --title "方块跑酷 Android 调试包" \
             --prerelease \

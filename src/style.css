@@ -13,7 +13,8 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #6d128c;
+  /* 和天空同色。缩放取整时若露出 1 像素，也不会变成黑边。 */
+  background: #c026d3;
   touch-action: none;
   overscroll-behavior: none;
   user-select: none;
@@ -24,6 +25,7 @@ body {
   width: 100vw;
   height: 100vh;
   height: 100dvh;
+  background: #c026d3;
 }
 
 canvas {
@@ -33,8 +35,8 @@ canvas {
 
 #fps-meter {
   position: fixed;
-  left: 12px;
-  bottom: 12px;
+  left: calc(12px + env(safe-area-inset-left));
+  bottom: calc(12px + env(safe-area-inset-bottom));
   z-index: 20;
   padding: 4px 8px;
   border-radius: 4px;

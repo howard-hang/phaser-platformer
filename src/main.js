@@ -1,5 +1,5 @@
 /**
- * 游戏入口。按 16:9 比例缩放，竖屏和横屏都完整显示，点击坐标由 Phaser 自己换算。
+ * 游戏入口。用 EXPAND 按宽高比铺满屏幕：短边对齐，长边扩大可视区域，不拉伸、不留黑边。
  */
 import './style.css';
 import Phaser from 'phaser';
@@ -9,6 +9,7 @@ import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { bindAndroidBack } from './platform/androidBack.js';
+import { bindAudioLifecycle, getSynth } from './game/audio.js';
 
 const config = {
   type: Phaser.AUTO,
@@ -18,7 +19,8 @@ const config = {
   backgroundColor: THEME.bg,
   banner: false,
   scale: {
-    mode: Phaser.Scale.FIT,
+    // EXPAND：父元素多大，画面就铺满多大。游戏宽高按比例加长，角色不会被拉扁。
+    mode: Phaser.Scale.EXPAND,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: TUNING.viewWidth,
     height: TUNING.viewHeight,
@@ -77,6 +79,11 @@ async function main() {
   });
   window.addEventListener('contextmenu', (event) => event.preventDefault());
 
+  // 任意一次点击或按键都算用户手势，用来解开自动播放限制。
+  const unlockAudio = () => getSynth().unlock();
+  window.addEventListener('pointerdown', unlockAudio);
+  window.addEventListener('keydown', unlockAudio);
+
   if (window.__PHASER_GAME__) {
     window.__PHASER_GAME__.destroy(true);
   }
@@ -84,6 +91,7 @@ async function main() {
   attachFpsMeter(window.__PHASER_GAME__);
   // 网页版会立刻返回；安卓壳里改成：关卡回主页，主页退出。
   bindAndroidBack(window.__PHASER_GAME__);
+  bindAudioLifecycle();
 }
 
 main();

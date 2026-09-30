@@ -100,6 +100,33 @@ function drawHome(ctx) {
   ctx.stroke();
 }
 
+/** 全屏图标。进入用四角向外，退出用四角向内。不用 emoji。 */
+function drawFullscreen(ctx, active) {
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const corners = [
+    [14, 14],
+    [50, 14],
+    [14, 50],
+    [50, 50],
+  ];
+  corners.forEach(([x, y]) => {
+    const dx = x < 32 ? 1 : -1;
+    const dy = y < 32 ? 1 : -1;
+    const outward = !active;
+    const tipX = outward ? x : x + dx * 10;
+    const tipY = outward ? y : y + dy * 10;
+    const arm = 14;
+    ctx.beginPath();
+    ctx.moveTo(tipX + dx * arm, tipY);
+    ctx.lineTo(tipX, tipY);
+    ctx.lineTo(tipX, tipY + dy * arm);
+    ctx.stroke();
+  });
+}
+
 function drawSpeaker(ctx, muted) {
   ctx.fillStyle = '#ffffff';
   ctx.strokeStyle = '#ffffff';
@@ -147,4 +174,6 @@ export function generateTextures(scene) {
   make('icon-home', 64, 64, drawHome);
   make('icon-sound', 64, 64, (ctx) => drawSpeaker(ctx, false));
   make('icon-mute', 64, 64, (ctx) => drawSpeaker(ctx, true));
+  make('icon-fullscreen', 64, 64, (ctx) => drawFullscreen(ctx, false));
+  make('icon-fullscreen-exit', 64, 64, (ctx) => drawFullscreen(ctx, true));
 }
