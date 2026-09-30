@@ -13,7 +13,8 @@ import {
   tintParallax,
 } from '../game/backdrop.js';
 import { displayPose } from '../game/motion.js';
-import { THEME, FONT, LEVEL_PALETTES } from '../game/theme.js';
+import { THEME, LEVEL_PALETTES } from '../game/theme.js';
+import { textStyle } from '../game/candy.js';
 import { createHud, isUiPointer, showWinPanel } from '../game/hud.js';
 import { isLevelUnlocked, loadProgress, recordClear, saveProgress, starsToUnlock } from '../game/progress.js';
 import { cssInsetsToGame, readSafeAreaInsets, verticalCameraScroll } from '../game/viewport.js';
@@ -80,13 +81,12 @@ export class GameScene extends Phaser.Scene {
     this.hud = createHud(this, {
       onHome: () => this.scene.start('select'),
     });
-    this.levelLabel = this.add.text(0, 0, `第 ${this.level.index} 关  ${this.level.name}`, {
-      fontFamily: FONT,
-      fontSize: '22px',
+    this.levelLabel = this.add.text(0, 0, `第 ${this.level.index} 关  ${this.level.name}`, textStyle({
+      size: 20,
       color: '#ffffff',
-      stroke: THEME.stroke,
+      stroke: '#2a0840',
       strokeThickness: 4,
-    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(230);
+    })).setOrigin(0.5, 1).setScrollFactor(0).setDepth(230);
     this.hud.setStats(this.run);
     this.scale.on('resize', this.applyViewport, this);
     this.events.once('shutdown', () => {
@@ -210,13 +210,12 @@ export class GameScene extends Phaser.Scene {
       this.flags.push({ x, pole, cloth });
     }
 
-    this.add.text(this.level.startX + 300, TUNING.groundY - 110, '点击 / 空格跳跃', {
-      fontFamily: FONT,
-      fontSize: '28px',
+    this.add.text(this.level.startX + 300, TUNING.groundY - 110, '点击 / 空格跳跃', textStyle({
+      size: 26,
       color: '#ffffff',
-      stroke: THEME.stroke,
+      stroke: '#2a0840',
       strokeThickness: 4,
-    }).setDepth(7);
+    })).setDepth(7);
 
     this.physics.add.overlap(this.player, this.hazardSprites, () => this.onHazard(), null, this);
     this.physics.add.overlap(this.player, this.starSprites, (_player, star) => this.onStar(star), null, this);
@@ -365,13 +364,12 @@ export class GameScene extends Phaser.Scene {
     const x = this.level.finishX;
     this.add.rectangle(x, TUNING.groundY - 78, 8, 156, THEME.finish).setDepth(6);
     this.add.rectangle(x + 46, TUNING.groundY - 78, 8, 156, THEME.finish).setDepth(6);
-    this.add.text(x + 23, TUNING.groundY - 180, '终点', {
-      fontFamily: FONT,
-      fontSize: '32px',
-      color: '#ffffff',
-      stroke: THEME.stroke,
-      strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(6);
+    this.add.text(x + 23, TUNING.groundY - 180, '终点', textStyle({
+      size: 28,
+      color: '#ffe14a',
+      stroke: '#3b0764',
+      strokeThickness: 5,
+    })).setOrigin(0.5).setDepth(6);
   }
 
   bindInput() {
@@ -523,6 +521,7 @@ export class GameScene extends Phaser.Scene {
         nextText = `还差 ${short} 颗星`;
       }
     }
+    this.levelLabel?.setVisible(false);
     this.winUi = showWinPanel(this, {
       index: this.level.index,
       score: this.run.score,

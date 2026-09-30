@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CANDY_BUTTON_H,
+  ICON_HIT,
   computeExpandSize,
   cssInsetsToGame,
   layoutHud,
   layoutLevelBoard,
   layoutLevelSelect,
+  layoutWinPanel,
   nextFullscreenAction,
   shouldShowFullscreenButton,
   verticalCameraScroll,
@@ -174,7 +177,7 @@ describe('全屏按钮和安全区', () => {
       expect(cell.x).toBeGreaterThanOrEqual(32);
       expect(cell.x + cell.w).toBeLessThanOrEqual(960 - 24);
       expect(cell.y).toBeGreaterThanOrEqual(28);
-      expect(cell.h).toBeGreaterThanOrEqual(64);
+      expect(cell.h).toBeGreaterThanOrEqual(CANDY_BUTTON_H);
     }
     const next = layoutLevelBoard({
       viewWidth: 960,
@@ -248,6 +251,64 @@ describe('全屏按钮和安全区', () => {
       for (const button of [hud.sound, hud.fullscreen, hud.home]) {
         const box = centerBox({ ...button, w: 88, h: 88 });
         expect(overlaps(fps, box), `${screenW}x${screenH} fps 和右上角按钮`).toBe(false);
+      }
+    }
+  });
+
+  it('常见手机横屏上，选关按钮和卡片的点击高度不少于 44 CSS 像素', () => {
+    const phones = [[844, 390], [932, 430], [667, 375], [640, 360], [568, 320]];
+    for (const [screenW, screenH] of phones) {
+      const size = computeExpandSize(960, 540, screenW, screenH);
+      const layout = layoutLevelBoard({
+        viewWidth: size.gameWidth,
+        viewHeight: size.gameHeight,
+        count: 20,
+      });
+      const css = (gamePx) => gamePx * size.scale;
+      for (const button of [layout.prev, layout.next, layout.back]) {
+        expect(css(button.h), `${screenW}x${screenH} 按钮高`).toBeGreaterThanOrEqual(44);
+        expect(css(button.w), `${screenW}x${screenH} 按钮宽`).toBeGreaterThanOrEqual(44);
+      }
+      for (const cell of layout.cells) {
+        expect(css(cell.h), `${screenW}x${screenH} 卡片高`).toBeGreaterThanOrEqual(44);
+        expect(css(cell.w), `${screenW}x${screenH} 卡片宽`).toBeGreaterThanOrEqual(44);
+      }
+      expect(css(ICON_HIT), `${screenW}x${screenH} 图标热区`).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  it('通关面板在四种比例下文字和按钮不重叠', () => {
+    const screens = [
+      [1280, 720],
+      [2400, 1080],
+      [1024, 768],
+      [800, 800],
+    ];
+    for (const [screenW, screenH] of screens) {
+      const size = computeExpandSize(960, 540, screenW, screenH);
+      const layout = layoutWinPanel({
+        viewWidth: size.gameWidth,
+        viewHeight: size.gameHeight,
+        insets: { top: 20, right: 28, bottom: 16, left: 28 },
+      });
+      const panel = cornerBox(layout.panel);
+      const title = centerBox(layout.title);
+      const stars = centerBox(layout.stars);
+      const body = centerBox(layout.body);
+      const buttons = layout.buttons.map(centerBox);
+      expect(panel.t).toBeGreaterThanOrEqual(20);
+      expect(panel.b).toBeLessThanOrEqual(size.gameHeight - 16);
+      expect(overlaps(title, stars), `${screenW}x${screenH} 标题和星星`).toBe(false);
+      expect(overlaps(stars, body), `${screenW}x${screenH} 星星和正文`).toBe(false);
+      expect(overlaps(body, buttons[0]), `${screenW}x${screenH} 正文和按钮`).toBe(false);
+      for (const button of buttons) {
+        expect(button.l).toBeGreaterThanOrEqual(panel.l);
+        expect(button.r).toBeLessThanOrEqual(panel.r);
+        expect(button.b).toBeLessThanOrEqual(panel.b);
+        expect(button.t).toBeGreaterThan(body.b);
+      }
+      for (let i = 1; i < buttons.length; i += 1) {
+        expect(overlaps(buttons[i - 1], buttons[i]), `${screenW}x${screenH} 按钮彼此`).toBe(false);
       }
     }
   });

@@ -39,14 +39,19 @@ canvas {
 
 #fps-meter {
   position: fixed;
-  /* 具体坐标由脚本按游戏像素钉在左上角，这里只给一个不挡底栏按钮的初值。 */
+  /* 具体坐标由脚本按游戏像素钉在左上角，这里只给一个不挡按钮的初值。 */
   top: calc(8px + env(safe-area-inset-top));
   left: calc(12px + env(safe-area-inset-left));
   z-index: 20;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.55);
+  box-sizing: border-box;
+  max-width: 96px;
+  padding: 1px 8px 3px;
+  border-radius: 999px;
+  background: #ff4b8d;
+  border-bottom: 3px solid #9d174d;
   color: #ffffff;
-  font: 14px/1.2 ui-monospace, monospace;
+  font: 12px/1.2 ui-monospace, SFMono-Regular, monospace;
+  white-space: nowrap;
+  overflow: hidden;
   pointer-events: none;
 }

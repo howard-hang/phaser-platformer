@@ -127,7 +127,7 @@ function drawStar(ctx) {
 function drawHome(ctx) {
   ctx.strokeStyle = '#ffffff';
   ctx.fillStyle = '#ffffff';
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 6;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.beginPath();
@@ -145,7 +145,7 @@ function drawHome(ctx) {
 /** 全屏图标。进入用四角向外，退出用四角向内。不用 emoji。 */
 function drawFullscreen(ctx, active) {
   ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 6;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   const corners = [
@@ -169,10 +169,37 @@ function drawFullscreen(ctx, active) {
   });
 }
 
+/** 选关卡片上的空心星，和关卡里的实心星分开，避免改到玩法贴图。 */
+function drawStarOutline(ctx) {
+  starPath(ctx, 32, 32, 22, 9);
+  ctx.strokeStyle = '#b45309';
+  ctx.lineWidth = 5;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+/** 锁。白描边，卡片上不再用文字代替图标。 */
+function drawLock(ctx) {
+  ctx.strokeStyle = '#ffffff';
+  ctx.fillStyle = '#ffffff';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.arc(32, 26, 11, Math.PI, 0);
+  ctx.stroke();
+  ctx.fillRect(16, 28, 32, 24);
+  ctx.fillStyle = '#4a1468';
+  ctx.beginPath();
+  ctx.arc(32, 38, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(30.5, 39, 3, 7);
+}
+
 function drawSpeaker(ctx, muted) {
   ctx.fillStyle = '#ffffff';
   ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 6;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.fillRect(14, 26, 8, 12);
@@ -216,6 +243,8 @@ export function generateTextures(scene) {
   make('gate', HITBOX.block.w, HITBOX.block.h, drawGate);
   make('crumble', HITBOX.block.w, HITBOX.block.h, drawCrumble);
   make('star', HITBOX.star.w, HITBOX.star.h, drawStar);
+  make('ui-star-empty', 64, 64, drawStarOutline);
+  make('ui-lock', 64, 64, drawLock);
   make('icon-home', 64, 64, drawHome);
   make('icon-sound', 64, 64, (ctx) => drawSpeaker(ctx, false));
   make('icon-mute', 64, 64, (ctx) => drawSpeaker(ctx, true));

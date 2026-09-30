@@ -1,55 +1,21 @@
 /**
- * 左上角计数和右上角按钮。全部是矢量图形和文字，不贴 PNG。
- * 按钮用比图标更大的点击区，缩进安全区之后仍然好点。
- * 位置按当前画面和刘海安全区重排，不写死在 960×540 上。
+ * 左上角计数和右上角按钮。按钮是圆形糖果键，图标用矢量贴图，不用 emoji。
+ * 数字放在固定格子里，变长时不左右跳。位置按画面和刘海重排。
  */
-import { FONT, THEME } from './theme.js';
+import Phaser from 'phaser';
 import { getSynth } from './audio.js';
 import { isNativeShell } from '../platform/androidBack.js';
-import { layoutHud, nextFullscreenAction, shouldShowFullscreenButton } from './viewport.js';
+import { layoutHud, layoutWinPanel, nextFullscreenAction, shouldShowFullscreenButton } from './viewport.js';
+import {
+  PANEL,
+  addCandyText,
+  createCandyButton,
+  createFixedDigits,
+  paintCandyPanel,
+  textStyle,
+} from './candy.js';
 
-function labelStyle(color, size) {
-  return {
-    fontFamily: FONT,
-    fontSize: `${size}px`,
-    color,
-    stroke: THEME.stroke,
-    strokeThickness: 5,
-  };
-}
-
-function addCornerButton(scene, x, y, texture, onClick, { onUp = false } = {}) {
-  const zone = scene.add.zone(x, y, 88, 88).setScrollFactor(0).setDepth(250);
-  zone.setInteractive({ useHandCursor: true });
-  zone.setData('ui', true);
-  const circle = scene.add.circle(x, y, 28, 0xffffff, 0)
-    .setStrokeStyle(3, 0xffffff, 1)
-    .setScrollFactor(0)
-    .setDepth(251);
-  const icon = scene.add.image(x, y, texture)
-    .setDisplaySize(40, 40)
-    .setScrollFactor(0)
-    .setDepth(252);
-  // 按下就先挡住跳跃。全屏必须在抬起时调用，浏览器才认这次手势。
-  zone.on('pointerdown', () => {
-    scene.suppressJump = true;
-    if (!onUp) onClick();
-  });
-  if (onUp) {
-    zone.on('pointerup', () => {
-      scene.suppressJump = true;
-      onClick();
-    });
-  }
-  return { zone, circle, icon };
-}
-
-function placeButton(button, x, y) {
-  if (!button) return;
-  button.zone.setPosition(x, y);
-  button.circle.setPosition(x, y);
-  button.icon.setPosition(x, y);
-}
+const HUD_SIZE = 26;
 
 function isFullscreenNow() {
   return !!(document.fullscreenElement || document.webkitFullscreenElement);
@@ -68,6 +34,27 @@ function toggleDocumentFullscreen() {
   if (request) request.call(root);
 }
 
+function createStat(scene, label, color, digits) {
+  const caption = scene.add.text(0, 0, label, textStyle({
+    size: HUD_SIZE,
+    color,
+    stroke: '#2a0840',
+    strokeThickness: 4,
+    align: 'left',
+    padding: { x: 1, y: 1 },
+  })).setOrigin(0, 0).setScrollFactor(0).setDepth(240);
+  const digitsView = createFixedDigits(scene, color, digits, HUD_SIZE);
+  return {
+    setPosition(x, y) {
+      caption.setPosition(x, y);
+      digitsView.setPosition(x + caption.width + 6, y);
+    },
+    setValue(value) {
+      digitsView.setValue(value);
+    },
+  };
+}
+
 /** 创建常驻 HUD。onHome 只在关卡里需要。 */
 export function createHud(scene, { onHome = null, showStats = true } = {}) {
   const showFullscreen = shouldShowFullscreenButton(isNativeShell());
@@ -75,32 +62,46 @@ export function createHud(scene, { onHome = null, showStats = true } = {}) {
   let deaths;
   let stars;
   if (showStats) {
-    score = scene.add.text(22, 16, 'SCORE: 0', labelStyle(THEME.score, 34))
-      .setScrollFactor(0)
-      .setDepth(240);
-    deaths = scene.add.text(22, 56, 'DEATHS: 0', labelStyle(THEME.death, 34))
-      .setScrollFactor(0)
-      .setDepth(240);
-    stars = scene.add.text(22, 96, 'STARS: 0', labelStyle(THEME.stars, 34))
-      .setScrollFactor(0)
-      .setDepth(240);
+    score = createStat(scene, 'SCORE', '#3de4ff', 4);
+    deaths = createStat(scene, 'DEATHS', '#ff3b30', 3);
+    stars = createStat(scene, 'STARS', '#ffffff', 1);
   }
 
-  const sound = addCornerButton(scene, 908, 48, 'icon-sound', () => {
-    const synth = getSynth();
-    const muted = synth.toggleMuted();
-    synth.unlock();
-    sound.icon.setTexture(muted ? 'icon-mute' : 'icon-sound');
+  const sound = createCandyButton(scene, {
+    x: 908,
+    y: 48,
+    width: 62,
+    height: 62,
+    shape: 'circle',
+    variant: 'mint',
+    iconKey: 'icon-sound',
+    depth: 250,
+    onClick: () => {
+      const synth = getSynth();
+      const muted = synth.toggleMuted();
+      synth.unlock();
+      sound.setIcon(muted ? 'icon-mute' : 'icon-sound');
+    },
   });
 
   let fullscreen = null;
   if (showFullscreen) {
-    fullscreen = addCornerButton(scene, 808, 48, 'icon-fullscreen', () => {
-      getSynth().unlock();
-      toggleDocumentFullscreen();
-    }, { onUp: true });
+    fullscreen = createCandyButton(scene, {
+      x: 808,
+      y: 48,
+      width: 62,
+      height: 62,
+      shape: 'circle',
+      variant: 'sky',
+      iconKey: 'icon-fullscreen',
+      depth: 250,
+      onClick: () => {
+        getSynth().unlock();
+        toggleDocumentFullscreen();
+      },
+    });
     const syncIcon = () => {
-      fullscreen.icon.setTexture(isFullscreenNow() ? 'icon-fullscreen-exit' : 'icon-fullscreen');
+      fullscreen.setIcon(isFullscreenNow() ? 'icon-fullscreen-exit' : 'icon-fullscreen');
     };
     document.addEventListener('fullscreenchange', syncIcon);
     document.addEventListener('webkitfullscreenchange', syncIcon);
@@ -112,23 +113,32 @@ export function createHud(scene, { onHome = null, showStats = true } = {}) {
 
   let home = null;
   if (onHome) {
-    home = addCornerButton(scene, 708, 48, 'icon-home', () => {
-      getSynth().unlock();
-      scene.time.delayedCall(0, onHome);
+    home = createCandyButton(scene, {
+      x: 708,
+      y: 48,
+      width: 62,
+      height: 62,
+      shape: 'circle',
+      variant: 'lemon',
+      iconKey: 'icon-home',
+      depth: 250,
+      onClick: () => {
+        getSynth().unlock();
+        scene.time.delayedCall(0, onHome);
+      },
     });
   }
 
-  const synth = getSynth();
-  sound.icon.setTexture(synth.muted ? 'icon-mute' : 'icon-sound');
+  sound.setIcon(getSynth().muted ? 'icon-mute' : 'icon-sound');
 
   const hud = {
     showFullscreen,
     jumpGuard: { left: 740, bottom: 120 },
     setStats(state) {
       if (!showStats) return;
-      score.setText(`SCORE: ${state.score}`);
-      deaths.setText(`DEATHS: ${state.deaths}`);
-      stars.setText(`STARS: ${state.stars}`);
+      score.setValue(state.score);
+      deaths.setValue(state.deaths);
+      stars.setValue(state.stars);
     },
     relayout({ viewWidth, viewHeight, insets }) {
       const layout = layoutHud({
@@ -146,9 +156,9 @@ export function createHud(scene, { onHome = null, showStats = true } = {}) {
         deaths.setPosition(layout.deaths.x, layout.deaths.y);
         stars.setPosition(layout.stars.x, layout.stars.y);
       }
-      placeButton(sound, layout.sound.x, layout.sound.y);
-      placeButton(fullscreen, layout.fullscreen?.x, layout.fullscreen?.y);
-      placeButton(home, layout.home?.x, layout.home?.y);
+      sound.setPosition(layout.sound.x, layout.sound.y);
+      fullscreen?.setPosition(layout.fullscreen.x, layout.fullscreen.y);
+      home?.setPosition(layout.home.x, layout.home.y);
       hud.jumpGuard = layout.jumpGuard;
       return layout;
     },
@@ -166,43 +176,70 @@ function formatTime(ms) {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-function addWinButton(scene, label, width, enabled, onClick) {
-  const button = scene.add.rectangle(0, 0, width, 58, enabled ? 0xffffff : 0x4a2158)
-    .setScrollFactor(0)
-    .setDepth(260);
-  const caption = scene.add.text(0, 0, label, {
-    fontFamily: FONT,
-    fontSize: enabled ? '28px' : '22px',
-    color: enabled ? '#2a0838' : '#ffffff',
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(261);
-  if (enabled) {
-    button.setInteractive({ useHandCursor: true });
-    button.setData('ui', true);
-    button.on('pointerdown', () => {
-      scene.suppressJump = true;
-      scene.time.delayedCall(0, onClick);
-    });
-  }
-  return { button, caption, width };
-}
-
 /**
  * 通关面板。再玩一次、下一关、选关。
- * 下一关还锁着时中间按钮不可点，并写明还差几颗星。背景音乐不从头播放。
+ * 星星按拿到的颗数逐个弹出。下一关还锁着时中间按钮不可点。
  */
 export function showWinPanel(scene, stats, actions) {
   const panel = scene.add.graphics().setScrollFactor(0).setDepth(200);
-  const title = scene.add.text(0, 0, `第 ${stats.index} 关通关`, labelStyle('#ffffff', 46))
-    .setOrigin(0.5)
-    .setScrollFactor(0)
-    .setDepth(210);
-  const body = scene.add.text(0, 0, '', { ...labelStyle('#ffffff', 26), align: 'center' })
-    .setOrigin(0.5)
-    .setScrollFactor(0)
-    .setDepth(210);
-  const replay = addWinButton(scene, '再玩一次', 168, true, actions.onReplay);
-  const next = addWinButton(scene, actions.nextText, 228, actions.nextEnabled, actions.onNext);
-  const select = addWinButton(scene, '选关', 140, true, actions.onSelect);
+  const title = addCandyText(scene, 0, 0, `第 ${stats.index} 关通关`, {
+    size: 36,
+    color: PANEL.title,
+    stroke: '#ffffff',
+    strokeThickness: 5,
+    shadow: true,
+  }).setDepth(210);
+  const body = scene.add.text(0, 0, '', textStyle({
+    size: 24,
+    color: PANEL.body,
+    stroke: '#ffffff',
+    strokeThickness: 3,
+    align: 'center',
+    lineSpacing: 6,
+    shadow: false,
+  })).setOrigin(0.5).setScrollFactor(0).setDepth(210);
+  const starIcons = [0, 1, 2].map((index) => {
+    const earned = index < stats.stars;
+    const icon = scene.add.image(0, 0, earned ? 'star' : 'ui-star-empty')
+      .setDisplaySize(36, 36)
+      .setScrollFactor(0)
+      .setDepth(212);
+    const targetScale = icon.scaleX;
+    icon.setScale(0);
+    scene.tweens.add({
+      targets: icon,
+      scale: targetScale,
+      duration: 280,
+      delay: 160 + index * 150,
+      ease: 'Back.easeOut',
+    });
+    return icon;
+  });
+  const replay = createCandyButton(scene, {
+    label: '再玩一次',
+    variant: 'pink',
+    width: 180,
+    fontSize: 26,
+    depth: 260,
+    onClick: () => scene.time.delayedCall(0, actions.onReplay),
+  });
+  const next = createCandyButton(scene, {
+    label: actions.nextText,
+    variant: 'mint',
+    width: 248,
+    fontSize: 26,
+    depth: 260,
+    enabled: actions.nextEnabled,
+    onClick: () => scene.time.delayedCall(0, actions.onNext),
+  });
+  const select = createCandyButton(scene, {
+    label: '选关',
+    variant: 'sky',
+    width: 156,
+    fontSize: 26,
+    depth: 260,
+    onClick: () => scene.time.delayedCall(0, actions.onSelect),
+  });
   const buttons = [replay, next, select];
 
   const view = {
@@ -211,66 +248,36 @@ export function showWinPanel(scene, stats, actions) {
     body,
     buttons,
     relayout(viewWidth, viewHeight, insets = { top: 0, right: 0, bottom: 0, left: 0 }) {
-      const topLimit = (insets.top || 0) + 108;
-      const bottomLimit = viewHeight - (insets.bottom || 0) - 16;
-      const side = Math.max(insets.left || 0, insets.right || 0);
-      const w = Math.min(660, viewWidth - side * 2 - 32);
-      const h = Math.min(348, Math.max(280, bottomLimit - topLimit));
-      const x = (viewWidth - w) / 2;
-      const y = topLimit + Math.max(0, (bottomLimit - topLimit - h) / 2);
-      panel.clear();
-      panel.fillStyle(0x2a0838, 0.9);
-      panel.fillRoundedRect(x, y, w, h, 18);
-      panel.lineStyle(4, 0xffffff, 0.9);
-      panel.strokeRoundedRect(x, y, w, h, 18);
-      title.setPosition(viewWidth / 2, y + 42);
-      body.setText(
-        `分数 ${stats.score}\n死亡 ${stats.deaths}\n星星 ${stats.stars} / ${stats.totalStars}\n用时 ${formatTime(stats.timeMs)}`,
-      );
-      body.setPosition(viewWidth / 2, y + 148);
-      const gap = 16;
-      const total = buttons.reduce((sum, item) => sum + item.width, 0) + gap * (buttons.length - 1);
-      let cursor = viewWidth / 2 - total / 2;
-      const by = y + h - 52;
-      for (const item of buttons) {
-        const cx = cursor + item.width / 2;
-        item.button.setPosition(cx, by);
-        item.caption.setPosition(cx, by);
-        cursor += item.width + gap;
+      const layout = layoutWinPanel({ viewWidth, viewHeight, insets });
+      paintCandyPanel(panel, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
+      if (!panel.input) {
+        panel.setInteractive(
+          new Phaser.Geom.Rectangle(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h),
+          Phaser.Geom.Rectangle.Contains,
+        );
+        panel.setData('ui', true);
+      } else {
+        panel.input.hitArea.setTo(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
       }
+      title.setPosition(layout.title.x, layout.title.y);
+      starIcons.forEach((icon, index) => {
+        icon.setPosition(layout.stars.x + (index - 1) * 52, layout.stars.y);
+      });
+      body.setText(`分数 ${stats.score}    死亡 ${stats.deaths}\n用时 ${formatTime(stats.timeMs)}`);
+      body.setPosition(layout.body.x, layout.body.y);
+      buttons.forEach((button, index) => {
+        const slot = layout.buttons[index];
+        button.setPosition(slot.x, slot.y);
+      });
     },
   };
   view.relayout(scene.scale.width, scene.scale.height);
   return view;
 }
 
-/** 主页或选关上的大按钮。label 换成「选关」「返回标题」时仍是同一套白底黑字。 */
-export function createStartButton(scene, x, y, onClick, label = '开始游戏', width = 280) {
-  const button = scene.add.rectangle(x, y, width, 72, 0xffffff)
-    .setScrollFactor(0)
-    .setDepth(20)
-    .setInteractive({ useHandCursor: true });
-  button.setData('ui', true);
-  const caption = scene.add.text(x, y, label, {
-    fontFamily: FONT,
-    fontSize: '36px',
-    color: '#2a0838',
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(21);
-  button.on('pointerdown', () => {
-    scene.suppressJump = true;
-    onClick();
-  });
-  return {
-    button,
-    caption,
-    setPosition(nx, ny) {
-      button.setPosition(nx, ny);
-      caption.setPosition(nx, ny);
-    },
-  };
-}
-
 export function isUiPointer(scene, pointer) {
   const hits = scene.input.hitTestPointer(pointer);
   return hits.some((obj) => obj.getData && obj.getData('ui'));
 }
+
+export { createStartButton } from './candy.js';

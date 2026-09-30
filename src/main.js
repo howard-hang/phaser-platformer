@@ -71,7 +71,8 @@ function placeFpsMeter(game, meter) {
   meter.style.left = `${rect.left + slot.x * scaleX}px`;
   meter.style.top = `${rect.top + slot.y * scaleY}px`;
   meter.style.bottom = 'auto';
-  meter.style.fontSize = `${Math.max(11, Math.round(slot.h * scaleY * 0.62))}px`;
+  meter.style.maxWidth = `${slot.w * scaleX}px`;
+  meter.style.fontSize = `${Math.max(11, Math.round(slot.h * scaleY * 0.5))}px`;
 }
 
 /** 网址带 ?fps 时在左上角显示 Phaser 统计的帧率，方便对照刷新率。 */

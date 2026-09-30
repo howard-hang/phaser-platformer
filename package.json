@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
-    "build": "vite build",
+    "subset-font": "node scripts/subset-font.mjs",
+    "build": "node scripts/subset-font.mjs && vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4173",
     "test": "vitest run",
     "android:sync": "cap sync android",
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@capacitor/android": "8.5.2",
     "@capacitor/cli": "8.5.2",
+    "subset-font": "2.9.0",
     "vite": "8.3.1",
     "vitest": "5.0.2"
   }

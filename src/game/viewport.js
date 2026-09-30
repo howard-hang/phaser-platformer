@@ -10,6 +10,13 @@ export const HUD_LINE = 40;
 /** 右上角按钮中心间距。点选区是 88，间距留得比它大，避免两颗按钮叠在一起。 */
 export const BUTTON_GAP = 100;
 export const BUTTON_INSET = 52;
+/** 圆形图标按钮的点击区。比画出来的圆更大，手机上仍好按。 */
+export const ICON_HIT = 88;
+/**
+ * 文字按钮的高度。按 320 CSS 像素高的横屏来算，游戏像素大约是屏幕的 540/320，
+ * 76 落到屏幕上仍有大约 45 CSS 像素，不低于 44。
+ */
+export const CANDY_BUTTON_H = 76;
 
 /**
  * 计算 EXPAND 之后的游戏宽高。
@@ -222,7 +229,7 @@ export function layoutLevelSelect({
 
 /**
  * 二十关选关板。按屏幕能放下的行列分页，卡片让开安全区。
- * 卡片高度至少 64，方便手指点。page 从 0 开始。
+ * 卡片高度至少 76，方便手指点。page 从 0 开始。
  */
 export function layoutLevelBoard({
   viewWidth,
@@ -236,17 +243,18 @@ export function layoutLevelBoard({
   const left = (insets.left || 0) + 18;
   const right = (insets.right || 0) + 18;
   // 标题区只放关卡名和累计星星。页码改到翻页按钮上方，两行不再叠在一起。
-  const header = 92;
-  // 底栏要同时放下页码和 72 像素高的「返回标题」。
-  const footer = 116;
+  const header = 108;
+  // 底栏要同时放下页码和 76 像素高的返回、翻页按钮，并和卡片留出空隙。
+  const footer = 128;
   const gapX = 12;
   const gapY = 10;
+  const minCard = CANDY_BUTTON_H;
   const innerW = Math.max(120, viewWidth - left - right);
   const columns = Math.max(1, Math.min(4, Math.floor((innerW + gapX) / (240 + gapX))));
   const availH = Math.max(80, viewHeight - top - bottom - header - footer);
-  let rows = Math.max(2, Math.min(5, Math.floor((availH + gapY) / (68 + gapY))));
+  let rows = Math.max(2, Math.min(5, Math.floor((availH + gapY) / (minCard + gapY))));
   let cardH = (availH - gapY * (rows - 1)) / rows;
-  while (rows > 2 && cardH < 64) {
+  while (rows > 2 && cardH < minCard) {
     rows -= 1;
     cardH = (availH - gapY * (rows - 1)) / rows;
   }
@@ -268,22 +276,80 @@ export function layoutLevelBoard({
       h: cardH,
     });
   }
-  // 返回标题高 72，翻页按钮高 52。中心抬高，底边刚好停在安全区上沿。
-  const buttonY = viewHeight - bottom - 36;
-  // 页码夹在上一页和下一页之间，单独一行，不压到「返回标题」。
-  const pageY = buttonY - 58;
+  // 三颗按钮都是 76 高。中心抬高，底边刚好停在安全区上沿。
+  const buttonY = viewHeight - bottom - CANDY_BUTTON_H / 2;
+  // 页码夹在上一页和下一页之间，单独一行，不压到按钮。
+  const pageY = buttonY - 60;
   return {
-    title: { x: viewWidth / 2, y: top + 22, w: 220, h: 46 },
-    total: { x: viewWidth / 2, y: top + 66, w: 280, h: 26 },
+    title: { x: viewWidth / 2, y: top + 26, w: 300, h: 44 },
+    total: { x: viewWidth / 2, y: top + 74, w: 340, h: 28 },
     cells,
     page: safePage,
     pages,
     pageSize,
     columns,
     rows,
-    prev: { x: left + 78, y: buttonY, w: 148, h: 52 },
-    next: { x: viewWidth - right - 78, y: buttonY, w: 148, h: 52 },
-    back: { x: viewWidth / 2, y: buttonY, w: 200, h: 72 },
+    prev: { x: left + 86, y: buttonY, w: 156, h: CANDY_BUTTON_H },
+    next: { x: viewWidth - right - 86, y: buttonY, w: 156, h: CANDY_BUTTON_H },
+    back: { x: viewWidth / 2, y: buttonY, w: 210, h: CANDY_BUTTON_H },
     pageLabel: { x: viewWidth / 2, y: pageY, w: 180, h: 28 },
+  };
+}
+
+/** 通关面板。标题、星星、正文、按钮从上往下排，短屏幕上也不会叠在一起。 */
+export function layoutWinPanel({
+  viewWidth,
+  viewHeight,
+  insets = { top: 0, right: 0, bottom: 0, left: 0 },
+  buttonWidths = [180, 248, 156],
+  buttonHeight = CANDY_BUTTON_H,
+  buttonGap = 14,
+} = {}) {
+  const topLimit = (insets.top || 0) + 96;
+  const bottomLimit = viewHeight - ((insets.bottom || 0) + 12);
+  const side = Math.max(insets.left || 0, insets.right || 0) + 24;
+  const maxW = Math.max(280, viewWidth - side * 2);
+  let widths = buttonWidths.slice();
+  let gaps = buttonGap * Math.max(0, widths.length - 1);
+  let buttonsTotal = widths.reduce((sum, item) => sum + item, 0) + gaps;
+  if (buttonsTotal + 40 > maxW) {
+    const room = Math.max(120, maxW - 40 - gaps);
+    const raw = widths.reduce((sum, item) => sum + item, 0);
+    widths = widths.map((item) => Math.max(72, Math.floor(item * room / raw)));
+    buttonsTotal = widths.reduce((sum, item) => sum + item, 0) + gaps;
+  }
+  const w = Math.min(680, Math.max(buttonsTotal + 40, Math.min(640, maxW)));
+  const availH = Math.max(220, bottomLimit - topLimit);
+  const h = Math.min(372, availH);
+  const x = (viewWidth - w) / 2;
+  const y = topLimit + Math.max(0, (availH - h) / 2);
+  const pad = 18;
+  const titleH = 52;
+  const starH = 46;
+  const bodyH = 62;
+  let cursorY = y + pad;
+  const title = { x: viewWidth / 2, y: cursorY + titleH / 2, w: w - 48, h: titleH };
+  cursorY += titleH + 8;
+  const stars = { x: viewWidth / 2, y: cursorY + starH / 2, w: 196, h: starH };
+  cursorY += starH + 8;
+  const body = { x: viewWidth / 2, y: cursorY + bodyH / 2, w: w - 56, h: bodyH };
+  const by = y + h - pad - buttonHeight / 2;
+  const buttonTop = by - buttonHeight / 2;
+  const bodyBottom = body.y + body.h / 2;
+  if (bodyBottom + 8 > buttonTop) {
+    body.y -= bodyBottom + 8 - buttonTop;
+  }
+  let cursorX = viewWidth / 2 - buttonsTotal / 2;
+  const buttons = widths.map((bw) => {
+    const item = { x: cursorX + bw / 2, y: by, w: bw, h: buttonHeight };
+    cursorX += bw + buttonGap;
+    return item;
+  });
+  return {
+    panel: { x, y, w, h },
+    title,
+    stars,
+    body,
+    buttons,
   };
 }
