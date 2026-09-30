@@ -10,20 +10,25 @@ import {
   playerHitsObstacle,
   playerHitsStar,
   obstacleRect,
+  rectsOverlap,
 } from './world.js';
 
 const STEP = 1 / 60;
 
-/** 玩家身前，下一个还没过去的地面障碍（头顶方块不算）。 */
-function nextGroundHazard(x, y, obstacles, tuning) {
+/** 玩家身前，下一个还没过去、而且贴地会撞上的障碍。 */
+function nextGroundHazard(x, y, obstacles, tuning, time) {
   const prect = bodyRectFromSprite(x, y, HITBOX.player);
   const front = prect.x + prect.w;
+  const standing = bodyRectFromSprite(x, y, HITBOX.player);
   let best = null;
   let bestLeft = Infinity;
   for (const obstacle of obstacles) {
-    if (obstacle.type === 'overhead') continue;
-    const rect = obstacleRect(obstacle, tuning);
+    if (obstacle.type === 'overhead' || obstacle.type === 'ceiling') continue;
+    const rect = obstacleRect(obstacle, tuning, time);
+    if (!rect) continue;
     if (rect.x + rect.w <= front) continue;
+    // 高处的激光和升起来的移动障碍，贴地跑得过去。
+    if (!rectsOverlap(standing, { ...rect, x: standing.x })) continue;
     if (rect.x < bestLeft) {
       best = obstacle;
       bestLeft = rect.x;
@@ -57,8 +62,9 @@ function jumpClears(x, y, level, tuning) {
     cx = step.x;
     cy = step.y;
     vy = step.vy;
+    const time = (cx - level.startX) / tuning.speed;
     for (const obstacle of level.obstacles) {
-      if (playerHitsObstacle(cx, cy, obstacle, tuning)) return false;
+      if (playerHitsObstacle(cx, cy, obstacle, tuning, time)) return false;
     }
     if (step.landed) return true;
   }
@@ -70,10 +76,11 @@ function jumpClears(x, y, level, tuning) {
  * 头顶方块不主动起跳，站着跑过去。
  */
 function decideJump(x, y, level, tuning) {
-  const hazard = nextGroundHazard(x, y, level.obstacles, tuning);
+  const time = (x - level.startX) / tuning.speed;
+  const hazard = nextGroundHazard(x, y, level.obstacles, tuning, time);
   if (!hazard) return 'run';
   const prect = bodyRectFromSprite(x, y, HITBOX.player);
-  const hrect = obstacleRect(hazard, tuning);
+  const hrect = obstacleRect(hazard, tuning, time);
   const dist = hrect.x - (prect.x + prect.w);
   if (dist > 200) return 'run';
   if (dist > 95) return 'run';
@@ -100,7 +107,7 @@ export function simulateRun(level, tuning = TUNING, options = {}) {
   for (let t = 0; t <= maxT; t += STEP) {
     if (path) path.push({ x, y, grounded });
     for (const obstacle of level.obstacles) {
-      if (playerHitsObstacle(x, y, obstacle, tuning)) {
+      if (playerHitsObstacle(x, y, obstacle, tuning, t)) {
         return { ok: false, reason: 'hit', id: obstacle.id, t, x, y, stars };
       }
     }

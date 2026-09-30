@@ -50,6 +50,59 @@ describe('五关都能通关', () => {
   });
 });
 
+describe('新障碍先单独教，再和其他障碍组合', () => {
+  function nearestGap(level, x) {
+    let best = Infinity;
+    for (const obstacle of level.obstacles) {
+      const gap = Math.abs(obstacle.x - x) / level.speed;
+      if (gap > 0.05 && gap < best) best = gap;
+    }
+    for (const pad of level.pads) {
+      const gap = Math.abs(pad.x - x) / level.speed;
+      if (gap > 0.05 && gap < best) best = gap;
+    }
+    return best;
+  }
+
+  it('第 1 关只教倒挂刺和跳板，第 2 关才出现移动障碍，第 3 关才出现激光', () => {
+    const types = (level) => new Set(level.obstacles.map((item) => item.type));
+    expect(types(LEVELS[0]).has('ceiling')).toBe(true);
+    expect(LEVELS[0].pads.length).toBeGreaterThan(0);
+    expect(types(LEVELS[0]).has('mover')).toBe(false);
+    expect(types(LEVELS[0]).has('laser')).toBe(false);
+    expect(types(LEVELS[1]).has('mover')).toBe(true);
+    expect(types(LEVELS[1]).has('laser')).toBe(false);
+    expect(types(LEVELS[2]).has('laser')).toBe(true);
+    expect(types(LEVELS[3]).has('laser')).toBe(true);
+    expect(types(LEVELS[3]).has('mover')).toBe(true);
+    expect(types(LEVELS[4]).has('ceiling')).toBe(true);
+    expect(LEVELS[4].pads.length).toBeGreaterThan(0);
+  });
+
+  it('每种新障碍第一次出现时，前后都留出认识它的空档', () => {
+    const firstCeiling = LEVELS[0].obstacles.find((item) => item.type === 'ceiling');
+    const firstMover = LEVELS[1].obstacles.find((item) => item.type === 'mover');
+    const firstLaser = LEVELS[2].obstacles.find((item) => item.type === 'laser');
+    expect(nearestGap(LEVELS[0], firstCeiling.x)).toBeGreaterThan(1.6);
+    expect(nearestGap(LEVELS[0], LEVELS[0].pads[0].x)).toBeGreaterThan(1.6);
+    expect(nearestGap(LEVELS[1], firstMover.x)).toBeGreaterThan(1.6);
+    expect(nearestGap(LEVELS[2], firstLaser.x)).toBeGreaterThan(1.6);
+  });
+
+  it('后面的关卡会把不同的新障碍排在同一次冲刺里', () => {
+    const mixed = LEVELS[4].obstacles.filter((item) => item.type === 'laser' || item.type === 'mover' || item.type === 'ceiling');
+    let close = false;
+    for (let i = 0; i < mixed.length; i += 1) {
+      for (let j = i + 1; j < mixed.length; j += 1) {
+        if (mixed[i].type === mixed[j].type) continue;
+        const gap = Math.abs(mixed[i].x - mixed[j].x) / LEVELS[4].speed;
+        if (gap < 2.2) close = true;
+      }
+    }
+    expect(close).toBe(true);
+  });
+});
+
 describe('路径搜索本身', () => {
   it('空旷跑道上的地面星和空中星都能捡到', () => {
     const speed = 300;

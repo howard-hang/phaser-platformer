@@ -20,6 +20,7 @@ import { cssInsetsToGame, readSafeAreaInsets, verticalCameraScroll } from '../ga
 import {
   TUNING,
   HITBOX,
+  PAD_JUMP_VELOCITY,
   playerGroundY,
   obstaclePose,
   starPose,
@@ -47,6 +48,7 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.events.off('preupdate', this.restorePhysicsPose, this);
+    this.events.off('preupdate', this.syncDynamicHazards, this);
     this.events.off('postupdate', this.extrapolatePlayerPose, this);
     // 直接开未解锁的关时送回选关，不把后面的关漏出去。
     if (!isLevelUnlocked(loadProgress(), this.level.id)) {
@@ -62,6 +64,7 @@ export class GameScene extends Phaser.Scene {
     this.invulnUntil = 0;
     this.activeCheckpoint = this.level.checkpoints[0];
     this.airTimeMs = sampleJump().airTime * 1000;
+    this.boostAirMs = sampleJump({ ...TUNING, jumpVelocity: PAD_JUMP_VELOCITY }).airTime * 1000;
     this._insets = { top: 0, right: 0, bottom: 0, left: 0 };
 
     const palette = LEVEL_PALETTES[this.level.palette] || LEVEL_PALETTES[0];
@@ -94,10 +97,41 @@ export class GameScene extends Phaser.Scene {
     // 场景对象会复用。再开一局时清掉上一局的显示坐标，并拆掉旧监听，避免把方块拉回终点。
     this._physicsPose = null;
     this.events.off('preupdate', this.restorePhysicsPose, this);
+    this.events.off('preupdate', this.syncDynamicHazards, this);
     this.events.off('postupdate', this.extrapolatePlayerPose, this);
     // 物理步会把精灵坐标写回刚体位置。渲染前再外推，下一帧开始前先还原，避免外推进碰撞。
+    // 动态障碍在物理碰撞前对齐，避免慢一帧。
     this.events.on('preupdate', this.restorePhysicsPose, this);
+    this.events.on('preupdate', this.syncDynamicHazards, this);
     this.events.on('postupdate', this.extrapolatePlayerPose, this);
+  }
+
+  /**
+   * 上下移动的刺和周期激光跟着跑过的时间走。
+   * 只更新镜头附近的几个，避免整关每帧都刷新刚体。
+   */
+  syncDynamicHazards() {
+    const list = this.dynamicHazards;
+    if (!list?.length || !this.player) return;
+    const cam = this.cameras.main;
+    const left = cam.scrollX - 160;
+    const right = cam.scrollX + cam.width + 220;
+    const time = (this.player.x - this.level.startX) / this.tuning.speed;
+    for (let i = 0; i < list.length; i += 1) {
+      const item = list[i];
+      if (item.obstacle.x < left || item.obstacle.x > right) continue;
+      const pose = obstaclePose(item.obstacle, this.tuning, time);
+      const solid = pose.solid !== false;
+      if (item.sprite.x !== pose.cx || item.sprite.y !== pose.cy) {
+        item.sprite.setPosition(pose.cx, pose.cy);
+        item.sprite.refreshBody();
+      }
+      if (item.sprite.body.enable !== solid) {
+        item.sprite.body.enable = solid;
+        item.sprite.setVisible(solid);
+        if (solid) item.sprite.refreshBody();
+      }
+    }
   }
 
   /** 把上一帧为了显示而外推的坐标还原成刚体位置。 */
@@ -153,14 +187,41 @@ export class GameScene extends Phaser.Scene {
     this.hazardSprites = [];
     this.starSprites = [];
     this.flags = [];
+    this.dynamicHazards = [];
+    this.padSprites = [];
 
     for (const obstacle of this.level.obstacles) {
-      const pose = obstaclePose(obstacle);
+      const pose = obstaclePose(obstacle, this.tuning, 0);
+      if (obstacle.type === 'mover') {
+        // 白竖线标出上下移动的范围，本身不挡路。
+        const amplitude = obstacle.amplitude ?? 96;
+        this.add.rectangle(
+          obstacle.x,
+          TUNING.groundY - amplitude / 2,
+          4,
+          amplitude,
+          0xffffff,
+        ).setDepth(3);
+      }
       const sprite = this.physics.add.staticSprite(pose.cx, pose.cy, pose.key);
       applyHitbox(sprite, pose.spec);
       sprite.setDepth(5);
       sprite.setData('id', obstacle.id);
+      sprite.setVisible(pose.solid !== false);
+      if (sprite.body) sprite.body.enable = pose.solid !== false;
       this.hazardSprites.push(sprite);
+      if (obstacle.type === 'mover' || obstacle.type === 'laser') {
+        this.dynamicHazards.push({ obstacle, sprite });
+      }
+    }
+
+    for (const pad of this.level.pads || []) {
+      const pose = obstaclePose({ ...pad, type: 'pad' }, this.tuning, 0);
+      const sprite = this.physics.add.staticSprite(pose.cx, pose.cy, pose.key);
+      applyHitbox(sprite, pose.spec);
+      sprite.setDepth(5);
+      sprite.setData('id', pad.id);
+      this.padSprites.push(sprite);
     }
 
     for (const star of this.level.stars) {
@@ -189,6 +250,9 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.add.overlap(this.player, this.hazardSprites, () => this.onHazard(), null, this);
     this.physics.add.overlap(this.player, this.starSprites, (_player, star) => this.onStar(star), null, this);
+    if (this.padSprites.length) {
+      this.physics.add.overlap(this.player, this.padSprites, () => this.onPad(), null, this);
+    }
   }
 
   createPlayer() {
@@ -240,11 +304,25 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** 只有脚还在地上才起跳，空中不能二段跳。 */
+  /** 只有脚还在地上才起跳，空中不能二段跳。平时的起跳速度不变。 */
   tryJump() {
     if (this.won || this.time.now < this.invulnUntil) return;
     if (!this.isGrounded()) return;
     this.player.body.setVelocityY(TUNING.jumpVelocity);
+    this.airTimeMs = sampleJump().airTime * 1000;
+    this.rotating = true;
+    this.airMs = 0;
+    this.player.angle = 0;
+    getSynth().play('jump');
+  }
+
+  /** 踩上跳板会弹得更高。已经离地就不要每帧重复触发。 */
+  onPad() {
+    if (this.won || this.time.now < this.invulnUntil) return;
+    if (!this.isGrounded()) return;
+    if (this.player.body.velocity.y < -40) return;
+    this.player.body.setVelocityY(PAD_JUMP_VELOCITY);
+    this.airTimeMs = this.boostAirMs;
     this.rotating = true;
     this.airMs = 0;
     this.player.angle = 0;

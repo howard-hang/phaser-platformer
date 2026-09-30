@@ -5,9 +5,11 @@
  */
 import {
   HITBOX,
+  PAD_JUMP_VELOCITY,
   TUNING,
   bodyRectFromSprite,
   obstacleRect,
+  padRect,
   playerGroundY,
   rectsOverlap,
   starRect,
@@ -40,18 +42,20 @@ export function findClearPath(level, tuning = TUNING) {
   const finishX = level.finishX;
   const full = (1 << level.stars.length) - 1;
 
-  const obstacles = level.obstacles.map((obstacle) => ({
-    x: obstacle.x,
-    rect: obstacleRect(obstacle, tuning),
-    id: obstacle.id,
-  }));
+  const obstacles = level.obstacles.map((obstacle) => obstacle);
   obstacles.sort((a, b) => a.x - b.x);
+  const pads = (level.pads || []).map((pad) => ({
+    id: pad.id,
+    x: pad.x,
+    rect: padRect(pad, tuning),
+  }));
   const stars = level.stars.map((star) => ({
     id: star.id,
     x: star.x,
     lift: star.lift || 0,
     rect: starRect(star, tuning),
   }));
+  const timeAt = (x) => (x - level.startX) / speed;
 
   const horizon = speed * 0.95;
 
@@ -66,16 +70,25 @@ export function findClearPath(level, tuning = TUNING) {
     return lo;
   }
 
-  function hitsAt(px, py) {
+  function hitsAt(px, py, time) {
     const prect = playerRect(px, py);
-    const minX = px - 80;
-    const maxX = px + 80;
+    const minX = px - 120;
+    const maxX = px + 120;
     for (let i = firstObstacleIndex(minX); i < obstacles.length; i += 1) {
       const item = obstacles[i];
       if (item.x > maxX) break;
-      if (rectsOverlap(prect, item.rect)) return item.id;
+      const rect = obstacleRect(item, tuning, time);
+      if (rect && rectsOverlap(prect, rect)) return item.id;
     }
     return null;
+  }
+
+  function onPad(px) {
+    const prect = playerRect(px, groundY);
+    for (let i = 0; i < pads.length; i += 1) {
+      if (rectsOverlap(prect, pads[i].rect)) return true;
+    }
+    return false;
   }
 
   function pickup(px, py, mask) {
@@ -103,15 +116,20 @@ export function findClearPath(level, tuning = TUNING) {
       if (stars[i].lift <= 0) continue;
       if (stars[i].x >= back && stars[i].x <= far) return true;
     }
+    for (let i = 0; i < pads.length; i += 1) {
+      if (pads[i].x >= back && pads[i].x <= far + 40) return true;
+    }
     return false;
   }
 
-  function jumpFrom(x, mask) {
+  function jumpFrom(x, mask, velocity = tuning.jumpVelocity) {
     let cx = x;
     let cy = groundY;
-    let vy = tuning.jumpVelocity;
+    let vy = velocity;
     let nextMask = mask;
-    for (let i = 0; i < 180; i += 1) {
+    // 跳板滞空更久，步数留够落到地面。
+    const limit = velocity < tuning.jumpVelocity ? 240 : 180;
+    for (let i = 0; i < limit; i += 1) {
       const nextVy = vy + tuning.gravity * STEP;
       let nextX = cx + step;
       let nextY = cy + nextVy * STEP;
@@ -121,7 +139,7 @@ export function findClearPath(level, tuning = TUNING) {
         nextY = groundY;
         landed = true;
       }
-      if (hitsAt(nextX, nextY)) return null;
+      if (hitsAt(nextX, nextY, timeAt(nextX))) return null;
       nextMask = pickup(nextX, nextY, nextMask);
       cx = nextX;
       cy = nextY;
@@ -138,7 +156,7 @@ export function findClearPath(level, tuning = TUNING) {
     while (cx < finishX) {
       if (interesting(cx, nextMask)) break;
       const nx = cx + step;
-      if (hitsAt(nx, groundY)) return null;
+      if (hitsAt(nx, groundY, timeAt(nx))) return null;
       nextMask = pickup(nx, groundY, nextMask);
       cx = nx;
     }
@@ -185,12 +203,19 @@ export function findClearPath(level, tuning = TUNING) {
       continue;
     }
 
+    // 踩上跳板一定会弹起，不能贴地穿过去。
+    if (onPad(state.x)) {
+      const boosted = jumpFrom(state.x, state.mask, PAD_JUMP_VELOCITY);
+      if (boosted) stack.push(boosted);
+      continue;
+    }
+
     // 先压入跳跃，后压入跑步。栈顶先跑，实在过不去再回头试更早的起跳。
     const jumped = jumpFrom(state.x, state.mask);
     if (jumped) stack.push(jumped);
 
     const nx = state.x + step;
-    if (!hitsAt(nx, groundY)) {
+    if (!hitsAt(nx, groundY, timeAt(nx))) {
       stack.push({ x: nx, mask: pickup(nx, groundY, state.mask) });
     }
   }

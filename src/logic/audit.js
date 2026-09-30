@@ -6,17 +6,23 @@ import {
   HITBOX,
   TUNING,
   bodyRectFromSprite,
+  obstaclePose,
   obstacleRect,
+  padRect,
   playerGroundY,
   rectsOverlap,
   starRect,
 } from './world.js';
 
-/** 站在某个 x 上会不会和障碍重叠。 */
-function standingHits(x, obstacles, tuning) {
+/** 站在某个 x 上会不会和障碍重叠。移动障碍和激光按到达该点的时间计算。 */
+function standingHits(level, x, tuning) {
   const y = playerGroundY(tuning);
   const prect = bodyRectFromSprite(x, y, HITBOX.player);
-  return obstacles.some((obstacle) => rectsOverlap(prect, obstacleRect(obstacle, tuning)));
+  const time = (x - level.startX) / tuning.speed;
+  return level.obstacles.some((obstacle) => {
+    const rect = obstacleRect(obstacle, tuning, time);
+    return rect ? rectsOverlap(prect, rect) : false;
+  });
 }
 
 /** 返回问题描述数组，空数组表示关卡结构合格。 */
@@ -46,8 +52,16 @@ export function auditLevel(level, tuning = TUNING) {
     }
     // 重生点左右留出半个身位，避免刚复活就卡在尖刺里。
     for (const x of [point - 8, point, point + 24]) {
-      if (standingHits(x, level.obstacles, tuning)) {
+      if (standingHits(level, x, tuning)) {
         problems.push(`存档点 ${point} 附近站立会碰到障碍`);
+        break;
+      }
+    }
+    for (const pad of level.pads || []) {
+      const rect = padRect(pad, tuning);
+      const prect = bodyRectFromSprite(point, playerGroundY(tuning), HITBOX.player);
+      if (rectsOverlap(prect, rect)) {
+        problems.push(`存档点 ${point} 落在跳板 ${pad.id} 上，复活会直接弹起`);
         break;
       }
     }
@@ -59,12 +73,13 @@ export function auditLevel(level, tuning = TUNING) {
   let firstX = Infinity;
   let lastX = -Infinity;
   for (const obstacle of level.obstacles) {
-    const rect = obstacleRect(obstacle, tuning);
-    firstX = Math.min(firstX, rect.x);
-    lastX = Math.max(lastX, rect.x + rect.w);
-    if (obstacle.type === 'overhead') {
-      const playerTop = bodyRectFromSprite(0, playerGroundY(tuning), HITBOX.player).y;
-      if (rect.y + rect.h > playerTop) {
+    const pose = obstaclePose(obstacle, tuning, (obstacle.x - level.startX) / tuning.speed);
+    const left = pose.cx - pose.spec.w / 2;
+    const right = left + pose.spec.w;
+    firstX = Math.min(firstX, left);
+    lastX = Math.max(lastX, right);
+    if (obstacle.type === 'overhead' || obstacle.type === 'ceiling') {
+      if (standingHits(level, obstacle.x, tuning)) {
         problems.push(`头顶障碍 ${obstacle.id} 太低，站立就会撞上`);
       }
     }
@@ -80,8 +95,10 @@ export function auditLevel(level, tuning = TUNING) {
 
   for (const star of level.stars) {
     const srect = starRect(star, tuning);
+    const time = (star.x - level.startX) / tuning.speed;
     for (const obstacle of level.obstacles) {
-      if (rectsOverlap(srect, obstacleRect(obstacle, tuning))) {
+      const rect = obstacleRect(obstacle, tuning, time);
+      if (rect && rectsOverlap(srect, rect)) {
         problems.push(`星星 ${star.id} 和障碍 ${obstacle.id} 重叠`);
       }
     }

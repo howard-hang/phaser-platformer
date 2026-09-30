@@ -12,5 +12,12 @@
     "androidScheme": "https",
     "hostname": "localhost",
     "cleartext": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "hidden": true,
+      "insetsHandling": "disable",
+      "initialViewportFitValueHint": "cover"
+    }
   }
 }

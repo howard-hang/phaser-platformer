@@ -7,6 +7,7 @@ import {
   nextFullscreenAction,
   shouldShowFullscreenButton,
   verticalCameraScroll,
+  viewportFillBox,
 } from '../src/game/viewport.js';
 
 describe('按宽高比铺满', () => {
@@ -44,6 +45,28 @@ describe('按宽高比铺满', () => {
   it('更高的画面把多出来的高度留在上方，16:9 时镜头不动', () => {
     expect(verticalCameraScroll(540, 540)).toBe(0);
     expect(verticalCameraScroll(540, 720)).toBe(-180);
+  });
+});
+
+describe('视觉视口铺满', () => {
+  it('用视觉视口的宽高，不把画布缩进偏移量里', () => {
+    const box = viewportFillBox({
+      innerWidth: 800,
+      innerHeight: 360,
+      visualWidth: 2280,
+      visualHeight: 1080,
+      offsetLeft: 0,
+      offsetTop: 0,
+    });
+    expect(box).toEqual({ left: 0, top: 0, width: 2280, height: 1080 });
+  });
+
+  it('没有视觉视口时退回窗口内部尺寸', () => {
+    const box = viewportFillBox({ innerWidth: 390, innerHeight: 844 });
+    expect(box.width).toBe(390);
+    expect(box.height).toBe(844);
+    expect(box.left).toBe(0);
+    expect(box.top).toBe(0);
   });
 });
 

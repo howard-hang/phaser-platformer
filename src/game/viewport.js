@@ -76,10 +76,10 @@ export function readSafeAreaInsets(doc = document) {
     'top:0',
     'visibility:hidden',
     'pointer-events:none',
-    'padding-top:env(safe-area-inset-top)',
-    'padding-right:env(safe-area-inset-right)',
-    'padding-bottom:env(safe-area-inset-bottom)',
-    'padding-left:env(safe-area-inset-left)',
+    'padding-top:var(--safe-area-inset-top, env(safe-area-inset-top, 0px))',
+    'padding-right:var(--safe-area-inset-right, env(safe-area-inset-right, 0px))',
+    'padding-bottom:var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))',
+    'padding-left:var(--safe-area-inset-left, env(safe-area-inset-left, 0px))',
   ].join(';');
   (doc.body || doc.documentElement).appendChild(probe);
   const view = doc.defaultView || window;
@@ -96,6 +96,41 @@ export function readSafeAreaInsets(doc = document) {
   };
   probe.remove();
   return insets;
+}
+
+/**
+ * 画布要盖住视觉视口，而不是缩在安全区里面。
+ * 左右留白如果来自安卓窗口没伸进挖孔，页面本身涂不到那一块，得在原生层关掉内缩。
+ */
+export function viewportFillBox(metrics = {}) {
+  const pick = (value, fallback) => (Number.isFinite(value) && value > 0 ? value : fallback);
+  const width = pick(metrics.visualWidth, pick(metrics.innerWidth, 1));
+  const height = pick(metrics.visualHeight, pick(metrics.innerHeight, 1));
+  const left = Number.isFinite(metrics.offsetLeft) ? metrics.offsetLeft : 0;
+  const top = Number.isFinite(metrics.offsetTop) ? metrics.offsetTop : 0;
+  return { left, top, width, height };
+}
+
+/** 把游戏容器钉在视觉视口上，旋转和浏览器工具栏收起时跟着变。 */
+export function applyViewportFill(element, view = window) {
+  if (!element || !view) return null;
+  const visual = view.visualViewport;
+  const box = viewportFillBox({
+    innerWidth: view.innerWidth,
+    innerHeight: view.innerHeight,
+    visualWidth: visual?.width,
+    visualHeight: visual?.height,
+    offsetLeft: visual?.offsetLeft,
+    offsetTop: visual?.offsetTop,
+  });
+  element.style.position = 'fixed';
+  element.style.left = `${box.left}px`;
+  element.style.top = `${box.top}px`;
+  element.style.width = `${box.width}px`;
+  element.style.height = `${box.height}px`;
+  element.style.margin = '0';
+  element.style.padding = '0';
+  return box;
 }
 
 /** 安卓壳已经是沉浸式全屏，网页才显示全屏按钮。 */
