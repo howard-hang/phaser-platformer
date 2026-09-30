@@ -199,6 +199,24 @@ python3 scripts/generate-android-icons.py
 
 GitHub Actions 工作流 `.github/workflows/android.yml` 会在拉取请求和推送到 `main` 时构建这个调试 APK，并上传为名为 `fangkuai-paoku-debug` 的 artifact。推送到 `main` 后，还会把同一份包发到 GitHub Release `android-debug`（预发布），文件名是 `fangkuai-paoku-debug.apk`。发布步骤不检出仓库，所以要显式带上 `GH_REPO`，否则 `gh` 会因为找不到 git 仓库而失败。这是调试签名，不能上架商店。网页测试和 Pages 部署仍走 `.github/workflows/pages.yml`，没有改那个文件。
 
+## 界面字体
+
+按钮、标题和计数用站酷庆科黄油体。它是圆润的粗标题字，和糖果色按钮是一套。游戏里只带用得到的字，断网也能显示。
+
+- 字体名：站酷庆科黄油体（ZCOOL QingKe HuangYou）
+- 来源：[Google Fonts](https://fonts.google.com/specimen/ZCOOL+QingKe+HuangYou)，上游仓库 [googlefonts/zcool-qingke-huangyou](https://github.com/googlefonts/zcool-qingke-huangyou)
+- 许可证：[SIL Open Font License 1.1](scripts/fonts/OFL.txt)。可以免费商用，也可以子集化。不能把字体文件单独拿去卖。打包进网页和 APK 的许可证全文在 `OFL-ZCOOLQingKeHuangYou.txt`。
+- 完整字库：`scripts/fonts/ZCOOLQingKeHuangYou-Regular.ttf`。这份不打进游戏包。
+- 游戏里用的子集：`src/assets/game-font.woff2`
+
+新增关卡名，或改了界面上的字，重新生成子集：
+
+```bash
+npm run subset-font
+```
+
+`npm run build` 会先跑这一步。`scripts/subset-font.mjs` 读取 `src/levels/*.json` 的关卡名，以及 `src/` 和 `index.html` 里的字符串，自动收集字符，不用手写字符表。脚本拼出来、源码字符串里没出现的字，补进 `scripts/fonts/extra-chars.txt`，每个字都会收进去。
+
 ## 背景音乐
 
 标题画面和关卡共用一首循环的电子乐，文件在 `src/assets/music/pulse.ogg`（Vorbis，约几百 KB），会打进网页构建和 APK，断网也能播。死亡、再玩一次、回到标题都接着当前进度，不从头开始。浏览器禁止自动播放，所以要等第一次点击、触摸或按键之后才出声。右上角的声音开关同时管这首曲子和跳跃等音效。

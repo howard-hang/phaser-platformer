@@ -1,17 +1,18 @@
 /**
- * 主页。关卡右上角的房子按钮回到这里，再点开始会重开一局。
- * 背景和关卡用同一套视差贴图，标题和按钮随画面尺寸居中。
+ * 标题页。背景仍是关卡那套视差，标题和按钮随画面居中。
+ * 「方块跑酷」用分色厚描边，选关是一颗糖果主按钮。
  */
 import Phaser from 'phaser';
 import { TUNING } from '../logic/world.js';
-import { FONT, THEME } from '../game/theme.js';
+import { THEME } from '../game/theme.js';
 import {
   createParallax,
   layoutParallax,
   scrollParallax,
   tintParallax,
 } from '../game/backdrop.js';
-import { createHud, createStartButton } from '../game/hud.js';
+import { createHud } from '../game/hud.js';
+import { addCandyText, createCandyButton, createCandyLogo } from '../game/candy.js';
 import { getSynth } from '../game/audio.js';
 import { cssInsetsToGame, readSafeAreaInsets, verticalCameraScroll } from '../game/viewport.js';
 
@@ -25,27 +26,27 @@ export class MenuScene extends Phaser.Scene {
     this.parallax = createParallax(this);
     this.driftX = 0;
 
-    this.title = this.add.text(0, 0, '方块跑酷', {
-      fontFamily: FONT,
-      fontSize: '72px',
+    this.logo = createCandyLogo(this, '方块跑酷');
+    this.subtitle = addCandyText(this, 0, 0, '方块会自动向前跑\n点击、空格或上方向键跳跃\n收集星星，解锁后面的关卡', {
+      size: 22,
       color: '#ffffff',
-      stroke: THEME.stroke,
-      strokeThickness: 8,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(10);
-
-    this.subtitle = this.add.text(0, 0, '方块会自动向前跑\n点击、空格或上方向键跳跃\n收集星星，解锁后面的关卡', {
-      fontFamily: FONT,
-      fontSize: '26px',
-      color: '#ffffff',
-      stroke: THEME.stroke,
-      strokeThickness: 4,
+      stroke: '#3b0764',
+      strokeThickness: 5,
       align: 'center',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(10);
+      lineSpacing: 8,
+    }).setDepth(10);
 
-    this.start = createStartButton(this, 480, 390, () => {
-      getSynth().unlock();
-      this.scene.start('select');
-    }, '选关');
+    this.start = createCandyButton(this, {
+      label: '选关',
+      variant: 'pink',
+      width: 280,
+      fontSize: 34,
+      depth: 20,
+      onClick: () => {
+        getSynth().unlock();
+        this.scene.start('select');
+      },
+    });
 
     this.hud = createHud(this, { showStats: false });
     this.scale.on('resize', this.applyViewport, this);
@@ -70,9 +71,12 @@ export class MenuScene extends Phaser.Scene {
     const insets = cssInsetsToGame(readSafeAreaInsets(), this.scale.displayScale);
     layoutParallax(this.parallax, viewW, viewH, scrollY);
     const layout = this.hud.relayout({ viewWidth: viewW, viewHeight: viewH, insets });
-    this.title.setPosition(layout.centerX, layout.centerY - 120);
-    this.subtitle.setPosition(layout.centerX, layout.centerY - 30);
-    this.start.setPosition(layout.centerX, layout.centerY + 120);
+    const topGuard = Math.max(layout.sound.y + 58, (insets.top || 0) + 72);
+    const bottomGuard = viewH - Math.max(insets.bottom || 0, 0) - 28;
+    const mid = (topGuard + bottomGuard) / 2;
+    this.logo.setPosition(layout.centerX, mid - 128);
+    this.subtitle.setPosition(layout.centerX, mid - 4);
+    this.start.setPosition(layout.centerX, mid + 116);
     tintParallax(this.parallax, 0);
   }
 }

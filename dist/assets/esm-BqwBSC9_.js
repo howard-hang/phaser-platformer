@@ -1,2 +1,0 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["./web-CfpRHlG4.js","./dist-TLtlamx_.js"])))=>i.map(i=>d[i]);
-import{t as e}from"./index-DX2Z2haK.js";import{registerPlugin as t}from"./dist-TLtlamx_.js";var n=t(`App`,{web:()=>e(()=>import(`./web-CfpRHlG4.js`).then(e=>new e.AppWeb),__vite__mapDeps([0,1]),import.meta.url)});export{n as App};

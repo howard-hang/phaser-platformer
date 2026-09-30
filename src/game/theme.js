@@ -1,5 +1,8 @@
-/** 界面配色和字体。分数青色、死亡红色、星星白色，对齐参考图。 */
-export const FONT = 'GameFont, "WenQuanYi Micro Hei", "Microsoft YaHei", sans-serif';
+/**
+ * 界面字体。站酷庆科黄油体的子集，圆润标题字，离线打进包里。
+ * 缺字时再落到系统黑体，避免直接出现方框。
+ */
+export const FONT = 'GameFont, "ZCOOL QingKe HuangYou", "PingFang SC", "Microsoft YaHei", sans-serif';
 
 export const THEME = {
   bg: '#c026d3',

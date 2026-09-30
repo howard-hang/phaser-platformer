@@ -1,10 +1,10 @@
 /**
  * 选关。第 1 关始终可进，后面的关按清单里的累计星星解锁。
- * 二十关分页摆放，卡片让开安全区。返回标题用画面上的按钮；安卓返回键走同一条路。
+ * 卡片分已满星、已解锁、锁定三种颜色，翻页和返回都是糖果按钮。
  */
 import Phaser from 'phaser';
 import { TUNING } from '../logic/world.js';
-import { FONT, THEME } from '../game/theme.js';
+import { THEME } from '../game/theme.js';
 import { LEVELS } from '../game/level.js';
 import {
   bestStars,
@@ -19,9 +19,18 @@ import {
   scrollParallax,
   tintParallax,
 } from '../game/backdrop.js';
-import { createHud, createStartButton } from '../game/hud.js';
+import { createHud } from '../game/hud.js';
+import { addCandyText, candyPalette, createCandyButton, paintCandyRect, textStyle } from '../game/candy.js';
 import { getSynth } from '../game/audio.js';
 import { cssInsetsToGame, layoutLevelBoard, readSafeAreaInsets, verticalCameraScroll } from '../game/viewport.js';
+
+const OPEN_COLORS = ['sky', 'mint', 'grape', 'coral'];
+
+function cardVariant(level, unlocked, best) {
+  if (!unlocked) return 'locked';
+  if (best >= 3) return 'lemon';
+  return OPEN_COLORS[(level.index - 1) % OPEN_COLORS.length];
+}
 
 export class SelectScene extends Phaser.Scene {
   constructor() {
@@ -35,38 +44,65 @@ export class SelectScene extends Phaser.Scene {
     this.progress = loadProgress();
     this.page = this.registry.get('selectPage') || 0;
 
-    this.title = this.add.text(0, 0, '选择关卡', {
-      fontFamily: FONT,
-      fontSize: '40px',
-      color: '#ffffff',
-      stroke: THEME.stroke,
+    this.title = addCandyText(this, 0, 0, '选择关卡', {
+      size: 36,
+      color: '#fff7fb',
+      stroke: '#3b0764',
       strokeThickness: 6,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(12);
+    }).setDepth(12);
 
-    this.totalText = this.add.text(0, 0, '', {
-      fontFamily: FONT,
-      fontSize: '20px',
-      color: '#ffffff',
-      stroke: THEME.stroke,
+    this.totalStar = this.add.image(0, 0, 'star')
+      .setDisplaySize(22, 22)
+      .setScrollFactor(0)
+      .setDepth(12);
+    this.totalText = addCandyText(this, 0, 0, '', {
+      size: 20,
+      color: '#fff7fb',
+      stroke: '#3b0764',
       strokeThickness: 4,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(12);
+    }).setDepth(12);
 
-    // 页码画在底栏按钮之上，避免被关卡卡片盖住。
-    this.pageText = this.add.text(0, 0, '', {
-      fontFamily: FONT,
-      fontSize: '18px',
-      color: '#f5d0fe',
-      stroke: THEME.stroke,
-      strokeThickness: 3,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(22);
+    this.pageText = addCandyText(this, 0, 0, '', {
+      size: 20,
+      color: '#ffe14a',
+      stroke: '#3b0764',
+      strokeThickness: 4,
+    }).setDepth(22);
 
     this.cards = LEVELS.map((level) => this.createCard(level));
-    this.prev = this.createPager('上一页', () => this.turnPage(-1));
-    this.next = this.createPager('下一页', () => this.turnPage(1));
-    this.back = createStartButton(this, 480, 500, () => {
-      getSynth().unlock();
-      this.scene.start('menu');
-    }, '返回标题', 200);
+    this.prev = createCandyButton(this, {
+      label: '上一页',
+      variant: 'lemon',
+      width: 156,
+      fontSize: 26,
+      depth: 20,
+      onClick: () => {
+        getSynth().unlock();
+        this.turnPage(-1);
+      },
+    });
+    this.next = createCandyButton(this, {
+      label: '下一页',
+      variant: 'sky',
+      width: 156,
+      fontSize: 26,
+      depth: 20,
+      onClick: () => {
+        getSynth().unlock();
+        this.turnPage(1);
+      },
+    });
+    this.back = createCandyButton(this, {
+      label: '返回标题',
+      variant: 'pink',
+      width: 210,
+      fontSize: 28,
+      depth: 20,
+      onClick: () => {
+        getSynth().unlock();
+        this.scene.start('menu');
+      },
+    });
 
     this.hud = createHud(this, { showStats: false });
     this.scale.on('resize', this.applyViewport, this);
@@ -74,25 +110,6 @@ export class SelectScene extends Phaser.Scene {
       this.scale.off('resize', this.applyViewport, this);
     });
     this.applyViewport();
-  }
-
-  createPager(label, onClick) {
-    const bg = this.add.rectangle(0, 0, 148, 52, 0xffffff)
-      .setScrollFactor(0)
-      .setDepth(20)
-      .setInteractive({ useHandCursor: true });
-    bg.setData('ui', true);
-    const caption = this.add.text(0, 0, label, {
-      fontFamily: FONT,
-      fontSize: '24px',
-      color: '#2a0838',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(21);
-    bg.on('pointerdown', () => {
-      this.suppressJump = true;
-      getSynth().unlock();
-      onClick();
-    });
-    return { bg, caption };
   }
 
   turnPage(delta) {
@@ -111,44 +128,79 @@ export class SelectScene extends Phaser.Scene {
   createCard(level) {
     const unlocked = isLevelUnlocked(this.progress, level.id);
     const best = bestStars(this.progress, level.id);
-    const bg = this.add.rectangle(0, 0, 280, 72, unlocked ? 0x2a0838 : 0x3b1848, 1)
-      .setStrokeStyle(3, unlocked ? 0xffffff : 0x7a4a86, 1)
-      .setScrollFactor(0)
-      .setDepth(16);
-    const name = this.add.text(0, 0, `${level.index}  ${level.name}`, {
-      fontFamily: FONT,
-      fontSize: '24px',
-      color: unlocked ? '#ffffff' : '#e9d5ff',
-    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(18);
-    const status = this.add.text(0, 0, '', {
-      fontFamily: FONT,
-      fontSize: '16px',
-      color: '#f5d0fe',
+    const variant = cardVariant(level, unlocked, best);
+    const palette = candyPalette(variant);
+    const root = this.add.container(0, 0).setScrollFactor(0).setDepth(16);
+    const bg = this.add.graphics();
+    const indexText = this.add.text(0, 0, String(level.index), textStyle({
+      size: 20,
+      color: palette.ink,
+      stroke: palette.darkInk ? '#ffffff' : '#4a1468',
+      strokeThickness: 3,
+      shadow: false,
+    })).setOrigin(0.5);
+    const name = this.add.text(0, 0, level.name, textStyle({
+      size: 22,
+      color: palette.ink,
+      stroke: palette.darkInk ? '#ffffff' : '#4a1468',
+      strokeThickness: 3,
+      align: 'left',
+      shadow: false,
+    })).setOrigin(0, 0.5);
+    const status = this.add.text(0, 0, '', textStyle({
+      size: 16,
+      color: palette.ink,
+      stroke: palette.darkInk ? '#ffffff' : '#4a1468',
+      strokeThickness: 3,
       align: 'right',
-    }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(18);
-    const stars = [0, 1, 2].map(() => this.add.image(0, 0, 'star')
-      .setDisplaySize(18, 18)
-      .setScrollFactor(0)
-      .setDepth(18));
+      shadow: false,
+    })).setOrigin(1, 0.5);
+    const stars = [0, 1, 2].map((index) => this.add.image(0, 0, index < best ? 'star' : 'ui-star-empty')
+      .setDisplaySize(20, 20));
+    const lock = this.add.image(0, 0, 'ui-lock').setDisplaySize(26, 26);
+    root.add([bg, indexText, name, status, ...stars, lock]);
 
+    const zone = this.add.zone(0, 0, 10, 10).setScrollFactor(0).setDepth(17);
+    zone.setData('ui', true);
+    const card = {
+      root, bg, indexText, name, status, stars, lock, zone,
+      unlocked, best, variant, palette, pressed: false, hovered: false, cell: null,
+    };
     if (unlocked) {
-      status.setVisible(false);
-      stars.forEach((icon, index) => icon.setAlpha(index < best ? 1 : 0.28));
-      bg.setInteractive({ useHandCursor: true });
-      bg.setData('ui', true);
-      bg.on('pointerdown', () => {
+      zone.setInteractive({ useHandCursor: true });
+      zone.on('pointerover', (pointer) => {
+        if (pointer?.wasTouch) return;
+        card.hovered = true;
+        if (card.cell) this.placeCard(card, card.cell);
+      });
+      zone.on('pointerout', () => {
+        card.hovered = false;
+        card.pressed = false;
+        if (card.cell) this.placeCard(card, card.cell);
+      });
+      zone.on('pointerdown', () => {
         this.suppressJump = true;
-        getSynth().unlock();
-        this.scene.start('game', { levelId: level.id });
+        card.pressed = true;
+        if (card.cell) this.placeCard(card, card.cell);
+      });
+      zone.on('pointerup', () => {
+        this.suppressJump = true;
+        const fire = card.pressed;
+        card.pressed = false;
+        if (fire) {
+          getSynth().unlock();
+          this.scene.start('game', { levelId: level.id });
+        }
+      });
+      zone.on('pointerupoutside', () => {
+        card.pressed = false;
+        if (card.cell) this.placeCard(card, card.cell);
       });
     } else {
       const short = starsToUnlock(this.progress, level.id);
       status.setText(`还差 ${short} 颗`);
-      stars.forEach((icon) => icon.setVisible(false));
-      name.setAlpha(0.72);
     }
-
-    return { bg, name, status, stars, unlocked };
+    return card;
   }
 
   update(_time, delta) {
@@ -176,7 +228,7 @@ export class SelectScene extends Phaser.Scene {
     this.page = layout.page;
     this.title.setPosition(layout.title.x, layout.title.y);
     this.totalText.setText(`累计星星 ${totalBestStars(this.progress)} / ${LEVELS.length * 3}`);
-    this.totalText.setPosition(layout.total.x, layout.total.y);
+    this.placeTotal(layout.total.x, layout.total.y);
     this.pageText.setText(layout.pages > 1 ? `第 ${layout.page + 1} / ${layout.pages} 页` : '');
     this.pageText.setPosition(layout.pageLabel.x, layout.pageLabel.y);
     this.cards.forEach((card, index) => {
@@ -186,35 +238,67 @@ export class SelectScene extends Phaser.Scene {
     this.placePager(this.prev, layout.prev, layout.page > 0);
     this.placePager(this.next, layout.next, layout.page < layout.pages - 1);
     this.back.setPosition(layout.back.x, layout.back.y);
-    this.back.caption.setFontSize(layout.pages > 1 ? '28px' : '36px');
+  }
+
+  placeTotal(x, y) {
+    const gap = 8;
+    const width = this.totalStar.displayWidth + gap + this.totalText.width;
+    const left = x - width / 2;
+    this.totalStar.setPosition(left + this.totalStar.displayWidth / 2, y);
+    this.totalText.setPosition(left + this.totalStar.displayWidth + gap + this.totalText.width / 2, y);
   }
 
   placePager(pager, point, enabled) {
-    pager.bg.setPosition(point.x, point.y);
-    pager.caption.setPosition(point.x, point.y);
-    pager.bg.setAlpha(enabled ? 1 : 0.35);
-    pager.caption.setAlpha(enabled ? 1 : 0.45);
+    pager.setPosition(point.x, point.y);
+    pager.setEnabled(enabled);
   }
 
   placeCard(card, cell) {
+    card.cell = cell || null;
     const visible = !!cell;
-    card.bg.setVisible(visible);
-    card.name.setVisible(visible);
-    card.status.setVisible(visible && !card.unlocked);
-    card.stars.forEach((icon) => icon.setVisible(visible && card.unlocked));
-    if (!cell) return;
-    card.bg.setPosition(cell.x + cell.w / 2, cell.y + cell.h / 2);
-    card.bg.setSize(cell.w, cell.h);
-    const midY = cell.y + cell.h / 2;
-    card.name.setFontSize(cell.h < 70 ? '20px' : '24px');
-    card.name.setPosition(cell.x + 16, midY);
-    const right = cell.x + cell.w - 16;
-    if (card.unlocked) {
-      card.stars.forEach((icon, index) => {
-        icon.setPosition(right - 40 + index * 22, midY);
-      });
+    card.root.setVisible(visible);
+    card.zone.setVisible(visible);
+    if (!visible) {
+      card.zone.disableInteractive();
       return;
     }
-    card.status.setPosition(right, midY);
+    // 翻页回来要重新打开点击。disableInteractive 之后 input 对象还在，不能靠它判断。
+    if (card.unlocked) card.zone.setInteractive({ useHandCursor: true });
+    const palette = card.palette;
+    const face = card.hovered && !card.pressed ? palette.hover : palette.face;
+    const metrics = paintCandyRect(card.bg, cell.w, cell.h, face, palette.lip, card.pressed);
+    const badge = Math.min(42, cell.h * 0.52);
+    const bx = -cell.w / 2 + 12;
+    const by = metrics.faceCenter - badge / 2;
+    card.bg.fillStyle(palette.darkInk ? 0xffffff : 0x3b0764, 0.2);
+    card.bg.fillRoundedRect(bx, by, badge, badge, 12);
+    card.indexText.setPosition(bx + badge / 2, metrics.faceCenter);
+    const nameX = bx + badge + 10;
+    card.name.setFontSize(cell.h < 84 ? 18 : 22);
+    const starBlock = card.unlocked ? 74 : 108;
+    const maxName = cell.w / 2 - 12 - starBlock - nameX;
+    let size = cell.h < 84 ? 18 : 22;
+    while (size > 14 && card.name.width > maxName) {
+      size -= 1;
+      card.name.setFontSize(`${size}px`);
+    }
+    card.name.setPosition(nameX, metrics.faceCenter);
+    const right = cell.w / 2 - 14;
+    card.stars.forEach((icon, index) => {
+      icon.setVisible(card.unlocked);
+      icon.setPosition(right - 46 + index * 22, metrics.faceCenter);
+    });
+    card.lock.setVisible(!card.unlocked);
+    card.status.setVisible(!card.unlocked);
+    if (!card.unlocked) {
+      card.lock.setPosition(right - card.status.width - 8, metrics.faceCenter);
+      card.status.setPosition(right, metrics.faceCenter);
+    }
+    const cx = cell.x + cell.w / 2;
+    const cy = cell.y + cell.h / 2 + (card.pressed ? 4 : 0);
+    card.root.setPosition(cx, cy);
+    card.root.setScale(card.pressed ? 0.97 : 1);
+    card.zone.setPosition(cell.x + cell.w / 2, cell.y + cell.h / 2);
+    card.zone.setSize(cell.w, cell.h);
   }
 }
