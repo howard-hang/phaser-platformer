@@ -1,6 +1,7 @@
 /**
  * 通关面板的真实点击。
  * 16:9 和 20:9 各测一遍，鼠标和触屏都要点「再玩一次」「下一关」「选关」。
+ * 弹框是否在过线后 0.5 秒内出现，按物理步和游戏帧判断，不用墙上的毫秒。
  */
 import { existsSync, mkdirSync } from 'node:fs';
 import { createServer } from 'vite';
@@ -68,7 +69,10 @@ describe('通关按钮能点', () => {
       }
       expect(errors, errors.join('\n')).toEqual([]);
       for (const result of outcomes) {
-        expect(result.panelMs, JSON.stringify(result)).toBeLessThan(500);
+        // 过线后的弹框和「有没有滑出去」都按游戏帧算，不用墙上的 performance.now()。
+        // CI 上浏览器一卡，墙钟能到 500ms 以上，但物理只走了几像素。
+        expect(result.framesAfterLine, JSON.stringify(result)).toBe(0);
+        expect(result.simMs, JSON.stringify(result)).toBeLessThan(500);
         expect(result.overshootPx, JSON.stringify(result)).toBeLessThan(result.speed * 0.5);
         if (result.action === 'replay') {
           expect(result.after).toMatchObject({ game: true, id: 'level-1', won: false });
@@ -102,24 +106,43 @@ async function exercise(page, baseUrl, { name, mode, action, width, height }) {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     const speed = scene.tuning.speed;
     scene._physicsPose = null;
-    scene.player.body.reset(scene.level.finishX - speed * 0.04, scene.player.y);
-    scene.player.body.setVelocity(speed, 0);
-    const start = performance.now();
+    const startFrame = scene.game.loop.frame;
+    let steps = 0;
+    const onStep = () => { steps += 1; };
+    scene.physics.world.on('worldstep', onStep);
+    let crossFrame = null;
+    const watch = () => {
+      if (crossFrame == null && scene.player.x >= scene.level.finishX) {
+        crossFrame = scene.game.loop.frame;
+      }
+    };
+    scene.events.on('update', watch);
     const orig = scene.win.bind(scene);
     scene.win = function winAndStamp() {
       orig();
-      this.__panelMs = performance.now() - start;
+      const frame = this.game.loop.frame;
+      this.__panel = {
+        frames: frame - startFrame,
+        framesAfterLine: crossFrame == null ? null : frame - crossFrame,
+        simMs: steps * this.physics.world._frameTimeMS,
+      };
+      this.physics.world.off('worldstep', onStep);
+      this.events.off('update', watch);
     };
+    scene.player.body.reset(scene.level.finishX - speed * 0.04, scene.player.y);
+    scene.player.body.setVelocity(speed, 0);
   });
   await page.waitForFunction(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
-    return scene?.won === true && typeof scene.__panelMs === 'number';
+    return scene?.won === true && scene.__panel;
   }, { timeout: 2000 });
   const state = await page.evaluate(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     const labels = ['replay', 'next', 'select'];
     return {
-      panelMs: scene.__panelMs,
+      frames: scene.__panel.frames,
+      framesAfterLine: scene.__panel.framesAfterLine,
+      simMs: scene.__panel.simMs,
       overshootPx: scene.player.x - scene.level.finishX,
       speed: scene.tuning.speed,
       buttons: scene.winUi.buttons.map((button, index) => ({
@@ -236,7 +259,9 @@ async function exercise(page, baseUrl, { name, mode, action, width, height }) {
     action,
     width,
     height,
-    panelMs: state.panelMs,
+    frames: state.frames,
+    framesAfterLine: state.framesAfterLine,
+    simMs: state.simMs,
     overshootPx: state.overshootPx,
     speed: state.speed,
     after,
