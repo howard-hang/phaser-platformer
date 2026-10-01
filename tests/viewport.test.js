@@ -312,6 +312,32 @@ describe('全屏按钮和安全区', () => {
       }
     }
   });
+
+  it('无尽结算面板两颗按钮不重叠，正文也不压住按钮', () => {
+    const screens = [
+      [1280, 720],
+      [1000, 450],
+      [2400, 1080],
+      [800, 800],
+    ];
+    for (const [screenW, screenH] of screens) {
+      const size = computeExpandSize(960, 540, screenW, screenH);
+      const layout = layoutWinPanel({
+        viewWidth: size.gameWidth,
+        viewHeight: size.gameHeight,
+        insets: { top: 20, right: 28, bottom: 16, left: 28 },
+        buttonWidths: [220, 200],
+        starRow: false,
+        bodyLines: 3,
+      });
+      const body = centerBox(layout.body);
+      const buttons = layout.buttons.map(centerBox);
+      expect(buttons).toHaveLength(2);
+      expect(overlaps(body, buttons[0]), `${screenW}x${screenH} 正文和再来一次`).toBe(false);
+      expect(overlaps(buttons[0], buttons[1]), `${screenW}x${screenH} 两颗按钮`).toBe(false);
+      expect(layout.stars.h).toBe(0);
+    }
+  });
 });
 
 function centerBox(item) {

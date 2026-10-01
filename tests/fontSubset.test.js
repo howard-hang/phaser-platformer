@@ -12,7 +12,7 @@ describe('字体子集', () => {
 
   it('关卡名和界面文案都会进字符表', () => {
     const chars = collectChars();
-    for (const ch of '方块跑酷选择关卡累计星星上一页下一页返回标题选关还差颗通关再玩一次') {
+    for (const ch of '方块跑酷选择关卡累计星星上一页下一页返回标题选关还差颗通关再玩一次无尽模式距离纪录回主页新纪录本局结束米打破了最高') {
       expect(chars.includes(ch), ch).toBe(true);
     }
     const level = JSON.parse(fs.readFileSync('src/levels/level-20.json', 'utf8'));

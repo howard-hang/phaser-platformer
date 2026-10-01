@@ -1,11 +1,12 @@
 /**
  * 安卓返回键。
- * 关卡进行中（含通关面板）回到选关，选关回到标题，标题或其他画面退出应用。
+ * 闯关进行中（含通关面板）回到选关，无尽模式回到标题，选关回到标题，标题或其他画面退出应用。
  * 网页版没有这个按键。只有安卓 WebView 壳才会注册，普通浏览器不会加载 Capacitor。
  */
 
-/** 根据当前画面决定返回键的下一步。关卡优先于选关。 */
-export function androidBackAction({ gameActive, selectActive }) {
+/** 根据当前画面决定返回键的下一步。关卡优先于选关，无尽模式直接回标题。 */
+export function androidBackAction({ gameActive, selectActive, endless = false }) {
+  if (gameActive && endless) return 'menu';
   if (gameActive) return 'select';
   if (selectActive) return 'menu';
   return 'exit';
@@ -39,13 +40,15 @@ export async function bindAndroidBack(game) {
       if (handling) return;
       handling = true;
       try {
+        const gameScene = game.scene.getScene('game');
+        const endless = !!(game.scene?.isActive('game') && gameScene?.endless);
         const action = androidBackAction({
           gameActive: !!game.scene?.isActive('game'),
           selectActive: !!game.scene?.isActive('select'),
+          endless,
         });
         if (action === 'select') {
           // 必须从关卡场景切走。直接用 SceneManager.start 不会停掉正在跑的关卡。
-          const gameScene = game.scene.getScene('game');
           if (gameScene) {
             gameScene.scene.start('select');
           } else {
@@ -54,6 +57,11 @@ export async function bindAndroidBack(game) {
           return;
         }
         if (action === 'menu') {
+          // 无尽模式没有选关这一层，返回键直接回标题，并停掉正在跑的跑道。
+          if (endless && gameScene) {
+            gameScene.scene.start('menu');
+            return;
+          }
           const selectScene = game.scene.getScene('select');
           if (selectScene) {
             selectScene.scene.start('menu');

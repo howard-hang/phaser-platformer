@@ -5,6 +5,22 @@
  */
 import Phaser from 'phaser';
 import { LEVELS, getLevel, levelTuning, nextLevel } from '../game/level.js';
+import { START_X } from '../game/compileLevel.js';
+import { ENDLESS_CURVE } from '../game/endlessCurve.js';
+import {
+  createEndlessStream,
+  ensureAhead,
+  recycleBehind,
+  viewEndless,
+} from '../game/endlessCourse.js';
+import {
+  createEndlessGround,
+  createEndlessGroups,
+  mountEndlessPiece,
+  recenterEndlessGround,
+  unmountEndlessPiece,
+} from '../game/endlessActors.js';
+import { commitEndlessRecord, distanceMeters, loadEndlessRecord } from '../game/endlessScore.js';
 import { getSynth } from '../game/audio.js';
 import {
   createParallax,
@@ -16,7 +32,7 @@ import { createDeathFx } from '../game/deathFx.js';
 import { displayPose } from '../game/motion.js';
 import { THEME, LEVEL_PALETTES } from '../game/theme.js';
 import { textStyle } from '../game/candy.js';
-import { createHud, isUiPointer, showWinPanel } from '../game/hud.js';
+import { createHud, isUiPointer, showEndlessPanel, showWinPanel } from '../game/hud.js';
 import { isLevelUnlocked, loadProgress, recordClear, saveProgress, starsToUnlock } from '../game/progress.js';
 import { cssInsetsToGame, readSafeAreaInsets, verticalCameraScroll } from '../game/viewport.js';
 import {
@@ -25,8 +41,10 @@ import {
   FLIP_CEILING_Y,
   playerCeilingY,
   playerGroundY,
+  courseTime,
   obstaclePose,
   isGateClosed,
+  speedAtX,
   starPose,
   sampleJump,
 } from '../logic/world.js';
@@ -45,6 +63,35 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data) {
+    this.endless = data?.mode === 'endless';
+    if (this.endless) {
+      const raw = Number(data?.seed);
+      this.endlessSeed = Number.isFinite(raw) && raw > 0
+        ? (raw >>> 0) || 1
+        : (Math.floor(Math.random() * 0x7fffffff) + 1);
+      this.stream = createEndlessStream(this.endlessSeed);
+      this.endlessHandles = new Map();
+      this.level = {
+        id: 'endless',
+        name: '无尽模式',
+        index: 0,
+        speed: ENDLESS_CURVE.baseSpeed,
+        palette: 0,
+        startX: START_X,
+        finishX: Number.POSITIVE_INFINITY,
+        worldWidth: START_X + 4800,
+        checkpoints: [START_X],
+        obstacles: [],
+        stars: [],
+        flips: [],
+        decks: [],
+        routes: [],
+        speedBands: [],
+        endless: true,
+      };
+      this.tuning = { ...TUNING, speed: ENDLESS_CURVE.baseSpeed };
+      return;
+    }
     const requested = data?.levelId || LEVELS[0].id;
     this.level = getLevel(requested) || LEVELS[0];
     this.tuning = levelTuning(this.level);
@@ -56,13 +103,15 @@ export class GameScene extends Phaser.Scene {
     this.events.off('preupdate', this.restorePhysicsPose, this);
     this.events.off('preupdate', this.syncCourse, this);
     this.events.off('postupdate', this.extrapolatePlayerPose, this);
-    // 直接开未解锁的关时送回选关，不把后面的关漏出去。
-    if (!isLevelUnlocked(loadProgress(), this.level.id)) {
+    // 直接开未解锁的关时送回选关，不把后面的关漏出去。无尽模式不看星数。
+    if (!this.endless && !isLevelUnlocked(loadProgress(), this.level.id)) {
       this.scene.start('select');
       return;
     }
     this.run = createRunState();
     this.won = false;
+    this.ended = false;
+    this.endlessBest = this.endless ? loadEndlessRecord().best : 0;
     this.suppressJump = false;
     this.rotating = false;
     this.airMs = 0;
@@ -78,22 +127,31 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(palette.gap);
     this.parallax = createParallax(this, this.level.palette);
     this._tintBucket = -1;
-    this.createGround();
+    if (this.endless) this.createEndlessGround();
+    else this.createGround();
     this.createPlayer();
-    this.createCourse();
-    this.createFinish();
+    if (this.endless) this.createEndlessCourse();
+    else {
+      this.createCourse();
+      this.createFinish();
+    }
     this.bindInput();
     this.hud = createHud(this, {
-      onHome: () => this.scene.start('select'),
+      variant: this.endless ? 'endless' : 'campaign',
+      onHome: () => this.scene.start(this.endless ? 'menu' : 'select'),
     });
     this.deathFx = createDeathFx(this);
-    this.levelLabel = this.add.text(0, 0, `第 ${this.level.index} 关  ${this.level.name}`, textStyle({
+    const levelTitle = this.endless
+      ? '无尽模式'
+      : `第 ${this.level.index} 关  ${this.level.name}`;
+    this.levelLabel = this.add.text(0, 0, levelTitle, textStyle({
       size: 20,
       color: '#ffffff',
       stroke: '#2a0840',
       strokeThickness: 4,
     })).setOrigin(0.5, 1).setScrollFactor(0).setDepth(230);
-    this.hud.setStats(this.run);
+    if (this.endless) this.refreshEndlessHud();
+    else this.hud.setStats(this.run);
     this.scale.on('resize', this.applyViewport, this);
     this.events.once('shutdown', () => {
       this.scale.off('resize', this.applyViewport, this);
@@ -145,6 +203,83 @@ export class GameScene extends Phaser.Scene {
     });
     this.player.setPosition(view.x, view.y);
     this.player.angle = view.angle;
+  }
+
+  /** 当前水平速度。无尽模式按分段取，闯关就是这一关的速度。 */
+  runSpeed() {
+    if (!this.player) return this.tuning.speed;
+    return speedAtX(this.player.x, this.level, this.tuning);
+  }
+
+  /** 跑到当前位置的关卡时间。机关的开合和平台塌陷都用它。 */
+  courseNow() {
+    if (!this.player) return 0;
+    return courseTime(this.player.x, this.level, this.tuning);
+  }
+
+  /** 无尽 HUD：距离、本局星星、最高纪录。超过旧纪录时纪录数字跟着涨。 */
+  refreshEndlessHud() {
+    const px = Math.max(0, (this.player?.x || this.level.startX) - this.level.startX);
+    const meters = distanceMeters(Math.max(px, this.run?.maxDistance || 0));
+    this.hud.setStats({
+      distance: meters,
+      stars: this.run?.stars || 0,
+      best: Math.max(this.endlessBest || 0, meters),
+    });
+  }
+
+  /** 先铺一段热身和前方的障碍，并建好碰撞组。 */
+  createEndlessCourse() {
+    this.hazardSprites = [];
+    this.starSprites = [];
+    this.flags = [];
+    this.courseNodes = [];
+    this.crumbles = [];
+    this.flipVisuals = [];
+    this.deckNodes = [];
+    this._inFlip = false;
+    this.endlessGroups = createEndlessGroups(this);
+    this.syncEndlessWorld(this.level.startX + 2800);
+    this.add.text(this.level.startX + 300, TUNING.groundY - 110, '点击 / 空格跳跃', textStyle({
+      size: 26,
+      color: '#ffffff',
+      stroke: '#2a0840',
+      strokeThickness: 4,
+    })).setDepth(7);
+  }
+
+  createEndlessGround() {
+    createEndlessGround(this);
+  }
+
+  /**
+   * 前方不够就再拼一段，身后太远的段拆掉。
+   * 速度分段留在 level 上，计时还要用。
+   */
+  syncEndlessWorld(targetX) {
+    const spawned = ensureAhead(this.stream, targetX);
+    for (let i = 0; i < spawned.length; i += 1) {
+      const piece = spawned[i];
+      this.endlessHandles.set(piece.id, mountEndlessPiece(this, this.endlessGroups, piece));
+    }
+    const behind = (this.player?.x || this.level.startX) - 1800;
+    const dropped = recycleBehind(this.stream, behind);
+    for (let i = 0; i < dropped.length; i += 1) {
+      const piece = dropped[i];
+      unmountEndlessPiece(this, this.endlessHandles.get(piece.id));
+      this.endlessHandles.delete(piece.id);
+    }
+    const view = viewEndless(this.stream, this.scale.width);
+    this.level.obstacles = view.obstacles;
+    this.level.stars = view.stars;
+    this.level.flips = view.flips;
+    this.level.decks = view.decks;
+    this.level.routes = view.routes;
+    this.level.speedBands = view.speedBands;
+    this.level.worldWidth = view.worldWidth;
+    this.level.speed = view.speed;
+    const cam = this.cameras.main;
+    if (cam) cam.setBounds(0, cam.scrollY, view.worldWidth, cam.height);
   }
 
   /** 看不见的地面碰撞体，上面盖一条白线。 */
@@ -270,7 +405,7 @@ export class GameScene extends Phaser.Scene {
     const body = this.player?.body;
     const deck = plat.getData('deck');
     if (!body || !deck || body.velocity.y < 0) return false;
-    const time = (this.player.x - this.level.startX) / this.tuning.speed;
+    const time = this.courseNow();
     if (deck.collapse != null && time >= deck.collapse) return false;
     return body.bottom <= deck.top + 10;
   }
@@ -332,7 +467,7 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const viewLeft = cam.scrollX - 280;
     const viewRight = cam.scrollX + cam.width + 520;
-    const time = (this.player.x - this.level.startX) / this.tuning.speed;
+    const time = this.courseNow();
     this.syncFlipGravity();
 
     for (let i = 0; i < this.courseNodes.length; i += 1) {
@@ -406,7 +541,7 @@ export class GameScene extends Phaser.Scene {
     body.reset(this.player.x, center);
     body.updateFromGameObject();
     body.prev.copy(body.position);
-    body.setVelocity(this.tuning.speed, 0);
+    body.setVelocity(this.runSpeed(), 0);
   }
 
   createPlayer() {
@@ -415,7 +550,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setDepth(8);
     applyHitbox(this.player, HITBOX.player);
     this.player.body.updateFromGameObject();
-    this.player.body.setVelocityX(this.tuning.speed);
+    this.player.body.setVelocityX(this.runSpeed());
     this.physics.add.collider(this.player, this.ground);
 
     // 偏移让方块停在画面偏左，前方留出反应距离。垂直方向由边界锁死，跳跃不会把镜头抬起来。
@@ -519,7 +654,8 @@ export class GameScene extends Phaser.Scene {
     this.player.body.setAllowGravity(false);
     getSynth().play('death');
     // 死亡只播碎裂音效。背景音乐继续当前进度，不从头开始。
-    this.hud.setStats(this.run);
+    if (this.endless) this.refreshEndlessHud();
+    else this.hud.setStats(this.run);
     const token = this._deathToken;
     const started = this.deathFx.play(x, y, () => {
       if (token !== this._deathToken || !this.player?.body) return;
@@ -529,8 +665,12 @@ export class GameScene extends Phaser.Scene {
     if (!started) this.finishDeath();
   }
 
-  /** 碎裂结束，立刻回到死亡时选好的存档点。 */
+  /** 碎裂结束。闯关回到存档点，无尽模式直接结算，不重生。 */
   finishDeath() {
+    if (this.endless) {
+      this.finishEndless();
+      return;
+    }
     const y = playerGroundY();
     this.player.setVisible(true);
     this.player.body.enable = true;
@@ -558,7 +698,40 @@ export class GameScene extends Phaser.Scene {
     if (!result.picked) return;
     star.disableBody(true, true);
     getSynth().play('star');
-    this.hud.setStats(this.run);
+    if (this.endless) this.refreshEndlessHud();
+    else this.hud.setStats(this.run);
+  }
+
+  /** 撞到障碍后的结算。纪录只在更远时写进本机。 */
+  finishEndless() {
+    if (this.ended) return;
+    this.ended = true;
+    this.won = true;
+    this.dying = false;
+    this.rotating = false;
+    this._physicsPose = null;
+    this.cameras.main.stopFollow();
+    const body = this.player?.body;
+    if (body) {
+      body.setVelocity(0, 0);
+      body.setAllowGravity(false);
+      body.enable = false;
+    }
+    const meters = distanceMeters((this.player?.x || this.level.startX) - this.level.startX);
+    const outcome = commitEndlessRecord(meters);
+    this.endlessBest = outcome.best;
+    this.refreshEndlessHud();
+    this.levelLabel?.setVisible(false);
+    this.winUi = showEndlessPanel(this, {
+      distance: outcome.distance,
+      stars: this.run.stars,
+      best: outcome.best,
+      improved: outcome.improved,
+    }, {
+      onReplay: () => this.scene.restart({ mode: 'endless' }),
+      onHome: () => this.scene.start('menu'),
+    });
+    this.winUi.relayout(this.scale.width, this.scale.height, this._insets);
   }
 
   update(_time, delta) {
@@ -569,13 +742,32 @@ export class GameScene extends Phaser.Scene {
 
     this.elapsedMs += delta;
     this.stickToCeiling();
-    this.player.body.setVelocityX(this.tuning.speed);
+    this.player.body.setVelocityX(this.runSpeed());
 
     const distance = this.player.x - this.level.startX;
     const next = noteProgress(this.run, distance, TUNING.pxPerScore);
-    if (next.score !== this.run.score) this.hud.setStats(next);
+    const scoreChanged = next.score !== this.run.score;
     this.run = next;
+    if (this.endless) {
+      this.syncEndlessWorld(this.player.x + 2600);
+      recenterEndlessGround(this);
+      if (scoreChanged || distanceMeters(distance) !== this._shownMeters) {
+        this._shownMeters = distanceMeters(distance);
+        this.refreshEndlessHud();
+      }
+    } else if (scoreChanged) {
+      this.hud.setStats(this.run);
+    }
     this.syncBackdrop();
+
+    if (this.endless) {
+      if (this.isGrounded()) {
+        this.player.angle = 0;
+        this.rotating = false;
+        this.airMs = 0;
+      }
+      return;
+    }
 
     const checkpoint = pickCheckpoint(this.level.checkpoints, this.player.x);
     if (checkpoint !== this.activeCheckpoint) {

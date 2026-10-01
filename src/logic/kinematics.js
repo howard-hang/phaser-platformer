@@ -15,6 +15,7 @@ import {
   playerCenterOnSurface,
   playerFeetY,
   playerGroundY,
+  speedAtX,
 } from './world.js';
 
 export const STEP = 1 / 60;
@@ -53,7 +54,8 @@ function catchDeck(prevY, nextX, nextY, nextVy, level, tuning, options) {
 export function stepKinematics(x, y, vy, level, tuning = TUNING, options) {
   const sign = gravitySignAt(x, level);
   const nextVy = vy + tuning.gravity * sign * STEP;
-  const nextX = x + tuning.speed * STEP;
+  // 无尽模式的速度写在分段上。没有分段时和原来一样，用 tuning.speed。
+  const nextX = x + speedAtX(x, level, tuning) * STEP;
   let nextY = y + nextVy * STEP;
   const nextSign = gravitySignAt(nextX, level);
   const rect = bodyRectFromSprite(nextX, nextY, HITBOX.player);

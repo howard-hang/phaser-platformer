@@ -75,8 +75,34 @@ export function gravitySignAt(x, level) {
   return 1;
 }
 
-/** 从起点匀速跑到 x 时的关卡时间（秒）。死亡重生后也按这个时间对齐机关。 */
+/**
+ * 玩家跑到 x 时应该用的水平速度。
+ * 闯关没有 speedBands，就是这一关的固定速度。
+ * 无尽模式一段一个速度，段内不变，段与段之间才加快。
+ */
+export function speedAtX(x, level, tuning = TUNING) {
+  const bands = level?.speedBands;
+  if (!bands || !bands.length) return tuning.speed;
+  for (let i = 0; i < bands.length; i += 1) {
+    if (x < bands[i].x1 || i === bands.length - 1) return bands[i].speed;
+  }
+  return tuning.speed;
+}
+
+/**
+ * 从起点跑到 x 的关卡时间（秒）。死亡重生后也按这个时间对齐机关。
+ * 速度分段时把每一段的路程除以该段速度再累加，不能再用总路程除以一个速度。
+ */
 export function courseTime(x, level, tuning = TUNING) {
+  const bands = level?.speedBands;
+  if (bands && bands.length) {
+    for (let i = 0; i < bands.length; i += 1) {
+      const band = bands[i];
+      if (x <= band.x1 || i === bands.length - 1) {
+        return band.t0 + (x - band.x0) / band.speed;
+      }
+    }
+  }
   return (x - level.startX) / tuning.speed;
 }
 
