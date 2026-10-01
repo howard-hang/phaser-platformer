@@ -88,7 +88,7 @@ describe('通关按钮能点', () => {
     } finally {
       await browser.close();
     }
-  }, 120000);
+  }, 180000);
 });
 
 async function exercise(page, baseUrl, { name, mode, action, width, height }) {
@@ -132,10 +132,12 @@ async function exercise(page, baseUrl, { name, mode, action, width, height }) {
     scene.player.body.reset(scene.level.finishX - speed * 0.04, scene.player.y);
     scene.player.body.setVelocity(speed, 0);
   });
+  // 墙钟只用来等浏览器把这一帧画出来。过线后多久弹框，下面仍按游戏帧和物理步判断。
+  // CI 上若同时开着多份 Chrome，两秒墙钟有时还没跑到第一次物理步。
   await page.waitForFunction(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     return scene?.won === true && scene.__panel;
-  }, { timeout: 2000 });
+  }, { timeout: 15000 });
   const state = await page.evaluate(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     const labels = ['replay', 'next', 'select'];
