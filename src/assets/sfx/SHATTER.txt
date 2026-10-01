@@ -1,0 +1,15 @@
+碎裂音效
+========
+
+文件：shatter.wav
+曲名：方块碎裂
+时长：0.12 秒，16-bit 单声道，22050 Hz
+来源：本仓库程序合成，没有使用第三方采样或音效库。
+算法：src/game/shatterSynth.js 里的 renderShatterPcm
+渲染：scripts/render-shatter.mjs
+作者：方块跑酷项目
+许可：CC0 1.0（贡献到公共领域，可免费商用，无需署名）
+      https://creativecommons.org/publicdomain/zero/1.0/deed.zh
+
+游戏运行时优先播放这份 wav。文件还没解码完时，用同一算法当场合成，听感一致。
+声音开关关掉后，这份音效和背景音乐、其他音效一起静音。

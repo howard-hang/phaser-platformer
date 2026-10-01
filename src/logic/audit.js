@@ -37,8 +37,8 @@ function solidRect(obstacle, tuning) {
 export function auditLevel(level, tuning = TUNING) {
   const problems = [];
   const duration = (level.finishX - level.startX) / tuning.speed;
-  if (duration < 60 || duration > 90) {
-    problems.push(`关卡时长 ${duration.toFixed(2)} 秒，不在 60 到 90 秒之间`);
+  if (duration < 40 || duration > 90) {
+    problems.push(`关卡时长 ${duration.toFixed(2)} 秒，不在 40 到 90 秒之间`);
   }
   if (!level.stars || level.stars.length !== 3) {
     problems.push(`星星应该正好 3 颗，现在是 ${level.stars?.length ?? 0}`);

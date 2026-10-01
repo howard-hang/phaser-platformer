@@ -2,7 +2,7 @@
   "id": "level-10",
   "name": "双闸窄道",
   "speed": 372,
-  "duration": 64,
+  "duration": 50.56,
   "palette": "lime",
   "obstacles": [
     {
@@ -12,244 +12,254 @@
       "delay": 0.52
     },
     {
-      "t": 3.88,
+      "t": 3.65,
       "type": "gate",
       "period": 1.4,
       "open": 0.62,
-      "phase": -0.03
+      "phase": 0.2
     },
     {
-      "t": 5.15,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 6.42,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 7.2,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 8.36,
+      "t": 4.67,
       "type": "spike",
       "count": 3
     },
     {
-      "t": 10.07,
+      "t": 5.69,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 6.47,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 6.99,
       "type": "spike",
       "count": 1
     },
     {
-      "t": 11.78,
+      "t": 7.63,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 9.13,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 10.63,
       "type": "block"
     },
     {
-      "t": 13.05,
+      "t": 11.65,
       "type": "crumble",
       "span": 1.18,
       "delay": 0.52
     },
     {
-      "t": 14.78,
+      "t": 13.15,
       "type": "gate",
       "period": 1.4,
       "open": 0.62,
-      "phase": 0.27
+      "phase": 0.5
     },
     {
-      "t": 16.05,
+      "t": 14.17,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 16.91,
+      "t": 15.03,
       "type": "gate",
       "period": 1.4,
       "open": 0.62,
-      "phase": 0.94
+      "phase": 0.02
     },
     {
-      "t": 18.07,
+      "t": 16.19,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 18.85,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 20.51,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 22.17,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 23.44,
-      "type": "block"
-    },
-    {
-      "t": 24.71,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 25.43,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 26.69,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 27.47,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 29.13,
-      "type": "spike",
-      "count": 1
-    },
-    {
-      "t": 30.79,
+      "t": 16.97,
       "type": "spike",
       "count": 3
     },
     {
-      "t": 32.06,
+      "t": 18.47,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 19.97,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 20.99,
       "type": "block"
     },
     {
-      "t": 33.33,
+      "t": 22.01,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 22.73,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 23.75,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 24.53,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 26.03,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 27.53,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 28.55,
+      "type": "block"
+    },
+    {
+      "t": 29.57,
       "type": "crumble",
       "span": 1.18,
       "delay": 0.52
     },
     {
-      "t": 34.2,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 35.06,
-      "type": "gate",
-      "period": 1.4,
-      "open": 0.62,
-      "phase": 0.99
-    },
-    {
-      "t": 36.32,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 37.18,
-      "type": "gate",
-      "period": 1.4,
-      "open": 0.62,
-      "phase": 0.26
-    },
-    {
-      "t": 38.84,
-      "type": "spike",
-      "count": 1
-    },
-    {
-      "t": 40.5,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 41.28,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 42.45,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 43.72,
-      "type": "block"
-    },
-    {
-      "t": 44.98,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 45.7,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 47.41,
-      "type": "spike",
-      "count": 1
-    },
-    {
-      "t": 49.12,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 49.9,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 51.07,
+      "t": 30.44,
       "type": "spike",
       "count": 3
     },
     {
-      "t": 52.34,
+      "t": 31.3,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": 0.55
+    },
+    {
+      "t": 32.32,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 33.18,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": 0.07
+    },
+    {
+      "t": 34.68,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 36.18,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 36.96,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 37.48,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 38.13,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 39.15,
       "type": "block"
     },
     {
-      "t": 53.6,
+      "t": 40.17,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 40.89,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 42.39,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 43.89,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 44.67,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 45.84,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 46.86,
+      "type": "block"
+    },
+    {
+      "t": 47.88,
       "type": "crumble",
       "span": 1.18,
       "delay": 0.52
     },
     {
-      "t": 55.33,
+      "t": 49.38,
       "type": "gate",
       "period": 1.4,
       "open": 0.62,
-      "phase": 0.32
+      "phase": 0.67
     }
   ],
   "stars": [
     {
-      "t": 1.15,
+      "t": 1.6,
       "lift": 0
     },
     {
-      "t": 25.48,
-      "lift": 70
+      "t": 26.85,
+      "lift": 0
     },
     {
-      "t": 42.51,
-      "lift": 98
+      "t": 43.35,
+      "lift": 0
     }
   ],
   "checkpoints": [
-    11,
-    23,
-    35.9,
-    47
+    17.8,
+    25.4,
+    41.8,
+    50.2
   ]
 }

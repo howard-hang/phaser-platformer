@@ -17,12 +17,18 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: 安装 Chrome（通关按钮的真实点击）
+        run: |
+          wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt-get update
+          sudo apt-get install -y /tmp/chrome.deb || (sudo apt-get install -y -f && sudo apt-get install -y /tmp/chrome.deb)
       - run: npm test
       - run: npm run build
 
-  # 公开仓库才会部署。私有仓库的 Pages 往往不可用，预览改用分支里的 dist/。
+  # 只有 main 会发到 GitHub Pages。功能分支推上去会被环境保护规则拒绝，整条工作流变红。
+  # 私有仓库的 Pages 往往不可用，预览改用分支里的 dist/。
   deploy:
-    if: github.event_name == 'push' && github.event.repository.visibility == 'public'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.repository.visibility == 'public'
     needs: test
     runs-on: ubuntu-latest
     permissions:

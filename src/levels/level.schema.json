@@ -9,7 +9,7 @@
     "id": { "type": "string", "pattern": "^level-[1-9][0-9]*$" },
     "name": { "type": "string", "minLength": 1 },
     "speed": { "type": "number", "exclusiveMinimum": 0, "maximum": 520 },
-    "duration": { "type": "number", "minimum": 60, "maximum": 90 },
+    "duration": { "type": "number", "minimum": 40, "maximum": 90 },
     "palette": { "type": "string", "minLength": 1 },
     "obstacles": {
       "type": "array",

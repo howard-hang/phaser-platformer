@@ -2,7 +2,7 @@
   "id": "level-3",
   "name": "靛色窄缝",
   "speed": 330,
-  "duration": 64,
+  "duration": 55.6,
   "palette": "indigo",
   "obstacles": [
     {
@@ -10,190 +10,190 @@
       "type": "block"
     },
     {
-      "t": 3.61,
+      "t": 3.65,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 4.33,
+      "t": 4.2,
       "type": "spike",
-      "count": 2
+      "count": 3
     },
     {
-      "t": 6.14,
+      "t": 6.1,
       "type": "spike",
-      "count": 1
+      "count": 3
     },
     {
-      "t": 7.95,
+      "t": 7.83,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 8.73,
+      "t": 8.38,
       "type": "spike",
-      "count": 2
+      "count": 3
     },
     {
-      "t": 10.07,
+      "t": 9.68,
       "type": "spike",
-      "count": 1
+      "count": 3
     },
     {
-      "t": 11.54,
+      "t": 11.18,
       "type": "spike",
-      "count": 2
+      "count": 3
     },
     {
-      "t": 15.15,
+      "t": 14.63,
       "type": "block"
     },
     {
-      "t": 16.62,
+      "t": 16.13,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 17.34,
+      "t": 16.85,
       "type": "spike",
-      "count": 2
+      "count": 3
     },
     {
-      "t": 20.95,
+      "t": 20.3,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 21.73,
+      "t": 21.08,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 22.16,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 23.66,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 23.08,
+      "t": 25.39,
       "type": "spike",
       "count": 1
     },
     {
-      "t": 24.54,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 26.35,
-      "type": "spike",
-      "count": 1
-    },
-    {
-      "t": 28.16,
+      "t": 27.12,
       "type": "block"
     },
     {
-      "t": 29.62,
+      "t": 28.62,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 30.34,
+      "t": 29.34,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 33.95,
+      "t": 32.79,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 34.73,
+      "t": 33.57,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 36.08,
+      "t": 34.65,
       "type": "spike",
       "count": 1
     },
     {
-      "t": 37.54,
+      "t": 36.15,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 39.35,
+      "t": 37.88,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 41.16,
+      "t": 39.61,
       "type": "block"
     },
     {
-      "t": 42.62,
+      "t": 41.11,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 43.34,
+      "t": 41.83,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 45.15,
+      "t": 43.56,
       "type": "spike",
       "count": 1
     },
     {
-      "t": 46.96,
+      "t": 45.29,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 47.74,
+      "t": 46.07,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 49.08,
+      "t": 47.14,
       "type": "spike",
       "count": 1
     },
     {
-      "t": 50.55,
+      "t": 48.64,
       "type": "spike",
       "count": 2
     },
     {
-      "t": 54.16,
+      "t": 52.09,
       "type": "block"
     },
     {
-      "t": 55.63,
+      "t": 53.59,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 56.35,
+      "t": 54.31,
       "type": "spike",
       "count": 2
     }
   ],
   "stars": [
     {
-      "t": 1.15,
+      "t": 3.1,
       "lift": 0
     },
     {
-      "t": 23.13,
-      "lift": 70
+      "t": 26.6,
+      "lift": 0
     },
     {
-      "t": 43.4,
-      "lift": 98
+      "t": 44.85,
+      "lift": 0
     }
   ],
   "checkpoints": [
-    11,
-    23.9,
-    38.6,
-    51.5
+    12.2,
+    23,
+    35.4,
+    48.2
   ]
 }

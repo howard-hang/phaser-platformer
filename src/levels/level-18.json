@@ -2,7 +2,7 @@
   "id": "level-18",
   "name": "无缝连跳",
   "speed": 420,
-  "duration": 65,
+  "duration": 59.37,
   "palette": "emerald",
   "obstacles": [
     {
@@ -12,319 +12,319 @@
       "delay": 0.52
     },
     {
-      "t": 3.88,
-      "type": "gate",
-      "period": 1.4,
-      "open": 0.62,
-      "phase": -0.03
-    },
-    {
-      "t": 4.93,
-      "type": "flip",
-      "span": 2.35
-    },
-    {
-      "t": 6.58,
-      "type": "spike",
-      "count": 1
-    },
-    {
-      "t": 8.23,
-      "type": "flip",
-      "span": 4.15
-    },
-    {
-      "t": 9.28,
-      "type": "spike",
-      "count": 3
-    },
-    {
-      "t": 9.43,
-      "type": "spike",
-      "anchor": "ceiling",
-      "count": 1
-    },
-    {
-      "t": 9.78,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 10.33,
-      "type": "spike",
-      "count": 1
-    },
-    {
-      "t": 10.58,
-      "type": "spike",
-      "anchor": "ceiling",
-      "count": 2
-    },
-    {
-      "t": 11.48,
-      "type": "spike",
-      "anchor": "ceiling",
-      "count": 1
-    },
-    {
-      "t": 12.51,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 13.53,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 14.58,
-      "type": "block"
-    },
-    {
-      "t": 15.63,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 16.35,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 17.4,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 18.18,
-      "type": "spike",
-      "count": 3
-    },
-    {
-      "t": 19.15,
-      "type": "spike",
-      "count": 3
-    },
-    {
-      "t": 20.75,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 22.35,
-      "type": "block"
-    },
-    {
-      "t": 23.4,
-      "type": "crumble",
-      "span": 1.18,
-      "delay": 0.52
-    },
-    {
-      "t": 25.13,
-      "type": "gate",
-      "period": 1.4,
-      "open": 0.62,
-      "phase": -0.28
-    },
-    {
-      "t": 26.18,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 27.04,
-      "type": "gate",
-      "period": 1.4,
-      "open": 0.62,
-      "phase": 0.61
-    },
-    {
-      "t": 28,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 28.78,
-      "type": "spike",
-      "count": 3
-    },
-    {
-      "t": 29.75,
-      "type": "crumble",
-      "span": 1.18,
-      "delay": 0.52
-    },
-    {
-      "t": 30.72,
-      "type": "spike",
-      "count": 1
-    },
-    {
-      "t": 31.69,
-      "type": "spike",
-      "count": 1
-    },
-    {
-      "t": 33.63,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 34.49,
-      "type": "gate",
-      "period": 1.4,
-      "open": 0.62,
-      "phase": 0.16
-    },
-    {
-      "t": 35.45,
-      "type": "flip",
-      "span": 4.15
-    },
-    {
-      "t": 36.5,
-      "type": "block"
-    },
-    {
-      "t": 36.65,
-      "type": "spike",
-      "anchor": "ceiling",
-      "count": 1
-    },
-    {
-      "t": 37,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 37.55,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 37.8,
-      "type": "spike",
-      "anchor": "ceiling",
-      "count": 2
-    },
-    {
-      "t": 38.27,
-      "type": "spike",
-      "count": 2
-    },
-    {
-      "t": 38.7,
-      "type": "spike",
-      "anchor": "ceiling",
-      "count": 1
-    },
-    {
-      "t": 39.32,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 40.1,
-      "type": "spike",
-      "count": 3
-    },
-    {
-      "t": 41.66,
-      "type": "spike",
-      "count": 1
-    },
-    {
-      "t": 43.22,
-      "type": "spike",
-      "count": 3
-    },
-    {
-      "t": 44.27,
-      "type": "block"
-    },
-    {
-      "t": 45.32,
-      "type": "crumble",
-      "span": 1.18,
-      "delay": 0.52
-    },
-    {
-      "t": 47.05,
+      "t": 3.65,
       "type": "gate",
       "period": 1.4,
       "open": 0.62,
       "phase": 0.2
     },
     {
-      "t": 48.1,
-      "type": "overhead",
-      "gap": 58
+      "t": 4.7,
+      "type": "flip",
+      "span": 2.35
     },
     {
-      "t": 48.96,
-      "type": "gate",
-      "period": 1.4,
-      "open": 0.62,
-      "phase": -0.31
-    },
-    {
-      "t": 49.93,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 50.71,
+      "t": 6.35,
       "type": "spike",
-      "count": 3
+      "count": 4
     },
     {
-      "t": 52.27,
+      "t": 7.9,
+      "type": "flip",
+      "span": 4.15
+    },
+    {
+      "t": 8.95,
       "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 9.1,
+      "type": "spike",
+      "anchor": "ceiling",
       "count": 1
     },
     {
-      "t": 53.82,
+      "t": 9.45,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 10,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 10.25,
+      "type": "spike",
+      "anchor": "ceiling",
+      "count": 2
+    },
+    {
+      "t": 11.15,
+      "type": "spike",
+      "anchor": "ceiling",
+      "count": 1
+    },
+    {
+      "t": 11.7,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 12.25,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 13.3,
+      "type": "block"
+    },
+    {
+      "t": 14.35,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 14.9,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 15.95,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 16.5,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 17.47,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 18.97,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 20.47,
+      "type": "block"
+    },
+    {
+      "t": 21.52,
       "type": "crumble",
       "span": 1.18,
       "delay": 0.52
     },
     {
-      "t": 55.55,
+      "t": 23.02,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": 0.48
+    },
+    {
+      "t": 24.07,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 56.41,
+      "t": 24.93,
       "type": "gate",
       "period": 1.4,
       "open": 0.62,
-      "phase": 0.64
+      "phase": -0.03
     },
     {
-      "t": 57.38,
+      "t": 25.89,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 26.67,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 27.64,
+      "type": "crumble",
+      "span": 1.18,
+      "delay": 0.52
+    },
+    {
+      "t": 28.61,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 29.58,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 31.08,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 31.94,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": -0.04
+    },
+    {
+      "t": 32.9,
       "type": "flip",
       "span": 4.15
     },
     {
-      "t": 58.58,
+      "t": 33.95,
+      "type": "block"
+    },
+    {
+      "t": 34.1,
       "type": "spike",
       "anchor": "ceiling",
       "count": 1
     },
     {
-      "t": 58.93,
+      "t": 34.45,
       "type": "spike",
-      "count": 2
+      "count": 4
     },
     {
-      "t": 59.73,
+      "t": 35,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 35.25,
       "type": "spike",
       "anchor": "ceiling",
       "count": 2
     },
     {
-      "t": 60.63,
+      "t": 35.72,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 36.15,
+      "type": "spike",
+      "anchor": "ceiling",
+      "count": 1
+    },
+    {
+      "t": 36.77,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 37.55,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 39.05,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 40.55,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 41.6,
+      "type": "block"
+    },
+    {
+      "t": 42.65,
+      "type": "crumble",
+      "span": 1.18,
+      "delay": 0.52
+    },
+    {
+      "t": 44.15,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": 0.35
+    },
+    {
+      "t": 45.2,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 46.06,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": -0.16
+    },
+    {
+      "t": 47.03,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 47.81,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 49.31,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 50.81,
+      "type": "crumble",
+      "span": 1.18,
+      "delay": 0.52
+    },
+    {
+      "t": 52.31,
+      "type": "overhead",
+      "gap": 58
+    },
+    {
+      "t": 53.17,
+      "type": "gate",
+      "period": 1.4,
+      "open": 0.62,
+      "phase": -0.27
+    },
+    {
+      "t": 54.14,
+      "type": "flip",
+      "span": 4.15
+    },
+    {
+      "t": 55.34,
+      "type": "spike",
+      "anchor": "ceiling",
+      "count": 1
+    },
+    {
+      "t": 55.69,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 56.49,
+      "type": "spike",
+      "anchor": "ceiling",
+      "count": 2
+    },
+    {
+      "t": 57.39,
       "type": "spike",
       "anchor": "ceiling",
       "count": 1
@@ -332,20 +332,20 @@
   ],
   "stars": [
     {
-      "t": 1.15,
+      "t": 1.6,
       "lift": 0
     },
     {
-      "t": 19.2,
-      "lift": 70
+      "t": 30.35,
+      "lift": 0
     },
     {
-      "t": 43.28,
-      "lift": 98
+      "t": 48.6,
+      "lift": 0
     }
   ],
   "checkpoints": [
-    40.85,
-    51.5
+    38.6,
+    48.6
   ]
 }

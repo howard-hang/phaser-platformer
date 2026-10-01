@@ -3,6 +3,7 @@
  * 实心高饱和色、大圆角、底部深色厚边和轻投影。按下时脸部下沉并轻微缩小。
  * 颜色集中在这里，主按钮、次按钮和禁用态不要各写一套。
  */
+import Phaser from 'phaser';
 import { FONT } from './theme.js';
 import { CANDY_BUTTON_H, ICON_HIT } from './viewport.js';
 
@@ -188,8 +189,17 @@ export function createCandyButton(scene, {
 
   const hitW = shape === 'circle' ? ICON_HIT : Math.max(width, CANDY_BUTTON_H);
   const hitH = shape === 'circle' ? ICON_HIT : Math.max(height, CANDY_BUTTON_H);
-  const zone = scene.add.zone(x, y, hitW, hitH).setScrollFactor(0).setDepth(depth + 1);
-  zone.setData('ui', true);
+  // 容器记下尺寸，热区用同尺寸的 Zone。Zone 不在容器里，避免容器缩放时把点击区挤偏。
+  root.setSize(hitW, hitH);
+  const zone = scene.add.zone(x, y, hitW, hitH)
+    .setScrollFactor(0)
+    .setDepth(depth + 1)
+    .setData('ui', true);
+  const hitConfig = {
+    hitArea: new Phaser.Geom.Rectangle(0, 0, hitW, hitH),
+    hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+    useHandCursor: true,
+  };
 
   const state = {
     enabled,
@@ -237,11 +247,31 @@ export function createCandyButton(scene, {
     root.setScale(state.pressed ? 0.96 : 1);
   }
 
+  // setInteractive() 在 input 已存在时只把 enabled 设回 true，不会重新排队。
+  // 对象会停在「看着能点、名单里却没有」的状态，鼠标和触屏都打不中。
+  function syncInput() {
+    const plugin = zone.scene?.sys?.input;
+    if (!plugin) return;
+    const drop = plugin._pendingRemoval.indexOf(zone);
+    if (drop !== -1) plugin._pendingRemoval.splice(drop, 1);
+    const listed = plugin._list.includes(zone);
+    const queued = plugin._pendingInsertion.includes(zone);
+    if (!zone.input || (!listed && !queued)) {
+      plugin.setHitArea(zone, hitConfig);
+    }
+    const pending = plugin._pendingInsertion.indexOf(zone);
+    if (pending !== -1 && !plugin._list.includes(zone)) {
+      plugin._pendingInsertion.splice(pending, 1);
+      plugin._list.push(zone);
+    }
+    if (zone.input) zone.input.enabled = !!state.enabled;
+  }
+
   function bind() {
     zone.removeAllListeners();
-    zone.disableInteractive();
+    if (!zone.scene?.sys) return;
+    syncInput();
     if (!state.enabled) return;
-    zone.setInteractive({ useHandCursor: true });
     zone.on('pointerover', (pointer) => {
       if (pointer?.wasTouch) return;
       state.hovered = true;
@@ -283,6 +313,7 @@ export function createCandyButton(scene, {
     setPosition(nx, ny) {
       root.setPosition(nx, ny);
       zone.setPosition(nx, ny);
+      syncInput();
     },
     setEnabled(value) {
       state.enabled = !!value;

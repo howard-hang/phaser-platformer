@@ -46,6 +46,14 @@ export function shouldCreateAudio(interacted) {
 }
 
 /**
+ * 音效能不能出声。碎裂、跳跃、吃星走同一道门。
+ * 静音、进后台、还没建好音频上下文时都不播。
+ */
+export function canPlaySfx({ muted, appActive, hasContext }) {
+  return !!hasContext && !muted && !!appActive;
+}
+
+/**
  * 应用进后台就挂起音频，回到前台再恢复。
  * 挂起不会清掉播放进度。
  */

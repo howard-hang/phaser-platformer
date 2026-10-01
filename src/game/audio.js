@@ -5,9 +5,12 @@
  * 页面或安卓壳进后台时挂起上下文，回来从刚才的位置继续。
  */
 import musicUrl from '../assets/music/pulse.ogg';
+import shatterUrl from '../assets/sfx/shatter.wav';
 import { isNativeShell } from '../platform/androidBack.js';
+import { renderShatterPcm } from './shatterSynth.js';
 import {
   audioContextAction,
+  canPlaySfx,
   loadMutePreference,
   musicOutputGain,
   playbackPositionAfterRetry,
@@ -50,6 +53,9 @@ class Synth {
     this.musicGain = null;
     this.musicSource = null;
     this.musicLoading = null;
+    this.shatterBuffer = null;
+    this.shatterLoading = null;
+    this._synthShatter = null;
     this.muted = loadMutePreference(storageOrNull());
     this.unlocked = false;
     this.appActive = true;
@@ -68,6 +74,7 @@ class Synth {
       this.musicGain.connect(this.ctx.destination);
       this.applyGains();
       this.startMusic();
+      this.prepareShatter();
     }
     this.unlocked = true;
     if (this.appActive && this.ctx.state === 'suspended') {
@@ -123,6 +130,49 @@ class Synth {
       });
   }
 
+  /**
+   * 预解码仓库里的碎裂 wav。
+   * 解码完成前如果玩家已经死亡，play 会用同一算法当场合成。
+   */
+  prepareShatter() {
+    if (!this.ctx || this.shatterBuffer || this.shatterLoading) return;
+    this.shatterLoading = fetch(shatterUrl)
+      .then((response) => response.arrayBuffer())
+      .then((data) => this.ctx.decodeAudioData(data))
+      .then((buffer) => {
+        this.shatterBuffer = buffer;
+      })
+      .catch(() => {
+        this.shatterLoading = null;
+      });
+  }
+
+  /** 文件还没好时，按 shatterSynth 合成一截相同的碎裂声。 */
+  synthShatterBuffer() {
+    if (this._synthShatter) return this._synthShatter;
+    const pcm = renderShatterPcm(this.ctx.sampleRate);
+    const buffer = this.ctx.createBuffer(1, pcm.length, this.ctx.sampleRate);
+    buffer.getChannelData(0).set(pcm);
+    this._synthShatter = buffer;
+    return buffer;
+  }
+
+  /** 播放碎裂声。很短，接在主增益上，静音时主增益已经是 0，这里也会提前返回。 */
+  playShatter() {
+    const buffer = this.shatterBuffer || this.synthShatterBuffer();
+    const source = this.ctx.createBufferSource();
+    const amp = this.ctx.createGain();
+    source.buffer = buffer;
+    amp.gain.setValueAtTime(0.9, this.ctx.currentTime);
+    source.connect(amp);
+    amp.connect(this.master);
+    source.start();
+    source.onended = () => {
+      source.disconnect();
+      amp.disconnect();
+    };
+  }
+
   /** 安卓切到后台、或浏览器标签被藏起来时调用。 */
   setAppActive(isActive) {
     this.appActive = !!isActive;
@@ -138,16 +188,15 @@ class Synth {
   }
 
   play(name) {
-    if (!this.ctx || this.muted || !this.appActive) return;
+    // 碎裂音效和跳跃、吃星共用这道门，声音开关关掉时一起静音。
+    if (!canPlaySfx({ muted: this.muted, appActive: this.appActive, hasContext: !!this.ctx })) return;
     const time = this.ctx.currentTime;
     if (name === 'jump') {
       tone(this.ctx, this.master, time, {
         freq: 520, freqTo: 780, dur: 0.08, type: 'square', gain: 0.12,
       });
     } else if (name === 'death') {
-      tone(this.ctx, this.master, time, {
-        freq: 220, freqTo: 55, dur: 0.22, type: 'sawtooth', gain: 0.12,
-      });
+      this.playShatter();
     } else if (name === 'star') {
       tone(this.ctx, this.master, time, {
         freq: 880, dur: 0.07, type: 'triangle', gain: 0.1,
