@@ -156,5 +156,74 @@ export function auditLevel(level, tuning = TUNING) {
     }
   }
 
+  auditRoutes(level, tuning, problems);
   return problems;
+}
+
+function spanOf(obstacle) {
+  if (obstacle.type === 'flip' || obstacle.type === 'crumble') {
+    return [obstacle.x0, obstacle.x1];
+  }
+  const half = obstacle.type === 'spike' || obstacle.type === 'cspike' ? 18 : 21;
+  return [obstacle.x - half, obstacle.x + half];
+}
+
+/** 上层平台要能跳上去、跳下来，并且不和反转区叠在一起。 */
+function auditRoutes(level, tuning, problems) {
+  const decks = level.decks || [];
+  const routes = level.routes || [];
+  if (!decks.length) return;
+  const flips = level.flips || [];
+  for (const deck of decks) {
+    for (const zone of flips) {
+      if (deck.x0 < zone.x1 + 30 && zone.x0 < deck.x1 + 30) {
+        problems.push(`平台 ${deck.id} 和重力反转区重叠`);
+      }
+    }
+    if (deck.kind === 'route' && deck.layer === 2 && deck.h < 170) {
+      problems.push(`上层 ${deck.id} 太低，地面起跳会撞上去`);
+    }
+    if (deck.kind === 'step' && deck.h > 140) {
+      problems.push(`台阶 ${deck.id} 太高，不好跳`);
+    }
+  }
+  for (const step of decks) {
+    if (step.kind !== 'step') continue;
+    const deck = decks.find((item) => item.kind === 'route' && item.layer === 2 && item.fork === step.fork);
+    if (!deck) {
+      problems.push(`台阶 ${step.id} 没有接到上层路`);
+      continue;
+    }
+    if (step.x1 < deck.x0 + 36) problems.push(`台阶 ${step.id} 和上层路衔接太短`);
+    if (step.x0 > deck.x0 - 20) problems.push(`台阶 ${step.id} 没有露在上层路前面`);
+  }
+  for (const high of routes) {
+    if (high.layer < 3) continue;
+    const lower = routes.find((item) => item.fork === high.fork && item.layer === 2);
+    if (!lower) {
+      problems.push(`高层 ${high.id} 没有对应的二层`);
+      continue;
+    }
+    if (high.x0 < lower.x0 + 30 || high.x1 > lower.x1 - 16) {
+      problems.push(`高层 ${high.id} 没有完全落在二层路面上`);
+    }
+  }
+  const ground = (level.obstacles || []).filter((item) => !item.rise && item.type !== 'flip');
+  for (const deck of decks) {
+    if (deck.kind !== 'route' || deck.layer !== 2) continue;
+    const land = deck.x1 + tuning.speed * 0.42;
+    for (const obstacle of ground) {
+      const [start, end] = spanOf(obstacle);
+      if (end > deck.x1 + 8 && start < land) {
+        problems.push(`上层 ${deck.id} 落地处有地面障碍 ${obstacle.id}`);
+        break;
+      }
+    }
+  }
+  if (routes.length && level.stars?.length) {
+    const grounded = level.stars.some((star) => (star.lift || 0) < 40);
+    const lifted = level.stars.some((star) => (star.lift || 0) >= 160);
+    if (!grounded) problems.push('有上层路时，至少留一颗地面星星');
+    if (!lifted) problems.push('有上层路时，至少一颗星星要放在上层');
+  }
 }

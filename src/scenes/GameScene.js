@@ -232,6 +232,47 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.add.overlap(this.player, this.hazardSprites, () => this.onHazard(), null, this);
     this.physics.add.overlap(this.player, this.starSprites, (_player, star) => this.onStar(star), null, this);
+    this.createDecks();
+  }
+
+  /**
+   * 上层路线：一条薄平台。往上跳能穿过去，下落时才站上去。
+   * 台阶、主路、更高一层用不同颜色，入口左侧有一块白标，方便看出分叉。
+   */
+  createDecks() {
+    this.deckNodes = [];
+    const decks = this.level.decks || [];
+    for (let i = 0; i < decks.length; i += 1) {
+      const deck = decks[i];
+      const width = Math.max(8, deck.x1 - deck.x0);
+      const cx = (deck.x0 + deck.x1) / 2;
+      const color = deck.kind === 'step' ? 0xfde68a : (deck.layer >= 3 ? 0xfde047 : 0x67e8f9);
+      const slab = this.add.rectangle(cx, deck.top + 4, width, 8, color).setDepth(3);
+      const lip = this.add.rectangle(cx, deck.top + 1, width, 3, 0xffffff).setDepth(4);
+      // 入口白标，提示这里可以跳上来。
+      const mark = this.add.rectangle(deck.x0 + 10, deck.top - 12, 6, 20, 0xffffff).setDepth(4);
+      const body = this.add.rectangle(cx, deck.top + 3, width, 6, 0x000000, 0);
+      this.physics.add.existing(body, true);
+      body.setData('deck', deck);
+      this.physics.add.collider(this.player, body, null, (_player, plat) => this.canLandOnDeck(plat), this);
+      this.deckNodes.push({
+        deck,
+        body,
+        x0: deck.x0,
+        x1: deck.x1,
+        visuals: [slab, lip, mark],
+      });
+    }
+  }
+
+  /** 只有从上面落下来才站上平台，避免从底下被顶住。 */
+  canLandOnDeck(plat) {
+    const body = this.player?.body;
+    const deck = plat.getData('deck');
+    if (!body || !deck || body.velocity.y < 0) return false;
+    const time = (this.player.x - this.level.startX) / this.tuning.speed;
+    if (deck.collapse != null && time >= deck.collapse) return false;
+    return body.bottom <= deck.top + 10;
   }
 
   /** 反转区的色带和天花板。天花板是实体，人会被反重力顶在上面。 */
@@ -327,6 +368,14 @@ export class GameScene extends Phaser.Scene {
         item.tiles[t].setY(item.baseY + drop);
         item.tiles[t].setAlpha(alpha);
       }
+    }
+
+    const nodes = this.deckNodes || [];
+    for (let i = 0; i < nodes.length; i += 1) {
+      const node = nodes[i];
+      const near = node.x1 >= viewLeft && node.x0 <= viewRight;
+      // 镜头外的平台刚体关掉，和地面障碍同一套省帧办法。
+      node.body.body.enable = near;
     }
   }
 
@@ -426,7 +475,23 @@ export class GameScene extends Phaser.Scene {
       return body.blocked.up || body.touching.up || body.y <= FLIP_CEILING_Y + 2;
     }
     if (body.blocked.down || body.touching.down) return true;
-    return body.velocity.y >= 0 && body.bottom >= TUNING.groundY - 2 && body.bottom <= TUNING.groundY + 8;
+    if (body.velocity.y >= 0 && body.bottom >= TUNING.groundY - 2 && body.bottom <= TUNING.groundY + 8) {
+      return true;
+    }
+    return this.standsOnDeck();
+  }
+
+  /** 脚底贴着某块上层平台时也算落地，可以起跳。 */
+  standsOnDeck() {
+    const body = this.player?.body;
+    if (!body || body.velocity.y < 0) return false;
+    const nodes = this.deckNodes || [];
+    for (let i = 0; i < nodes.length; i += 1) {
+      const deck = nodes[i].deck;
+      if (this.player.x < deck.x0 - 6 || this.player.x > deck.x1 + 6) continue;
+      if (Math.abs(body.bottom - deck.top) <= 8) return true;
+    }
+    return false;
   }
 
   /** 物理步里累加旋转，一整圈刚好赶在落地前转完。 */

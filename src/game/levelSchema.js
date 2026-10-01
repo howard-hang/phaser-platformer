@@ -34,7 +34,7 @@ function expectKeys(file, path, value, allowed) {
 /** 校验单个关卡对象。通过后原样返回。 */
 export function validateLevel(level, file = 'level.json') {
   if (!isObject(level)) fail(file, '', '关卡应该是一个对象');
-  expectKeys(file, '', level, ['id', 'name', 'speed', 'duration', 'palette', 'obstacles', 'stars', 'checkpoints']);
+  expectKeys(file, '', level, ['id', 'name', 'speed', 'duration', 'palette', 'obstacles', 'stars', 'checkpoints', 'routes']);
   for (const key of ['id', 'name', 'speed', 'duration', 'palette', 'obstacles', 'stars', 'checkpoints']) {
     if (!(key in level)) fail(file, '', `缺少字段 ${key}`);
   }
@@ -60,6 +60,10 @@ export function validateLevel(level, file = 'level.json') {
   level.checkpoints.forEach((item, index) => {
     expectNumber(file, `checkpoints[${index}]`, item, { min: 0 });
   });
+  if ('routes' in level) {
+    if (!Array.isArray(level.routes)) fail(file, 'routes', '应该是数组');
+    level.routes.forEach((item, index) => validateRoute(item, file, `routes[${index}]`));
+  }
   const lastObstacle = level.obstacles.reduce((max, item) => Math.max(max, item.t), 0);
   if (lastObstacle >= level.duration) {
     fail(file, 'obstacles', '有障碍的时间不早于终点');
@@ -133,8 +137,68 @@ function validateStar(item, file, path) {
   expectKeys(file, path, item, ['t', 'lift', 'dx']);
   if (!('t' in item)) fail(file, path, '缺少 t');
   expectNumber(file, `${path}.t`, item.t, { min: 0 });
-  if ('lift' in item) expectNumber(file, `${path}.lift`, item.lift, { min: 0, max: 200 });
+  if ('lift' in item) expectNumber(file, `${path}.lift`, item.lift, { min: 0, max: 340 });
   if ('dx' in item) expectNumber(file, `${path}.dx`, item.dx, { min: -400, max: 400 });
+}
+
+const ROUTE_REWARDS = ['star', 'safe', 'shortcut'];
+
+function validateRouteObstacle(item, file, path) {
+  validateObstacle(item, file, path);
+  if (item.type === 'flip' || item.type === 'crumble' || item.anchor === 'ceiling') {
+    fail(file, path, '上层路线只放尖刺、方块、倒挂方块或周期门');
+  }
+}
+
+function validateStep(item, file, path) {
+  if (!isObject(item)) fail(file, path, '入口台阶应该是对象');
+  expectKeys(file, path, item, ['h', 'span', 'lead']);
+  if (!('h' in item) || !('span' in item)) fail(file, path, '入口台阶需要 h 和 span');
+  expectNumber(file, `${path}.h`, item.h, { min: 48, max: 130 });
+  expectNumber(file, `${path}.span`, item.span, { min: 0.4, max: 4 });
+  if ('lead' in item) expectNumber(file, `${path}.lead`, item.lead, { min: 0, max: 3 });
+}
+
+function validateHigh(item, file, path) {
+  if (!isObject(item)) fail(file, path, '第三层应该是对象');
+  expectKeys(file, path, item, ['h', 'span', 'lead', 'reward', 'obstacles']);
+  if (!('h' in item) || !('span' in item)) fail(file, path, '第三层需要 h 和 span');
+  expectNumber(file, `${path}.h`, item.h, { min: 220, max: 320 });
+  expectNumber(file, `${path}.span`, item.span, { min: 1.2, max: 8 });
+  if ('lead' in item) expectNumber(file, `${path}.lead`, item.lead, { min: 0, max: 6 });
+  if ('reward' in item && !ROUTE_REWARDS.includes(item.reward)) {
+    fail(file, `${path}.reward`, `未知奖励 ${JSON.stringify(item.reward)}`);
+  }
+  if ('obstacles' in item) {
+    if (!Array.isArray(item.obstacles)) fail(file, `${path}.obstacles`, '应该是数组');
+    item.obstacles.forEach((obstacle, index) => {
+      validateRouteObstacle(obstacle, file, `${path}.obstacles[${index}]`);
+    });
+  }
+}
+
+/** 一条可选的上层路。step 是跳上去的台阶，high 是再高一层。 */
+function validateRoute(item, file, path) {
+  if (!isObject(item)) fail(file, path, '分叉应该是对象');
+  expectKeys(file, path, item, ['t', 'span', 'h', 'layer', 'reward', 'step', 'high', 'obstacles']);
+  if (!('t' in item) || !('span' in item) || !('h' in item)) {
+    fail(file, path, '分叉需要 t、span 和 h');
+  }
+  expectNumber(file, `${path}.t`, item.t, { min: 0 });
+  expectNumber(file, `${path}.span`, item.span, { min: 2, max: 12 });
+  expectNumber(file, `${path}.h`, item.h, { min: 160, max: 240 });
+  if ('layer' in item && item.layer !== 2) fail(file, `${path}.layer`, '主层写 2，更高的一层写在 high 里');
+  if ('reward' in item && !ROUTE_REWARDS.includes(item.reward)) {
+    fail(file, `${path}.reward`, `未知奖励 ${JSON.stringify(item.reward)}。可用：${ROUTE_REWARDS.join('、')}`);
+  }
+  if ('step' in item) validateStep(item.step, file, `${path}.step`);
+  if ('high' in item) validateHigh(item.high, file, `${path}.high`);
+  if ('obstacles' in item) {
+    if (!Array.isArray(item.obstacles)) fail(file, `${path}.obstacles`, '应该是数组');
+    item.obstacles.forEach((obstacle, index) => {
+      validateRouteObstacle(obstacle, file, `${path}.obstacles[${index}]`);
+    });
+  }
 }
 
 /** 校验清单：顺序、文件名、解锁门槛。files 是已加载关卡文件名到内容的映射。 */

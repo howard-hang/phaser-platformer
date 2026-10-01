@@ -21,6 +21,11 @@
       "count": 3
     },
     {
+      "t": 4.62,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 7.8,
       "type": "block"
     },
@@ -33,6 +38,11 @@
       "t": 9.85,
       "type": "spike",
       "count": 3
+    },
+    {
+      "t": 10.27,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 13.45,
@@ -63,6 +73,21 @@
       "type": "block"
     },
     {
+      "t": 22.47,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 22.66,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 22.85,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 25.86,
       "type": "overhead",
       "gap": 58
@@ -78,6 +103,16 @@
       "count": 2
     },
     {
+      "t": 28.39,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 28.58,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 31.68,
       "type": "block"
     },
@@ -88,6 +123,21 @@
     },
     {
       "t": 33.9,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 34.09,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 34.28,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 34.47,
       "type": "spike",
       "count": 1
     },
@@ -120,6 +170,16 @@
       "type": "block"
     },
     {
+      "t": 46.52,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 46.71,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 49.91,
       "type": "overhead",
       "gap": 58
@@ -135,28 +195,59 @@
       "count": 2
     },
     {
+      "t": 52.44,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 52.63,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 55.73,
       "type": "block"
     }
   ],
   "stars": [
     {
-      "t": 3.6,
+      "t": 1.25,
       "lift": 0
     },
     {
-      "t": 27.35,
-      "lift": 0
+      "t": 15.05,
+      "lift": 200
     },
     {
-      "t": 45.85,
+      "t": 35.3,
       "lift": 0
     }
   ],
   "checkpoints": [
-    11,
-    23,
-    35,
-    47.4
+    10.96,
+    21.64,
+    32.32,
+    43
+  ],
+  "routes": [
+    {
+      "t": 12.2,
+      "span": 4.6,
+      "h": 200,
+      "layer": 2,
+      "reward": "star",
+      "step": {
+        "h": 84,
+        "span": 1.55,
+        "lead": 0.85
+      },
+      "obstacles": [
+        {
+          "t": 13.9,
+          "type": "overhead",
+          "gap": 58
+        }
+      ]
+    }
   ]
 }

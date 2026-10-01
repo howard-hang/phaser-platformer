@@ -105,6 +105,43 @@ export function eventBreathCount(def, minGap = BREATH_GAP_SEC) {
   return count;
 }
 
+/**
+ * 地面障碍之间的平均空闲（秒）。
+ * 空闲是上一个障碍结束到下一个障碍开始的时间，尖刺按 count 的宽度算。
+ * 上层路线另计，不和地面障碍混在同一条时间轴上，避免并行路线把空闲算成 0。
+ */
+export function eventIdleStats(def) {
+  const speed = def?.speed || 1;
+  const events = [...(def?.obstacles || [])].sort((a, b) => a.t - b.t);
+  const endOf = (event) => {
+    if (event.type === 'flip' || event.type === 'crumble') return event.t + (event.span || 0);
+    const width = event.type === 'spike' ? 36 * (event.count || 1) : 42;
+    return event.t + width / speed;
+  };
+  const idles = [];
+  for (let i = 1; i < events.length; i += 1) {
+    idles.push(Math.max(0, events[i].t - endOf(events[i - 1])));
+  }
+  const avgIdle = idles.length ? idles.reduce((sum, gap) => sum + gap, 0) / idles.length : 0;
+  const maxIdle = idles.reduce((max, gap) => Math.max(max, gap), 0);
+  let routeCombos = 0;
+  for (const route of def?.routes || []) {
+    routeCombos += eventComboStats({ obstacles: route.obstacles || [] }).count;
+    if (route.high) routeCombos += eventComboStats({ obstacles: route.high.obstacles || [] }).count;
+  }
+  const ground = eventComboStats(def);
+  const forks = (def?.routes || []).length;
+  const layers = (def?.routes || []).some((route) => route.high) ? 3 : (forks ? 2 : 1);
+  return {
+    avgIdle,
+    maxIdle,
+    combos: ground.count + routeCombos,
+    groundCombos: ground.count,
+    forks,
+    layers,
+  };
+}
+
 /** 第 n 关（从 1 数）建议的解锁星数：前面关卡满星的三分之二。 */
 export function suggestedUnlock(levelNumber) {
   if (levelNumber <= 1) return 0;

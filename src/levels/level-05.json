@@ -31,13 +31,39 @@
       "count": 3
     },
     {
-      "t": 10.98,
+      "t": 9.73,
       "type": "spike",
-      "count": 3
+      "count": 1
     },
     {
-      "t": 12.63,
-      "type": "block"
+      "t": 9.92,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 10.23,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 10.42,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 10.61,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 10.8,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 13.15,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 14.13,
@@ -55,9 +81,19 @@
       "gap": 58
     },
     {
-      "t": 16.73,
+      "t": 16.38,
       "type": "spike",
-      "count": 3
+      "count": 1
+    },
+    {
+      "t": 17.65,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 17.84,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 19.93,
@@ -77,6 +113,26 @@
       "t": 24.43,
       "type": "spike",
       "count": 3
+    },
+    {
+      "t": 24.83,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 25.02,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 25.33,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 25.52,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 27.74,
@@ -103,6 +159,26 @@
       "count": 2
     },
     {
+      "t": 32.36,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 32.55,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 32.86,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 33.05,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 35.28,
       "type": "spike",
       "count": 3
@@ -122,18 +198,43 @@
       "count": 2
     },
     {
+      "t": 40.07,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 40.26,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 40.57,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 40.76,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 40.95,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 43.09,
       "type": "block"
     },
     {
-      "t": 44.59,
-      "type": "overhead",
-      "gap": 58
+      "t": 43.29,
+      "type": "spike",
+      "count": 1
     },
     {
-      "t": 45.31,
+      "t": 45.52,
       "type": "spike",
-      "count": 2
+      "count": 1
     },
     {
       "t": 46.4,
@@ -144,6 +245,26 @@
       "t": 47.18,
       "type": "spike",
       "count": 2
+    },
+    {
+      "t": 47.47,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 47.66,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 47.97,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 48.16,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 50.39,
@@ -167,22 +288,55 @@
   ],
   "stars": [
     {
-      "t": 3.85,
+      "t": 1.25,
       "lift": 0
     },
     {
-      "t": 26.85,
-      "lift": 0
+      "t": 15.05,
+      "lift": 200
     },
     {
-      "t": 44.1,
+      "t": 34.83,
       "lift": 0
     }
   ],
   "checkpoints": [
-    11.8,
-    23.8,
-    36.2,
-    48.2
+    13.84,
+    21,
+    33.6,
+    46.84
+  ],
+  "routes": [
+    {
+      "t": 12.2,
+      "span": 4.6,
+      "h": 200,
+      "layer": 2,
+      "reward": "star",
+      "step": {
+        "h": 84,
+        "span": 1.55,
+        "lead": 0.85
+      },
+      "obstacles": [
+        {
+          "t": 13.9,
+          "type": "block"
+        }
+      ]
+    },
+    {
+      "t": 44.6,
+      "span": 4.6,
+      "h": 200,
+      "layer": 2,
+      "reward": "safe",
+      "step": {
+        "h": 84,
+        "span": 1.55,
+        "lead": 0.85
+      },
+      "obstacles": []
+    }
   ]
 }
