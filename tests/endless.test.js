@@ -2,7 +2,7 @@
  * 无尽模式的跑道。
  * 多颗种子、多档跑速都要能跑通；跑过的片段要回收；纪录只在更远时覆盖。
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { getLevel, levelTuning } from '../src/game/level.js';
 import {
   ENDLESS_CURVE,
@@ -40,6 +40,12 @@ function memoryStorage() {
 }
 
 describe('无尽跑道', () => {
+  // 可玩片段要按每个起步相位做可达性搜索。这段只在第一次发生，CI 上大约 5 秒，
+  // 不能算进默认 5 秒的用例时限里。筛完之后，同文件里的长跑道模拟都复用结果。
+  beforeAll(() => {
+    playableSegments();
+  }, 120000);
+
   it('闯关的重力、跳跃和关卡速度都不改', () => {
     expect(TUNING.gravity).toBe(1700);
     expect(TUNING.jumpVelocity).toBe(-740);
@@ -70,7 +76,7 @@ describe('无尽跑道', () => {
         expect(piece.tier, piece.segmentId).toBe(0);
       }
     }
-  });
+  }, 60000);
 
   it('多颗种子在难度曲线和各跑速档位上都能跑通', () => {
     const cases = [
@@ -131,7 +137,7 @@ describe('无尽跑道', () => {
     expect(dropped).toBeGreaterThan(10);
     expect(stream.kept).toBeNull();
     expect(stream.live.length).toBeGreaterThan(0);
-  });
+  }, 60000);
 
   it('最高纪录只在更远时写入本机', () => {
     const store = memoryStorage();
