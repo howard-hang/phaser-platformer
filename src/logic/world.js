@@ -35,6 +35,24 @@ export function playerGroundY(tuning = TUNING) {
   return tuning.groundY - HITBOX.player.h / 2;
 }
 
+/** 脚底贴在某条水平表面时，方块精灵的中心 Y。 */
+export function playerCenterOnSurface(surfaceY) {
+  return surfaceY - HITBOX.player.h / 2;
+}
+
+/** 精灵中心对应的脚底世界 Y。站在地面上时等于 groundY。 */
+export function playerFeetY(centerY) {
+  return centerY - HITBOX.player.h / 2 + HITBOX.player.offsetY + HITBOX.player.bodyH;
+}
+
+/**
+ * 上层主路离地高度。高于一次起跳的最高点，地面上的跳跃不会被吸上去。
+ * 入口台阶更低，从台阶再跳一次才上得去。
+ */
+export const ROUTE_STEP_H = 84;
+export const ROUTE_DECK_H = 200;
+export const ROUTE_HIGH_H = 258;
+
 /**
  * 重力反转区的天花板下沿（世界 Y，越小越高）。
  * 比普通跳跃的最高点再高一截，正常起跳碰不到。
@@ -103,17 +121,24 @@ export function rectsOverlap(a, b) {
     && a.y + a.h > b.y;
 }
 
+/** 障碍所在表面的地平线。rise 是上层平台离地的高度，0 表示原来的地面。 */
+function surfaceGroundY(obstacle, tuning) {
+  return tuning.groundY - (obstacle.rise || 0);
+}
+
 /**
  * 障碍物精灵中心、碰撞盒和贴图 key。
  * time 是从起点算的秒数。门开着、平台还没塌时返回 null，表示这一帧没有碰撞。
  * options.forceClosed 用来做关卡体检，把周期门当成关着的。
  */
+
 export function obstaclePose(obstacle, tuning = TUNING, time = 0, options = {}) {
+  const groundY = surfaceGroundY(obstacle, tuning);
   if (obstacle.type === 'spike') {
     const spec = HITBOX.spike;
     return {
       cx: obstacle.x,
-      cy: tuning.groundY - spec.h / 2,
+      cy: groundY - spec.h / 2,
       spec,
       key: 'spike',
     };
@@ -136,7 +161,7 @@ export function obstaclePose(obstacle, tuning = TUNING, time = 0, options = {}) 
     const spec = HITBOX.block;
     return {
       cx: obstacle.x,
-      cy: tuning.groundY - spec.h / 2,
+      cy: groundY - spec.h / 2,
       spec,
       key: obstacle.type === 'gate' ? 'gate' : 'block',
     };
@@ -146,7 +171,7 @@ export function obstaclePose(obstacle, tuning = TUNING, time = 0, options = {}) 
     const gap = obstacle.gap ?? 58;
     return {
       cx: obstacle.x,
-      cy: tuning.groundY - gap - spec.h / 2,
+      cy: groundY - gap - spec.h / 2,
       spec,
       key: 'block',
     };

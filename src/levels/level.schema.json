@@ -24,6 +24,10 @@
     "checkpoints": {
       "type": "array",
       "items": { "type": "number", "minimum": 0 }
+    },
+    "routes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/route" }
     }
   },
   "$defs": {
@@ -64,8 +68,65 @@
       "required": ["t"],
       "properties": {
         "t": { "type": "number", "minimum": 0 },
-        "lift": { "type": "number", "minimum": 0, "maximum": 200 },
+        "lift": { "type": "number", "minimum": 0, "maximum": 340 },
         "dx": { "type": "number" }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["t", "span", "h"],
+      "properties": {
+        "t": { "type": "number", "minimum": 0 },
+        "span": { "type": "number", "minimum": 2, "maximum": 12 },
+        "h": { "type": "number", "minimum": 160, "maximum": 240 },
+        "layer": { "const": 2 },
+        "reward": { "enum": ["star", "safe", "shortcut"] },
+        "step": { "$ref": "#/$defs/step" },
+        "high": { "$ref": "#/$defs/high" },
+        "obstacles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/routeObstacle" }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["h", "span"],
+      "properties": {
+        "h": { "type": "number", "minimum": 48, "maximum": 130 },
+        "span": { "type": "number", "minimum": 0.4, "maximum": 4 },
+        "lead": { "type": "number", "minimum": 0, "maximum": 3 }
+      }
+    },
+    "high": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["h", "span"],
+      "properties": {
+        "h": { "type": "number", "minimum": 220, "maximum": 320 },
+        "span": { "type": "number", "minimum": 1.2, "maximum": 8 },
+        "lead": { "type": "number", "minimum": 0, "maximum": 6 },
+        "reward": { "enum": ["star", "safe", "shortcut"] },
+        "obstacles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/routeObstacle" }
+        }
+      }
+    },
+    "routeObstacle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["t", "type"],
+      "properties": {
+        "t": { "type": "number", "minimum": 0 },
+        "type": { "enum": ["spike", "block", "overhead", "gate"] },
+        "count": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "gap": { "type": "number", "minimum": 48, "maximum": 120 },
+        "period": { "type": "number", "exclusiveMinimum": 0.2, "maximum": 6 },
+        "open": { "type": "number", "exclusiveMinimum": 0, "maximum": 6 },
+        "phase": { "type": "number" }
       }
     }
   }

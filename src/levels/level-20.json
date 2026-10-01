@@ -12,11 +12,36 @@
       "delay": 0.52
     },
     {
+      "t": 3.53,
+      "type": "spike",
+      "count": 4
+    },
+    {
       "t": 3.65,
       "type": "gate",
       "period": 1.4,
       "open": 0.62,
       "phase": 0.2
+    },
+    {
+      "t": 3.83,
+      "type": "spike",
+      "count": 4
+    },
+    {
+      "t": 3.99,
+      "type": "spike",
+      "count": 3
+    },
+    {
+      "t": 4.15,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 4.43,
+      "type": "spike",
+      "count": 4
     },
     {
       "t": 4.7,
@@ -76,20 +101,29 @@
       "type": "block"
     },
     {
-      "t": 13.25,
+      "t": 12.77,
       "type": "spike",
       "count": 4
     },
     {
-      "t": 14.75,
-      "type": "crumble",
-      "span": 1.18,
-      "delay": 0.52
+      "t": 15.18,
+      "type": "spike",
+      "count": 2
     },
     {
       "t": 15.62,
       "type": "spike",
       "count": 4
+    },
+    {
+      "t": 16.03,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 16.19,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 16.48,
@@ -99,16 +133,44 @@
       "phase": -0.03
     },
     {
+      "t": 16.66,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 16.82,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 16.98,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 17.38,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 17.53,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 18.39,
-      "type": "gate",
-      "period": 1.4,
-      "open": 0.62,
-      "phase": 0.86
+      "t": 17.71,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 17.96,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 19.17,
+      "type": "spike",
+      "count": 2
     },
     {
       "t": 19.35,
@@ -116,9 +178,29 @@
       "gap": 58
     },
     {
+      "t": 19.53,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 19.69,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 19.9,
       "type": "spike",
       "count": 4
+    },
+    {
+      "t": 20.31,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 20.47,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 20.87,
@@ -127,9 +209,29 @@
       "delay": 0.52
     },
     {
+      "t": 22.25,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 22.37,
       "type": "overhead",
       "gap": 58
+    },
+    {
+      "t": 22.55,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 22.71,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 22.87,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 23.23,
@@ -137,6 +239,21 @@
       "period": 1.4,
       "open": 0.62,
       "phase": -0.01
+    },
+    {
+      "t": 23.41,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 23.57,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 23.73,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 24.19,
@@ -181,23 +298,23 @@
       "count": 4
     },
     {
-      "t": 29.59,
-      "type": "overhead",
-      "gap": 58
-    },
-    {
-      "t": 30.14,
-      "type": "spike",
-      "count": 4
-    },
-    {
-      "t": 30.69,
-      "type": "spike",
-      "count": 4
-    },
-    {
       "t": 31.24,
       "type": "block"
+    },
+    {
+      "t": 31.42,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 31.58,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 31.74,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 32.29,
@@ -211,12 +328,12 @@
       "count": 3
     },
     {
-      "t": 33.81,
+      "t": 33.71,
       "type": "spike",
-      "count": 4
+      "count": 2
     },
     {
-      "t": 34.36,
+      "t": 33.96,
       "type": "spike",
       "count": 2
     },
@@ -228,16 +345,19 @@
       "phase": 0.68
     },
     {
-      "t": 36.38,
-      "type": "overhead",
-      "gap": 58
+      "t": 35.51,
+      "type": "spike",
+      "count": 2
     },
     {
-      "t": 37.24,
-      "type": "gate",
-      "period": 1.4,
-      "open": 0.62,
-      "phase": 0.17
+      "t": 35.76,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 37.93,
+      "type": "spike",
+      "count": 2
     },
     {
       "t": 38.21,
@@ -245,9 +365,29 @@
       "gap": 58
     },
     {
+      "t": 38.39,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 38.55,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 38.99,
       "type": "spike",
       "count": 4
+    },
+    {
+      "t": 39.4,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 39.56,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 39.95,
@@ -261,16 +401,29 @@
       "count": 4
     },
     {
-      "t": 41.68,
-      "type": "overhead",
-      "gap": 58
+      "t": 41.35,
+      "type": "spike",
+      "count": 2
     },
     {
-      "t": 42.54,
-      "type": "gate",
-      "period": 1.4,
-      "open": 0.62,
-      "phase": 0.47
+      "t": 41.6,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 42.81,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 43.06,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 43.22,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 43.51,
@@ -315,9 +468,34 @@
       "count": 4
     },
     {
+      "t": 48.89,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 49.05,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 49.33,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 49.53,
       "type": "overhead",
       "gap": 58
+    },
+    {
+      "t": 49.71,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 49.87,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 50.31,
@@ -325,9 +503,34 @@
       "count": 4
     },
     {
+      "t": 50.72,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 50.88,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 51.27,
       "type": "spike",
       "count": 4
+    },
+    {
+      "t": 51.68,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 51.84,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 52.12,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 52.32,
@@ -336,19 +539,69 @@
   ],
   "stars": [
     {
-      "t": 1.6,
+      "t": 1.25,
       "lift": 0
     },
     {
-      "t": 14.1,
-      "lift": 0
+      "t": 16.71,
+      "lift": 200
     },
     {
-      "t": 53.1,
-      "lift": 0
+      "t": 39.57,
+      "lift": 258
     }
   ],
-  "checkpoints": [
-    12.6
+  "checkpoints": [],
+  "routes": [
+    {
+      "t": 14.2,
+      "span": 4.05,
+      "h": 200,
+      "layer": 2,
+      "reward": "star",
+      "step": {
+        "h": 84,
+        "span": 1.55,
+        "lead": 0.85
+      },
+      "obstacles": [
+        {
+          "t": 15.74,
+          "type": "block"
+        }
+      ]
+    },
+    {
+      "t": 30.2,
+      "span": 4.05,
+      "h": 200,
+      "layer": 2,
+      "reward": "safe",
+      "step": {
+        "h": 84,
+        "span": 1.55,
+        "lead": 0.85
+      },
+      "obstacles": []
+    },
+    {
+      "t": 37,
+      "span": 4.95,
+      "h": 200,
+      "layer": 2,
+      "reward": "safe",
+      "step": {
+        "h": 84,
+        "span": 1.55,
+        "lead": 0.85
+      },
+      "obstacles": [],
+      "high": {
+        "h": 258,
+        "span": 2.2,
+        "lead": 1.65,
+        "reward": "star"
+      }
+    }
   ]
 }

@@ -24,6 +24,21 @@
       "phase": -0.03
     },
     {
+      "t": 4.06,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 4.23,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 4.4,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 4.98,
       "type": "flip",
       "span": 2.35
@@ -70,14 +85,14 @@
       "count": 4
     },
     {
-      "t": 13.53,
-      "type": "overhead",
-      "gap": 58
+      "t": 12.46,
+      "type": "spike",
+      "count": 2
     },
     {
-      "t": 14.08,
+      "t": 14.76,
       "type": "spike",
-      "count": 4
+      "count": 2
     },
     {
       "t": 15.18,
@@ -90,24 +105,43 @@
       "count": 4
     },
     {
+      "t": 16.16,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 16.74,
       "type": "spike",
       "count": 4
+    },
+    {
+      "t": 17.17,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 17.84,
       "type": "block"
     },
     {
-      "t": 18.94,
-      "type": "crumble",
-      "span": 1.18,
-      "delay": 0.52
+      "t": 19.1,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 19.36,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 19.91,
       "type": "spike",
       "count": 3
+    },
+    {
+      "t": 20.25,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 20.88,
@@ -127,9 +161,29 @@
       "phase": 0.23
     },
     {
+      "t": 23,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 23.17,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 23.34,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 23.92,
       "type": "overhead",
       "gap": 58
+    },
+    {
+      "t": 24.1,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 24.78,
@@ -137,6 +191,16 @@
       "period": 1.4,
       "open": 0.62,
       "phase": -0.33
+    },
+    {
+      "t": 24.96,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 25.13,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 25.79,
@@ -149,20 +213,24 @@
       "count": 4
     },
     {
-      "t": 27.36,
-      "type": "crumble",
-      "span": 1.18,
-      "delay": 0.52
-    },
-    {
-      "t": 28.23,
+      "t": 26.77,
       "type": "spike",
-      "count": 4
+      "count": 2
     },
     {
-      "t": 29.09,
-      "type": "overhead",
-      "gap": 58
+      "t": 27.15,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 27.41,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 27.67,
+      "type": "spike",
+      "count": 2
     },
     {
       "t": 29.95,
@@ -172,9 +240,24 @@
       "phase": -0.13
     },
     {
+      "t": 30.13,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 30.3,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 30.96,
       "type": "spike",
       "count": 4
+    },
+    {
+      "t": 31.39,
+      "type": "spike",
+      "count": 2
     },
     {
       "t": 32.46,
@@ -182,13 +265,38 @@
       "count": 4
     },
     {
-      "t": 33.96,
+      "t": 32.89,
       "type": "spike",
-      "count": 4
+      "count": 2
+    },
+    {
+      "t": 34.23,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 34.49,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 35.06,
       "type": "block"
+    },
+    {
+      "t": 35.24,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 35.41,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 35.58,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 36.16,
@@ -196,9 +304,24 @@
       "gap": 58
     },
     {
+      "t": 36.34,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 36.88,
       "type": "spike",
       "count": 2
+    },
+    {
+      "t": 37.14,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 37.31,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 37.98,
@@ -206,9 +329,19 @@
       "gap": 58
     },
     {
+      "t": 38.16,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 38.76,
       "type": "spike",
       "count": 3
+    },
+    {
+      "t": 39.1,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 39.77,
@@ -216,7 +349,37 @@
       "count": 3
     },
     {
+      "t": 40.11,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 40.37,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 41.14,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 41.27,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 41.44,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 41.7,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 42.44,
       "type": "spike",
       "count": 1
     },
@@ -225,15 +388,14 @@
       "type": "block"
     },
     {
-      "t": 43.87,
-      "type": "crumble",
-      "span": 1.18,
-      "delay": 0.52
+      "t": 42.95,
+      "type": "spike",
+      "count": 2
     },
     {
-      "t": 44.74,
+      "t": 45.13,
       "type": "spike",
-      "count": 1
+      "count": 2
     },
     {
       "t": 45.6,
@@ -243,9 +405,29 @@
       "phase": 1.02
     },
     {
+      "t": 45.78,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 45.95,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 46.12,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 46.7,
       "type": "overhead",
       "gap": 58
+    },
+    {
+      "t": 46.88,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 47.56,
@@ -255,14 +437,34 @@
       "phase": 0.46
     },
     {
+      "t": 47.74,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 47.91,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 48.57,
       "type": "overhead",
       "gap": 58
     },
     {
-      "t": 49.35,
+      "t": 48.75,
       "type": "spike",
-      "count": 3
+      "count": 2
+    },
+    {
+      "t": 49.01,
+      "type": "spike",
+      "count": 2
+    },
+    {
+      "t": 50.23,
+      "type": "spike",
+      "count": 2
     },
     {
       "t": 50.36,
@@ -276,7 +478,27 @@
       "count": 1
     },
     {
+      "t": 51.5,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 52.03,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 52.3,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 52.47,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 52.64,
       "type": "spike",
       "count": 1
     },
@@ -286,9 +508,24 @@
       "count": 1
     },
     {
+      "t": 53.44,
+      "type": "spike",
+      "count": 1
+    },
+    {
+      "t": 53.61,
+      "type": "spike",
+      "count": 1
+    },
+    {
       "t": 54.24,
       "type": "overhead",
       "gap": 58
+    },
+    {
+      "t": 54.42,
+      "type": "spike",
+      "count": 1
     },
     {
       "t": 55.1,
@@ -300,20 +537,71 @@
   ],
   "stars": [
     {
-      "t": 1.6,
+      "t": 1.25,
       "lift": 0
     },
     {
-      "t": 31.85,
-      "lift": 0
+      "t": 16.5,
+      "lift": 200
     },
     {
-      "t": 42.35,
-      "lift": 0
+      "t": 46.77,
+      "lift": 258
     }
   ],
   "checkpoints": [
-    13,
-    40.6
+    32
+  ],
+  "routes": [
+    {
+      "t": 13.8,
+      "span": 4.35,
+      "h": 200,
+      "layer": 2,
+      "reward": "star",
+      "step": {
+        "h": 84,
+        "span": 1.55,
+        "lead": 0.85
+      },
+      "obstacles": [
+        {
+          "t": 15.45,
+          "type": "block"
+        }
+      ]
+    },
+    {
+      "t": 29,
+      "span": 4.35,
+      "h": 200,
+      "layer": 2,
+      "reward": "safe",
+      "step": {
+        "h": 84,
+        "span": 1.55,
+        "lead": 0.85
+      },
+      "obstacles": []
+    },
+    {
+      "t": 44.2,
+      "span": 5.15,
+      "h": 200,
+      "layer": 2,
+      "reward": "safe",
+      "step": {
+        "h": 84,
+        "span": 1.55,
+        "lead": 0.85
+      },
+      "obstacles": [],
+      "high": {
+        "h": 258,
+        "span": 2.2,
+        "lead": 1.65,
+        "reward": "star"
+      }
+    }
   ]
 }

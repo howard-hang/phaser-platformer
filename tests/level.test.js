@@ -3,7 +3,7 @@ import { LEVELS, LEVEL_UNLOCKS, levelTuning } from '../src/game/level.js';
 import { FINISH_APPROACH_MAX, FINISH_APPROACH_MIN, finishApproachSeconds, levelMetrics } from '../src/game/metrics.js';
 import { TUNING } from '../src/logic/world.js';
 import { auditLevel } from '../src/logic/audit.js';
-import { findClearPath } from '../src/logic/search.js';
+import { findClearPath, proveRoutes } from '../src/logic/search.js';
 
 describe('二十关都能通关', () => {
   it('一共 20 关，速度递增，跳跃手感不变', () => {
@@ -55,6 +55,27 @@ describe('二十关都能通关', () => {
     const approach = finishApproachSeconds(level, tuning);
     expect(approach).toBeGreaterThanOrEqual(FINISH_APPROACH_MIN);
     expect(approach).toBeLessThanOrEqual(FINISH_APPROACH_MAX);
+    const routes = proveRoutes(level, tuning);
+    expect(routes.ok, JSON.stringify(routes)).toBe(true);
+    expect(routes.ground).toBe(true);
+    expect(routes.ups.length).toBeGreaterThan(0);
+    expect(routes.ups.every((item) => item.ok)).toBe(true);
+  });
+
+  it('前几关只有简单分叉，后面分叉更多并出现第三层', () => {
+    for (const level of LEVELS) {
+      expect(level.forkCount).toBeGreaterThanOrEqual(1);
+      if (level.index <= 4) expect(level.forkCount).toBe(1);
+      else if (level.index <= 9) expect(level.forkCount).toBe(2);
+      else expect(level.forkCount).toBe(3);
+      if (level.index >= 15) expect(level.maxLayer).toBe(3);
+      else expect(level.maxLayer).toBe(2);
+      expect(level.stars.some((star) => star.lift < 40)).toBe(true);
+      expect(level.stars.some((star) => star.lift >= 160)).toBe(true);
+      if (level.index >= 15) {
+        expect(level.stars.some((star) => star.lift >= 250)).toBe(true);
+      }
+    }
   });
 });
 
