@@ -3,6 +3,7 @@ import { NEAR_SEQUENCE, PARALLAX, nearVariantAt, progressTint } from '../src/gam
 import {
   audioContextAction,
   loadMutePreference,
+  clampVolume,
   musicOutputGain,
   playbackPositionAfterRetry,
   readMutedFlag,
@@ -62,6 +63,15 @@ describe('音乐和声音开关', () => {
     expect(musicOutputGain(false, 0.22)).toBe(0.22);
   });
 
+  it('音量滑条按比例降低增益，0 就是没声音', () => {
+    expect(clampVolume(2)).toBe(1);
+    expect(clampVolume(-1)).toBe(0);
+    expect(clampVolume('nope')).toBe(1);
+    expect(musicOutputGain(false, 0.42, 0.5)).toBeCloseTo(0.21);
+    expect(musicOutputGain(false, 0.22, 0)).toBe(0);
+    expect(musicOutputGain(true, 0.42, 0.5)).toBe(0);
+  });
+
   it('死亡重来不把音乐拨回开头', () => {
     expect(playbackPositionAfterRetry(12.5)).toBe(12.5);
     expect(playbackPositionAfterRetry(0)).toBe(0);
@@ -76,6 +86,8 @@ describe('音乐和声音开关', () => {
     expect(canPlaySfx({ muted: false, appActive: false, hasContext: true })).toBe(false);
     expect(canPlaySfx({ muted: false, appActive: true, hasContext: false })).toBe(false);
     expect(canPlaySfx({ muted: false, appActive: true, hasContext: true })).toBe(true);
+    expect(canPlaySfx({ muted: false, appActive: true, hasContext: true, sfxVolume: 0 })).toBe(false);
+    expect(canPlaySfx({ muted: false, appActive: true, hasContext: true, sfxVolume: 0.4 })).toBe(true);
   });
 
   it('第一次交互之前不创建音频', () => {

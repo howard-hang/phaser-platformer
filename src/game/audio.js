@@ -17,6 +17,13 @@ import {
   saveMutePreference,
   shouldCreateAudio,
 } from './audioPolicy.js';
+import {
+  applyVolumeChange,
+  loadSettings,
+  reconcileAudio,
+  saveSettings,
+  toggleMuteState,
+} from './settings.js';
 
 const SFX_GAIN = 0.22;
 const MUSIC_GAIN = 0.42;
@@ -56,9 +63,48 @@ class Synth {
     this.shatterBuffer = null;
     this.shatterLoading = null;
     this._synthShatter = null;
-    this.muted = loadMutePreference(storageOrNull());
+    const store = storageOrNull();
+    const audio = reconcileAudio(loadSettings(store), loadMutePreference(store));
+    this.muted = audio.muted;
+    this.musicVolume = audio.musicVolume;
+    this.sfxVolume = audio.sfxVolume;
     this.unlocked = false;
     this.appActive = true;
+  }
+
+  /** 当前静音和两条音量。滑条和声音按钮都从这里改。 */
+  audioState() {
+    return {
+      muted: this.muted,
+      musicVolume: this.musicVolume,
+      sfxVolume: this.sfxVolume,
+    };
+  }
+
+  /** 把静音和音量一起记下来，并立刻改输出增益。 */
+  commitAudio(next) {
+    this.muted = !!next.muted;
+    this.musicVolume = next.musicVolume;
+    this.sfxVolume = next.sfxVolume;
+    const store = storageOrNull();
+    saveMutePreference(store, this.muted);
+    const settings = loadSettings(store);
+    saveSettings({
+      ...settings,
+      musicVolume: this.musicVolume,
+      sfxVolume: this.sfxVolume,
+    }, store);
+    this.applyGains();
+  }
+
+  /** 音乐滑条。拉高会取消静音。 */
+  setMusicVolume(value) {
+    this.commitAudio(applyVolumeChange(this.audioState(), 'musicVolume', value));
+  }
+
+  /** 音效滑条。和音乐分开记。 */
+  setSfxVolume(value) {
+    this.commitAudio(applyVolumeChange(this.audioState(), 'sfxVolume', value));
   }
 
   /** 必须在用户操作里调用。静音时也会把音乐接上，只是增益为 0。 */
@@ -86,21 +132,19 @@ class Synth {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
     if (this.master) {
-      this.master.gain.setValueAtTime(musicOutputGain(this.muted, SFX_GAIN), now);
+      this.master.gain.setValueAtTime(musicOutputGain(this.muted, SFX_GAIN, this.sfxVolume), now);
     }
     if (this.musicGain) {
-      this.musicGain.gain.setValueAtTime(musicOutputGain(this.muted, MUSIC_GAIN), now);
+      this.musicGain.gain.setValueAtTime(musicOutputGain(this.muted, MUSIC_GAIN, this.musicVolume), now);
     }
   }
 
   setMuted(muted) {
-    this.muted = muted;
-    saveMutePreference(storageOrNull(), muted);
-    this.applyGains();
+    this.commitAudio({ ...this.audioState(), muted: !!muted });
   }
 
   toggleMuted() {
-    this.setMuted(!this.muted);
+    this.commitAudio(toggleMuteState(this.audioState()));
     return this.muted;
   }
 
@@ -189,7 +233,12 @@ class Synth {
 
   play(name) {
     // 碎裂、跳跃、吃道具和护甲共用这道门，声音开关关掉时一起静音。
-    if (!cueWillPlay(name, { muted: this.muted, appActive: this.appActive, hasContext: !!this.ctx })) return;
+    if (!cueWillPlay(name, {
+      muted: this.muted,
+      appActive: this.appActive,
+      hasContext: !!this.ctx,
+      sfxVolume: this.sfxVolume,
+    })) return;
     const time = this.ctx.currentTime;
     if (name === 'jump') {
       tone(this.ctx, this.master, time, {

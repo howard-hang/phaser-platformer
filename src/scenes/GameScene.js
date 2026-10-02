@@ -30,7 +30,10 @@ import {
 } from '../game/backdrop.js';
 import { createDeathFx } from '../game/deathFx.js';
 import { displayPose, stepRunnerVisual } from '../game/motion.js';
+import { planDustEmits } from '../game/dust.js';
 import { createRunnerFx } from '../game/runnerFx.js';
+import { feedback } from '../game/haptics.js';
+import { currentSettings, fxProfile } from '../game/settings.js';
 import { THEME, LEVEL_PALETTES } from '../game/theme.js';
 import { textStyle } from '../game/candy.js';
 import { createBlastFx } from '../game/blastFx.js';
@@ -174,6 +177,7 @@ export class GameScene extends Phaser.Scene {
     this.blastFx = createBlastFx(this);
     this.runnerFx = createRunnerFx(this);
     this._runnerVisual = { phase: 0, land: 0, angle: 0, grounded: true };
+    this._dustCarry = 0;
     this.deathFx = createDeathFx(this);
     const levelTitle = this.endless
       ? '无尽模式'
@@ -253,7 +257,22 @@ export class GameScene extends Phaser.Scene {
       held,
     });
     this._runnerVisual = next;
-    if (next.puff) this.runnerFx?.puff(this.player.x, TUNING.groundY - 4);
+    const profile = fxProfile(currentSettings().fx);
+    if (!held) {
+      // 地面持续撒，起跳和落地多撒一撮。倒挂在天花板上不撒，空中也不撒。
+      const plan = planDustEmits({
+        grounded: !!next.grounded && !this._inFlip,
+        burst: this._inFlip ? null : next.burst,
+        rate: profile.dustPerSec,
+        burstCount: profile.burst,
+        dt,
+        carry: this._dustCarry || 0,
+      });
+      this._dustCarry = plan.carry;
+      if (plan.count > 0) this.runnerFx?.emit(this.player.x, this.player.y, plan.count);
+    } else {
+      this._dustCarry = 0;
+    }
     visual.setPosition(this.player.x, this.player.y);
     visual.setScale(next.scaleX, next.scaleY);
     visual.setAngle(next.angle);
@@ -264,8 +283,9 @@ export class GameScene extends Phaser.Scene {
     const ghosts = this.trail || [];
     for (let i = 0; i < ghosts.length; i += 1) {
       const ghost = ghosts[i];
-      ghost.setVisible(!!next.trail && visual.visible);
-      if (!next.trail) continue;
+      const show = !held && i < profile.trails && !!next.trail && visual.visible;
+      ghost.setVisible(show);
+      if (!show) continue;
       const gap = 32 + i * 20;
       ghost.setPosition(this.player.x - gap, this.player.y);
       ghost.setScale(next.scaleX * (0.92 - i * 0.06), next.scaleY);
@@ -802,6 +822,7 @@ export class GameScene extends Phaser.Scene {
     this.player.body.setVelocity(0, 0);
     this.player.body.setAllowGravity(false);
     getSynth().play('death');
+    feedback('death');
     // 死亡只播碎裂音效。背景音乐继续当前进度，不从头开始。
     if (this.endless) this.refreshEndlessHud();
     else this.hud.setStats(this.run);
@@ -809,7 +830,7 @@ export class GameScene extends Phaser.Scene {
     const started = this.deathFx.play(x, y, () => {
       if (token !== this._deathToken || !this.player?.body) return;
       this.finishDeath();
-    });
+    }, fxProfile(currentSettings().fx).shake);
     // 特效没播起来就不要把人留在半空，直接重生。
     if (!started) this.finishDeath();
   }
@@ -927,6 +948,7 @@ export class GameScene extends Phaser.Scene {
     }
     this._touchGuard = false;
     getSynth().play('pickup');
+    feedback('pickup');
   }
 
   /** 护罩碎掉。这一次不死，接着跑，并留下短暂无敌。 */
@@ -937,6 +959,7 @@ export class GameScene extends Phaser.Scene {
     this.shield?.setVisible(false);
     this.runnerFx?.shatter(x, y);
     getSynth().play('armor');
+    feedback('armor');
   }
 
   advancePower() {

@@ -45,4 +45,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 死亡、护甲碎裂和吃到道具时的轻微震动。网页不支持时会跳过。 -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>

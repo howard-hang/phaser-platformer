@@ -91,7 +91,7 @@ export function createDeathFx(scene) {
     flash.setAlpha(0);
   }
 
-  function play(x, y, done) {
+  function play(x, y, done, shakeScale = 1) {
     // 上一段还没播完就不要再开一池，避免碎片叠爆。
     if (playing) return false;
     playing = true;
@@ -103,7 +103,9 @@ export function createDeathFx(scene) {
     layoutFlash();
     flash.setVisible(true);
     flash.setAlpha(0.88);
-    scene.cameras.main.shake(SHAKE_MS, SHAKE_INTENSITY);
+    // 特效关掉时不抖镜头。低档按比例减轻。
+    const scale = Number.isFinite(shakeScale) ? Math.max(0, shakeScale) : 1;
+    if (scale > 0) scene.cameras.main.shake(SHAKE_MS, SHAKE_INTENSITY * scale);
     for (let i = 0; i < plans.length; i += 1) {
       const shard = pool[i];
       shard.setVisible(true);

@@ -46,18 +46,22 @@ export function stepRunnerVisual(prev, { grounded, vy, dt, held }) {
   let land = prev?.land || 0;
   let angle = prev?.angle || 0;
   let puff = false;
+  // jump 是离地那一帧，land 是落地那一帧。灰尘在这两帧多撒一些。
+  let burst = null;
   if (held) {
     return {
-      phase, land: 0, angle: 0, scaleX: 1, scaleY: 1, puff: false, grounded: !!grounded, trail: false,
+      phase, land: 0, angle: 0, scaleX: 1, scaleY: 1, puff: false, burst: null, grounded: !!grounded, trail: false,
     };
   }
   if (!grounded) {
+    if (wasGrounded) burst = 'jump';
     angle += 110 * step;
     land = 0;
   } else {
     if (!wasGrounded) {
       land = 0.12;
       puff = true;
+      burst = 'land';
     }
     angle = 0;
     land = Math.max(0, land - step);
@@ -84,6 +88,7 @@ export function stepRunnerVisual(prev, { grounded, vy, dt, held }) {
     scaleX,
     scaleY,
     puff,
+    burst,
     grounded: !!grounded,
     trail: grounded && land <= 0,
   };

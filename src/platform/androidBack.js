@@ -4,11 +4,12 @@
  * 网页版没有这个按键。只有安卓 WebView 壳才会注册，普通浏览器不会加载 Capacitor。
  */
 
-/** 根据当前画面决定返回键的下一步。关卡优先于选关，无尽模式直接回标题。 */
-export function androidBackAction({ gameActive, selectActive, endless = false }) {
+/** 根据当前画面决定返回键的下一步。关卡优先于选关，无尽模式直接回标题。设置页回到标题。 */
+export function androidBackAction({ gameActive, selectActive, settingsActive = false, endless = false }) {
   if (gameActive && endless) return 'menu';
   if (gameActive) return 'select';
   if (selectActive) return 'menu';
+  if (settingsActive) return 'menu';
   return 'exit';
 }
 
@@ -41,10 +42,12 @@ export async function bindAndroidBack(game) {
       handling = true;
       try {
         const gameScene = game.scene.getScene('game');
+        const settingsActive = !!game.scene?.isActive('settings');
         const endless = !!(game.scene?.isActive('game') && gameScene?.endless);
         const action = androidBackAction({
           gameActive: !!game.scene?.isActive('game'),
           selectActive: !!game.scene?.isActive('select'),
+          settingsActive,
           endless,
         });
         if (action === 'select') {
@@ -57,6 +60,14 @@ export async function bindAndroidBack(game) {
           return;
         }
         if (action === 'menu') {
+          // 设置页没有选关这一层，返回键回到标题。
+          if (settingsActive) {
+            const settingsScene = game.scene.getScene('settings');
+            if (settingsScene) {
+              settingsScene.scene.start('menu');
+              return;
+            }
+          }
           // 无尽模式没有选关这一层，返回键直接回标题，并停掉正在跑的跑道。
           if (endless && gameScene) {
             gameScene.scene.start('menu');

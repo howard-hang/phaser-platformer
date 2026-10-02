@@ -19,4 +19,9 @@ describe('安卓返回键', () => {
   it('标题或启动画面退出应用', () => {
     expect(androidBackAction({ gameActive: false, selectActive: false })).toBe('exit');
   });
+
+  it('设置页回到标题', () => {
+    expect(androidBackAction({ gameActive: false, selectActive: false, settingsActive: true })).toBe('menu');
+    expect(androidBackAction({ gameActive: true, selectActive: false, settingsActive: true })).toBe('select');
+  });
 });

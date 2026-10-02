@@ -202,6 +202,26 @@ function drawLock(ctx) {
   ctx.fillRect(30.5, 39, 3, 7);
 }
 
+/** 设置。一圈齿轮，线条和主页、声音图标一样粗，不用表情符号。 */
+function drawSettings(ctx) {
+  ctx.strokeStyle = '#ffffff';
+  ctx.fillStyle = '#ffffff';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.arc(32, 32, 9, 0, Math.PI * 2);
+  ctx.stroke();
+  const teeth = 8;
+  for (let i = 0; i < teeth; i += 1) {
+    const angle = (Math.PI * 2 * i) / teeth - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(32 + Math.cos(angle) * 14, 32 + Math.sin(angle) * 14);
+    ctx.lineTo(32 + Math.cos(angle) * 24, 32 + Math.sin(angle) * 24);
+    ctx.stroke();
+  }
+}
+
 function drawSpeaker(ctx, muted) {
   ctx.fillStyle = '#ffffff';
   ctx.strokeStyle = '#ffffff';
@@ -368,6 +388,7 @@ export function generateTextures(scene) {
   make('ui-star-empty', 64, 64, drawStarOutline);
   make('ui-lock', 64, 64, drawLock);
   make('icon-home', 64, 64, drawHome);
+  make('icon-settings', 64, 64, drawSettings);
   make('icon-sound', 64, 64, (ctx) => drawSpeaker(ctx, false));
   make('icon-mute', 64, 64, (ctx) => drawSpeaker(ctx, true));
   make('icon-fullscreen', 64, 64, (ctx) => drawFullscreen(ctx, false));
