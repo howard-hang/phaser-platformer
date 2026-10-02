@@ -11,9 +11,9 @@ import {
 
 export { POWERUP_CONFIG };
 
-export const POWER_TYPES = ['double', 'bomb', 'plane'];
+export const POWER_TYPES = ['double', 'armor', 'plane'];
 
-/** 可以炸掉的障碍。平台、地面和重力反转区不在里面，炸完路还在。 */
+/** 飞机落地时可以清掉的障碍。平台、地面和重力反转区不在里面，清完路还在。 */
 export const DESTRUCTIBLE_TYPES = ['spike', 'cspike', 'block', 'overhead', 'gate', 'crumble'];
 
 /** 跑道上的道具碰撞盒，画法和星星一样贴着贴图。 */
@@ -56,12 +56,15 @@ export function createPowerState() {
 
 /**
  * 吃到新道具就换掉旧的。
- * 炸弹没有持续状态，吃下去立刻结算，原来的计时也一起停。
+ * 护甲没有倒计时，一直留到撞上一次为止。
  */
 export function grantPower(prev, kind, now, config = POWERUP_CONFIG) {
   const replaced = prev?.kind || null;
-  if (kind === 'bomb') {
-    return { state: createPowerState(), bomb: true, replaced };
+  if (kind === 'armor') {
+    return {
+      state: { ...createPowerState(), kind: 'armor' },
+      replaced,
+    };
   }
   if (kind === 'double') {
     return {
@@ -71,7 +74,6 @@ export function grantPower(prev, kind, now, config = POWERUP_CONFIG) {
         endsAt: now + config.double.duration,
         airReady: true,
       },
-      bomb: false,
       replaced,
     };
   }
@@ -83,7 +85,6 @@ export function grantPower(prev, kind, now, config = POWERUP_CONFIG) {
         endsAt: now + config.plane.duration,
         phase: 'fly',
       },
-      bomb: false,
       replaced,
     };
   }
@@ -100,6 +101,7 @@ function idleFrom(state) {
 /** 用游戏内的秒推进。到点就结束；飞机先进入落地，落地完再留一小段无敌。 */
 export function tickPower(state, now, config = POWERUP_CONFIG) {
   if (!state) return createPowerState();
+  if (state.kind === 'armor') return state;
   if (state.kind === 'double') {
     if (now + 1e-6 >= state.endsAt) return idleFrom(state);
     return state;
@@ -150,16 +152,50 @@ export function resolveJump({ grounded, airReady, jumpVelocity, flipped }) {
   return { ok: true, vy, usedAir: !grounded };
 }
 
-/** 飞机全程，以及落地后的短暂窗口，障碍打不中。 */
+/** 飞机全程，以及护甲碎掉或落地后的短暂窗口，障碍打不中。护甲本身不算无敌，撞上才碎。 */
 export function isPowerInvulnerable(state, now) {
   if (!state) return false;
   if (state.kind === 'plane') return true;
   return !!(state.invulnUntil && now < state.invulnUntil);
 }
 
+/**
+ * 这一下怎么处理。
+ * 坑和掉出地图直接死。护甲只挡普通障碍，而且只挡一次。
+ */
+export function resolveHazard({ kind, pit, outOfMap, invulnerable }) {
+  if (invulnerable) return 'ignore';
+  if (pit || outOfMap) return 'die';
+  if (kind === 'armor') return 'break';
+  return 'die';
+}
+
+/** 护甲碎掉。没有剩余次数，只留下短暂无敌。 */
+export function breakArmor(state, now, config = POWERUP_CONFIG) {
+  if (state?.kind !== 'armor') return state || createPowerState();
+  return {
+    ...createPowerState(),
+    invulnUntil: now + config.armor.breakInvuln,
+  };
+}
+
+/** 脚已经掉到地面以下，算掉出地图。 */
+export function isOutOfMap(y, tuning = TUNING) {
+  return y > tuning.groundY + 64;
+}
+
+/**
+ * 飞行一个物理步之后的水平坐标。
+ * 位移是跑速乘步长。垂直修正不能把这一步清掉。
+ */
+export function planeStepX(x, speed, stepSeconds) {
+  return x + speed * stepSeconds;
+}
+
 /** 倒计时条还剩的比例，1 是刚吃到，0 是用完。 */
 export function powerRatio(state, now, config = POWERUP_CONFIG) {
   if (!state?.kind) return 0;
+  if (state.kind === 'armor') return 1;
   let total = config.double.duration;
   let left = state.endsAt - now;
   if (state.kind === 'plane' && state.phase === 'land') {
@@ -175,7 +211,7 @@ export function powerRatio(state, now, config = POWERUP_CONFIG) {
 
 export function powerIconKey(kind) {
   if (kind === 'plane') return 'power-plane';
-  if (kind === 'bomb') return 'power-bomb';
+  if (kind === 'armor') return 'power-armor';
   return 'power-double';
 }
 
@@ -231,7 +267,7 @@ export function sampleLandingPoints(playerX, speed, tuning = TUNING, config = PO
   return points;
 }
 
-/** 清掉区间里可以炸的障碍。平台不会出现在这个列表里。 */
+/** 清掉区间里可以拆的障碍。平台不会出现在这个列表里。 */
 export function clearSpan(obstacles, x0, x1) {
   const removed = [];
   const kept = [];
@@ -245,17 +281,11 @@ export function clearSpan(obstacles, x0, x1) {
   return { removed, kept };
 }
 
-/** 炸弹：玩家前方一段距离。 */
-export function blastObstacles(obstacles, playerX, config = POWERUP_CONFIG) {
-  const bomb = config.bomb;
-  return clearSpan(obstacles, playerX - bomb.behind, playerX + bomb.range);
-}
-
 /**
- * 炸完之后平台和反转区的几何还在，被清掉的都是可炸障碍。
+ * 清场之后平台和反转区的几何还在，被清掉的都是可拆障碍。
  * 地面没有单独的物体，清障碍不会把地面从图里拿掉。
  */
-export function blastKeepsCourse(before, after, removed) {
+export function clearKeepsCourse(before, after, removed) {
   if (!sameSpans(before?.decks || [], after?.decks || [])) return false;
   if (!sameSpans(before?.flips || [], after?.flips || [])) return false;
   for (let i = 0; i < removed.length; i += 1) {

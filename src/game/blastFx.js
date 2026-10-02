@@ -1,5 +1,5 @@
 /**
- * 炸弹和清场用的爆炸圈。
+ * 飞机落地清场时的光圈。
  * 对象事先建好，爆炸时只改位置和寿命，不在帧循环里新造对象。
  */
 import { POWERUP_CONFIG } from './powerupConfig.js';
@@ -27,7 +27,7 @@ export function createBlastFx(scene) {
       for (let i = 0; i < list.length && spots.length < pool.length; i += 1) {
         spots.push(list[i]);
       }
-      const life = POWERUP_CONFIG.bomb.fxSeconds;
+      const life = POWERUP_CONFIG.plane.clearFx;
       for (let i = 0; i < pool.length; i += 1) {
         const item = pool[i];
         const spot = spots[i];

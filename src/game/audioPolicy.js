@@ -54,7 +54,7 @@ export function canPlaySfx({ muted, appActive, hasContext }) {
 }
 
 /** 会出声的音效名。爆炸也在里面，静音时和碎裂一起关掉。 */
-export const SFX_CUES = ['jump', 'death', 'star', 'checkpoint', 'win', 'pickup', 'bomb'];
+export const SFX_CUES = ['jump', 'death', 'star', 'checkpoint', 'win', 'pickup', 'armor'];
 
 export function cueWillPlay(name, flags) {
   if (!SFX_CUES.includes(name)) return false;

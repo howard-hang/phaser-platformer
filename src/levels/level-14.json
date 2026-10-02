@@ -513,7 +513,7 @@
     }
   ],
   "powerups": [
-    { "t": 7.676, "type": "bomb" },
+    { "t": 7.676, "type": "armor" },
     { "t": 32.071, "type": "plane" },
     { "t": 46.091, "type": "double" }
   ],

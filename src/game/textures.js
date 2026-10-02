@@ -46,6 +46,12 @@ function drawPlayer(ctx) {
   ctx.fillRect(13, 13, 16, 16);
 }
 
+/** 奔跑残影。只要一块淡方块，不要黑边和中心，叠在背景上才看得出。 */
+function drawPlayerGhost(ctx) {
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(6, 6, 30, 30);
+}
+
 function drawSpike(ctx) {
   ctx.beginPath();
   ctx.moveTo(18, 2);
@@ -268,22 +274,36 @@ function drawPowerDouble(ctx) {
   });
 }
 
-/** 炸弹：圆弹体加一根引线。不用表情符号。 */
-function drawPowerBomb(ctx) {
-  drawBadge(ctx, '#ff7a59', '#d1432b');
+/** 护甲图标：一圈盾环，不用表情符号。 */
+function drawPowerArmor(ctx) {
+  drawBadge(ctx, '#7af0ff', '#147a96');
   ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 3;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.arc(17, 20, 7, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(22, 14);
-  ctx.lineTo(27, 8);
+  ctx.arc(18, 20, 8, 0.6, Math.PI * 2 - 0.2);
   ctx.stroke();
   ctx.fillStyle = '#ffe14a';
   ctx.beginPath();
-  ctx.arc(28, 7, 2.4, 0, Math.PI * 2);
+  ctx.arc(24, 12, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** 套在方块外面的护罩。中间留空，让白方块露出来。 */
+function drawArmorShield(ctx) {
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(36, 36, 28, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = '#7af0ff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(36, 36, 23, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = '#ffe14a';
+  ctx.beginPath();
+  ctx.arc(22, 20, 3.5, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -338,6 +358,7 @@ export function generateTextures(scene) {
   };
 
   make('player', HITBOX.player.w, HITBOX.player.h, drawPlayer);
+  make('player-ghost', HITBOX.player.w, HITBOX.player.h, drawPlayerGhost);
   make('spike', HITBOX.spike.w, HITBOX.spike.h, drawSpike);
   make('spike-down', HITBOX.spike.w, HITBOX.spike.h, drawSpikeDown);
   make('block', HITBOX.block.w, HITBOX.block.h, drawBlock);
@@ -352,7 +373,8 @@ export function generateTextures(scene) {
   make('icon-fullscreen', 64, 64, (ctx) => drawFullscreen(ctx, false));
   make('icon-fullscreen-exit', 64, 64, (ctx) => drawFullscreen(ctx, true));
   make('power-double', 36, 36, drawPowerDouble);
-  make('power-bomb', 36, 36, drawPowerBomb);
+  make('power-armor', 36, 36, drawPowerArmor);
+  make('armor-shield', 72, 72, drawArmorShield);
   make('power-plane', 36, 36, drawPowerPlane);
   make('ride-wings', 84, 36, drawRideWings);
 }

@@ -398,10 +398,17 @@ export function createPowerHud(scene) {
       const slot = view.slot;
       if (!slot) return;
       bar.clear();
+      icon.setDisplaySize(28, 28);
+      // 护甲没有倒计时，只留一枚图标。
+      if (view.kind === 'armor') {
+        bar.fillStyle(0x2a0840, 0.72);
+        bar.fillRoundedRect(slot.x, slot.y, 40, slot.h, 12);
+        icon.setPosition(slot.x + 20, slot.y + slot.h / 2);
+        return;
+      }
       bar.fillStyle(0x2a0840, 0.72);
       bar.fillRoundedRect(slot.x, slot.y, slot.w, slot.h, 12);
       icon.setPosition(slot.x + 20, slot.y + slot.h / 2);
-      icon.setDisplaySize(28, 28);
       const barX = slot.x + 40;
       const barW = slot.w - 52;
       const barH = 12;

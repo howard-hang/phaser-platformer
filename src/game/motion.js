@@ -34,3 +34,57 @@ export function displayPose(pose, velocity, extraMs, stepMs, options) {
     angle,
   };
 }
+
+/**
+ * 白方块的挤压和空中转角。只给贴图用，碰撞体保持原尺寸。
+ * 起跳拉长，落地压扁，奔跑时轻轻起伏，空中慢慢转。
+ */
+export function stepRunnerVisual(prev, { grounded, vy, dt, held }) {
+  const step = Math.max(0, dt || 0);
+  const wasGrounded = !!prev?.grounded;
+  const phase = (prev?.phase || 0) + step;
+  let land = prev?.land || 0;
+  let angle = prev?.angle || 0;
+  let puff = false;
+  if (held) {
+    return {
+      phase, land: 0, angle: 0, scaleX: 1, scaleY: 1, puff: false, grounded: !!grounded, trail: false,
+    };
+  }
+  if (!grounded) {
+    angle += 110 * step;
+    land = 0;
+  } else {
+    if (!wasGrounded) {
+      land = 0.12;
+      puff = true;
+    }
+    angle = 0;
+    land = Math.max(0, land - step);
+  }
+  let scaleX = 1;
+  let scaleY = 1;
+  if (!grounded) {
+    const rising = vy < -30;
+    scaleY = rising ? 1.16 : 1.08;
+    scaleX = rising ? 0.86 : 0.94;
+  } else if (land > 0) {
+    const t = land / 0.12;
+    scaleY = 1 + (0.78 - 1) * t;
+    scaleX = 1 + (1.22 - 1) * t;
+  } else {
+    const bob = Math.sin(phase * 20);
+    scaleY = 1 + bob * 0.08;
+    scaleX = 1 - bob * 0.06;
+  }
+  return {
+    phase,
+    land,
+    angle,
+    scaleX,
+    scaleY,
+    puff,
+    grounded: !!grounded,
+    trail: grounded && land <= 0,
+  };
+}

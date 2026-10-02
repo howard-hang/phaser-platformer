@@ -72,7 +72,7 @@
       "required": ["t", "type"],
       "properties": {
         "t": { "type": "number", "minimum": 0 },
-        "type": { "enum": ["double", "bomb", "plane"] },
+        "type": { "enum": ["double", "armor", "plane"] },
         "lift": { "type": "number", "minimum": 0, "maximum": 340 },
         "dx": { "type": "number", "minimum": -400, "maximum": 400 }
       }

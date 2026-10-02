@@ -296,7 +296,7 @@
   ],
   "powerups": [
     { "t": 25.394, "type": "double" },
-    { "t": 50.449, "type": "bomb" }
+    { "t": 50.449, "type": "armor" }
   ],
   "checkpoints": [
     13.84,

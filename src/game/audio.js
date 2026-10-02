@@ -188,7 +188,7 @@ class Synth {
   }
 
   play(name) {
-    // 碎裂、跳跃、吃道具和爆炸共用这道门，声音开关关掉时一起静音。
+    // 碎裂、跳跃、吃道具和护甲共用这道门，声音开关关掉时一起静音。
     if (!cueWillPlay(name, { muted: this.muted, appActive: this.appActive, hasContext: !!this.ctx })) return;
     const time = this.ctx.currentTime;
     if (name === 'jump') {
@@ -218,22 +218,22 @@ class Synth {
       tone(this.ctx, this.master, time, {
         freq: 660, freqTo: 990, dur: 0.09, type: 'triangle', gain: 0.1,
       });
-    } else if (name === 'bomb') {
-      // 程序合成的短爆炸：低频下滑加一小段噪声，不引用外部采样。
-      playBomb(this.ctx, this.master, time);
+    } else if (name === 'armor') {
+      // 程序合成的护罩碎裂：短促的高频撞击加一小段噪声，不引用外部采样。
+      playArmorBreak(this.ctx, this.master, time);
     }
   }
 }
 
-/** 爆炸声。噪声用固定数列生成，每次听起来一样，也方便静音时整段跳过。 */
-function playBomb(ctx, master, time) {
+/** 护罩碎裂。噪声用固定数列生成，每次听起来一样，静音时整段不会进到这里。 */
+function playArmorBreak(ctx, master, time) {
   tone(ctx, master, time, {
-    freq: 150, freqTo: 46, dur: 0.22, type: 'sawtooth', gain: 0.16,
+    freq: 1480, freqTo: 420, dur: 0.08, type: 'triangle', gain: 0.12,
   });
-  tone(ctx, master, time, {
-    freq: 520, freqTo: 80, dur: 0.12, type: 'square', gain: 0.06,
+  tone(ctx, master, time + 0.03, {
+    freq: 880, freqTo: 220, dur: 0.1, type: 'square', gain: 0.05,
   });
-  const dur = 0.18;
+  const dur = 0.12;
   const length = Math.max(1, Math.floor(ctx.sampleRate * dur));
   const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
   const data = buffer.getChannelData(0);
@@ -247,8 +247,8 @@ function playBomb(ctx, master, time) {
   const filter = ctx.createBiquadFilter();
   const amp = ctx.createGain();
   filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(780, time);
-  amp.gain.setValueAtTime(0.2, time);
+  filter.frequency.setValueAtTime(2200, time);
+  amp.gain.setValueAtTime(0.14, time);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + dur);
   source.buffer = buffer;
   source.connect(filter);

@@ -1,5 +1,5 @@
 /**
- * 二段跳、炸弹、飞机。
+ * 二段跳、护甲、飞机。
  * 效果、时长和替换都在这里测。不吃道具时的通关仍由原来的可达性测试保证。
  */
 import { describe, expect, it } from 'vitest';
@@ -7,15 +7,18 @@ import { LEVELS } from '../src/game/level.js';
 import { POWERUP_CONFIG, campaignPowerCount } from '../src/game/powerupConfig.js';
 import { stepKinematics } from '../src/logic/kinematics.js';
 import {
-  blastKeepsCourse,
-  blastObstacles,
+  breakArmor,
   canAirJump,
+  clearKeepsCourse,
   clearSpan,
   createPowerState,
   flightCenterY,
   grantPower,
   isDestructible,
+  isOutOfMap,
   isPowerInvulnerable,
+  planeStepX,
+  resolveHazard,
   landingClearWindow,
   noteAirJump,
   noteLand,
@@ -76,7 +79,7 @@ describe('道具时长和替换', () => {
     expect(powerRatio(state, 2.5)).toBeCloseTo(0.5);
   });
 
-  it('吃到新的就换掉旧的，炸弹会停掉正在计时的道具', () => {
+  it('吃到新的就换掉旧的，护甲会停掉正在计时的道具', () => {
     let state = grantPower(createPowerState(), 'double', 1).state;
     expect(state.kind).toBe('double');
     expect(state.airReady).toBe(true);
@@ -86,11 +89,13 @@ describe('道具时长和替换', () => {
     expect(state.kind).toBe('plane');
     expect(state.endsAt).toBeCloseTo(8);
     expect(canAirJump(state, false)).toBe(false);
-    const bombed = grantPower(state, 'bomb', 4);
-    expect(bombed.bomb).toBe(true);
-    expect(bombed.replaced).toBe('plane');
-    expect(bombed.state.kind).toBeNull();
-    expect(isPowerInvulnerable(bombed.state, 4)).toBe(false);
+    const armored = grantPower(state, 'armor', 4);
+    expect(armored.replaced).toBe('plane');
+    expect(armored.state.kind).toBe('armor');
+    expect(tickPower(armored.state, 80).kind).toBe('armor');
+    const back = grantPower(armored.state, 'double', 5);
+    expect(back.replaced).toBe('armor');
+    expect(back.state.kind).toBe('double');
   });
 
   it('二段跳每次离地只能再跳一次，落地后补回', () => {
@@ -170,10 +175,42 @@ describe('二段跳高度', () => {
   });
 });
 
-describe('炸弹不炸断路', () => {
+describe('护甲', () => {
+  it('只挡一次，碎掉后大约 0.5 秒无敌，坑和掉出地图仍然死', () => {
+    let state = grantPower(createPowerState(), 'armor', 0).state;
+    expect(POWERUP_CONFIG.armor.breakInvuln).toBeCloseTo(0.5);
+    expect(resolveHazard({ kind: 'armor', pit: false, outOfMap: false, invulnerable: false })).toBe('break');
+    expect(resolveHazard({ kind: 'armor', pit: true, outOfMap: false, invulnerable: false })).toBe('die');
+    expect(resolveHazard({ kind: 'armor', pit: false, outOfMap: true, invulnerable: false })).toBe('die');
+    expect(resolveHazard({ kind: null, pit: false, outOfMap: false, invulnerable: false })).toBe('die');
+    expect(resolveHazard({ kind: 'armor', pit: false, outOfMap: false, invulnerable: true })).toBe('ignore');
+    state = breakArmor(state, 2);
+    expect(state.kind).toBeNull();
+    expect(isPowerInvulnerable(state, 2.49)).toBe(true);
+    expect(isPowerInvulnerable(state, 2.5)).toBe(false);
+    expect(isOutOfMap(playerGroundY())).toBe(false);
+    expect(isOutOfMap(TUNING.groundY + 80)).toBe(true);
+  });
+});
+
+describe('飞行水平位移', () => {
+  it('飞行期间 x 按跑速增加', () => {
+    const speed = 318;
+    const step = 1 / 60;
+    let x = 1200;
+    const frames = 120;
+    for (let i = 0; i < frames; i += 1) x = planeStepX(x, speed, step);
+    const moved = x - 1200;
+    expect(moved).toBeCloseTo(speed * frames * step, 5);
+    expect(moved / (frames * step)).toBeCloseTo(speed, 5);
+    expect(moved).toBeGreaterThan(0);
+  });
+});
+
+describe('飞机落地清场', () => {
   it('只清前方的尖刺、方块、门和坑，平台和反转区还在', () => {
     const playerX = 1000;
-    const range = POWERUP_CONFIG.bomb.range;
+    const range = 460;
     const obstacles = [
       { id: 'behind', type: 'spike', x: playerX - 120 },
       { id: 'spike', type: 'spike', x: playerX + 80 },
@@ -187,12 +224,12 @@ describe('炸弹不炸断路', () => {
     ];
     const decks = [{ id: 'route', x0: playerX + 60, x1: playerX + 280, top: TUNING.groundY - 200, h: 200 }];
     const flips = [{ id: 'flip', x0: playerX + 380, x1: playerX + 450 }];
-    const blasted = blastObstacles(obstacles, playerX);
+    const blasted = clearSpan(obstacles, playerX - 36, playerX + range);
     expect(blasted.removed.map((item) => item.id).sort()).toEqual(
       ['block', 'cspike', 'gate', 'over', 'pit', 'spike'],
     );
     expect(blasted.kept.map((item) => item.id).sort()).toEqual(['behind', 'far', 'flip']);
-    expect(blastKeepsCourse({ decks, flips }, { decks, flips }, blasted.removed)).toBe(true);
+    expect(clearKeepsCourse({ decks, flips }, { decks, flips }, blasted.removed)).toBe(true);
     expect(decks[0].x0).toBe(playerX + 60);
     expect(isDestructible({ type: 'flip' })).toBe(false);
     expect(isDestructible({ type: 'spike' })).toBe(true);
@@ -242,7 +279,7 @@ describe('飞机落地', () => {
     const flips = [{ id: 'flip', x0: span.x0, x1: span.x0 + 40 }];
     const cleared = clearSpan(obstacles, span.x0, span.x1);
     expect(cleared.kept.map((item) => item.id).sort()).toEqual(['flip', 'outside']);
-    expect(blastKeepsCourse({ decks, flips }, { decks, flips }, cleared.removed)).toBe(true);
+    expect(clearKeepsCourse({ decks, flips }, { decks, flips }, cleared.removed)).toBe(true);
     expect(decks[0].top).toBe(192);
 
     const points = sampleLandingPoints(playerX, speed);
@@ -281,7 +318,7 @@ describe('闯关道具', () => {
       expect(level.powerups.length).toBe(POWERUP_CONFIG.campaign.counts[index]);
       for (const item of level.powerups) {
         seen.add(item.type);
-        expect(['double', 'bomb', 'plane']).toContain(item.type);
+        expect(['double', 'armor', 'plane']).toContain(item.type);
         for (const obstacle of level.obstacles) {
           const [left, right] = obstacleIntervalX(obstacle);
           const hit = item.x > left - 4 && item.x < right + 4;
@@ -300,7 +337,7 @@ describe('闯关道具', () => {
         }
       }
     });
-    expect(seen).toEqual(new Set(['double', 'bomb', 'plane']));
+    expect(seen).toEqual(new Set(['double', 'armor', 'plane']));
   });
 });
 
@@ -308,7 +345,7 @@ describe('无尽投放概率', () => {
   it('开局概率更低，三种都会被掷到', () => {
     expect(POWERUP_CONFIG.endless.earlyChance).toBeLessThan(POWERUP_CONFIG.endless.chance);
     expect(rollPowerType(() => 0.5, 1000)).toBeNull();
-    expect(rollPowerType(() => 0.5, 20000)).toBe('bomb');
+    expect(rollPowerType(() => 0.5, 20000)).toBe('armor');
     const types = new Set();
     const values = [0.1, 0, 0.1, 0.4, 0.1, 0.9];
     let cursor = 0;
@@ -316,6 +353,6 @@ describe('无尽投放概率', () => {
     types.add(rollPowerType(rng, 100));
     types.add(rollPowerType(rng, 100));
     types.add(rollPowerType(rng, 100));
-    expect(types).toEqual(new Set(['double', 'bomb', 'plane']));
+    expect(types).toEqual(new Set(['double', 'armor', 'plane']));
   });
 });

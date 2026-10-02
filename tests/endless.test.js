@@ -158,7 +158,7 @@ describe('无尽跑道', () => {
     expect(first.powerups).toEqual(again.powerups);
     expect(first.powerups.length).toBeGreaterThan(0);
     for (const item of first.powerups) {
-      expect(['double', 'bomb', 'plane']).toContain(item.type);
+      expect(['double', 'armor', 'plane']).toContain(item.type);
       for (const obstacle of first.obstacles) {
         const [left, right] = obstacleIntervalX(obstacle);
         expect(item.x > left - 4 && item.x < right + 4, `${item.id} 压到 ${obstacle.id}`).toBe(false);

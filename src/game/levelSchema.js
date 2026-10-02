@@ -5,7 +5,7 @@
 import { LEVEL_PALETTES } from './theme.js';
 
 const OBSTACLE_TYPES = ['spike', 'block', 'overhead', 'crumble', 'gate', 'flip'];
-const POWER_TYPES = ['double', 'bomb', 'plane'];
+const POWER_TYPES = ['double', 'armor', 'plane'];
 
 function fail(file, path, message) {
   const where = path ? ` ${path}` : '';
@@ -88,7 +88,7 @@ function validatePowerup(item, file, path) {
   if (!('t' in item) || !('type' in item)) fail(file, path, '缺少 t 或 type');
   expectNumber(file, `${path}.t`, item.t, { min: 0 });
   if (!POWER_TYPES.includes(item.type)) {
-    fail(file, `${path}.type`, `未知类型 ${JSON.stringify(item.type)}。可用：${POWER_TYPES.join('、')}`);
+    fail(file, `${path}.type`, `未知类型 ${JSON.stringify(item.type)}。可用：二段跳、护甲、飞机`);
   }
   if ('lift' in item) expectNumber(file, `${path}.lift`, item.lift, { min: 0, max: 340 });
   if ('dx' in item) expectNumber(file, `${path}.dx`, item.dx, { min: -400, max: 400 });

@@ -21,17 +21,17 @@ export const POWERUP_CONFIG = {
     landingPad: 180,
     // 清场时也清掉脚边这一小截，避免人还压在尖刺上。
     clearBehind: 48,
+    // 落地清场时的光圈时长（秒）。
+    clearFx: 0.42,
     // 飞行时顺路吃星星的垂直、水平距离。地面星星和上层星星都够得到。
     starReach: 240,
     starCatchX: 46,
   },
-  bomb: {
-    // 从玩家往前清这么远（像素）。平台和地面不在这套规则里。
-    range: 460,
-    // 脚底下重叠到的障碍也算前方，避免吃到炸弹的同一帧被尖刺刺中。
-    behind: 36,
-    // 爆炸圈持续的时间（秒）。
-    fxSeconds: 0.42,
+  armor: {
+    // 护甲没有持续时间，只挡一次。碎掉之后这一小段不再连撞。
+    breakInvuln: 0.5,
+    // 碎裂特效的时长（秒）。
+    fxSeconds: 0.36,
   },
   endless: {
     // 两个道具中心至少隔开这么远。
@@ -42,7 +42,7 @@ export const POWERUP_CONFIG = {
     earlyDistance: 6400,
     earlyChance: 0.42,
     chance: 0.86,
-    types: ['double', 'bomb', 'plane'],
+    types: ['double', 'armor', 'plane'],
   },
   // 第 1 关起，每一关放几个。前期少，后面每种都见得到。
   campaign: {

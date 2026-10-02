@@ -21,9 +21,9 @@ export function createEndlessGroups(scene) {
   const hazards = scene.physics.add.staticGroup();
   const stars = scene.physics.add.staticGroup();
   const powerups = scene.physics.add.staticGroup();
-  // 道具先注册。同一帧里先记下吃到的，炸弹和飞机才能挡住这一下。
+  // 道具先注册。同一帧里先记下吃到的，护甲和飞机才能挡住这一下。
   scene.physics.add.overlap(scene.player, powerups, (_player, sprite) => scene.onPowerup(sprite), null, scene);
-  scene.physics.add.overlap(scene.player, hazards, () => scene.onHazard(), null, scene);
+  scene.physics.add.overlap(scene.player, hazards, (_player, sprite) => scene.onHazard(sprite), null, scene);
   scene.physics.add.overlap(scene.player, stars, (_player, star) => scene.onStar(star), null, scene);
   return { hazards, stars, powerups };
 }
@@ -81,6 +81,7 @@ export function mountEndlessPiece(scene, groups, piece) {
       );
       scene.physics.add.existing(kill, true);
       kill.body.enable = false;
+      kill.setData('pit', true);
       groups.hazards.add(kill);
       objects.push(kill);
       const entry = {
