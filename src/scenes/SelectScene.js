@@ -20,7 +20,8 @@ import {
   tintParallax,
 } from '../game/backdrop.js';
 import { createHud } from '../game/hud.js';
-import { addCandyText, candyPalette, createCandyButton, paintCandyRect, textStyle } from '../game/candy.js';
+import { addCandyText, candyPalette, createCandyButton, paintCandyRect, shrinkToWidth, textStyle } from '../game/candy.js';
+import { levelName, t } from '../i18n/index.js';
 import { getSynth } from '../game/audio.js';
 import { cssInsetsToGame, layoutLevelBoard, readSafeAreaInsets, verticalCameraScroll } from '../game/viewport.js';
 
@@ -44,12 +45,12 @@ export class SelectScene extends Phaser.Scene {
     this.progress = loadProgress();
     this.page = this.registry.get('selectPage') || 0;
 
-    this.title = addCandyText(this, 0, 0, '选择关卡', {
+    this.title = addCandyText(this, 0, 0, t('select.title'), {
       size: 36,
       color: '#fff7fb',
       stroke: '#3b0764',
       strokeThickness: 6,
-    }).setDepth(12);
+    }).setScrollFactor(0).setDepth(12);
 
     this.totalStar = this.add.image(0, 0, 'star')
       .setDisplaySize(22, 22)
@@ -60,18 +61,18 @@ export class SelectScene extends Phaser.Scene {
       color: '#fff7fb',
       stroke: '#3b0764',
       strokeThickness: 4,
-    }).setDepth(12);
+    }).setScrollFactor(0).setDepth(12);
 
     this.pageText = addCandyText(this, 0, 0, '', {
       size: 20,
       color: '#ffe14a',
       stroke: '#3b0764',
       strokeThickness: 4,
-    }).setDepth(22);
+    }).setScrollFactor(0).setDepth(22);
 
     this.cards = LEVELS.map((level) => this.createCard(level));
     this.prev = createCandyButton(this, {
-      label: '上一页',
+      label: t('select.prev'),
       variant: 'lemon',
       width: 156,
       fontSize: 26,
@@ -82,7 +83,7 @@ export class SelectScene extends Phaser.Scene {
       },
     });
     this.next = createCandyButton(this, {
-      label: '下一页',
+      label: t('select.next'),
       variant: 'sky',
       width: 156,
       fontSize: 26,
@@ -93,7 +94,7 @@ export class SelectScene extends Phaser.Scene {
       },
     });
     this.back = createCandyButton(this, {
-      label: '返回标题',
+      label: t('select.back'),
       variant: 'pink',
       width: 210,
       fontSize: 28,
@@ -139,7 +140,7 @@ export class SelectScene extends Phaser.Scene {
       strokeThickness: 3,
       shadow: false,
     })).setOrigin(0.5);
-    const name = this.add.text(0, 0, level.name, textStyle({
+    const name = this.add.text(0, 0, levelName(level), textStyle({
       size: 22,
       color: palette.ink,
       stroke: palette.darkInk ? '#ffffff' : '#4a1468',
@@ -198,7 +199,7 @@ export class SelectScene extends Phaser.Scene {
       });
     } else {
       const short = starsToUnlock(this.progress, level.id);
-      status.setText(`还差 ${short} 颗`);
+      status.setText(t('select.locked', { count: short }));
     }
     return card;
   }
@@ -227,9 +228,17 @@ export class SelectScene extends Phaser.Scene {
     });
     this.page = layout.page;
     this.title.setPosition(layout.title.x, layout.title.y);
-    this.totalText.setText(`累计星星 ${totalBestStars(this.progress)} / ${LEVELS.length * 3}`);
+    shrinkToWidth(this.title, Math.min(layout.title.w, viewW - 48), 22);
+    this.totalText.setFontSize(20);
+    this.totalText.setText(t('select.stars', {
+      current: totalBestStars(this.progress),
+      total: LEVELS.length * 3,
+    }));
+    shrinkToWidth(this.totalText, layout.total.w - 36, 14);
     this.placeTotal(layout.total.x, layout.total.y);
-    this.pageText.setText(layout.pages > 1 ? `第 ${layout.page + 1} / ${layout.pages} 页` : '');
+    this.pageText.setFontSize(20);
+    this.pageText.setText(layout.pages > 1 ? t('select.page', { page: layout.page + 1, pages: layout.pages }) : '');
+    shrinkToWidth(this.pageText, layout.pageLabel.w, 14);
     this.pageText.setPosition(layout.pageLabel.x, layout.pageLabel.y);
     this.cards.forEach((card, index) => {
       const cell = layout.cells.find((item) => item.index === index);
@@ -275,7 +284,11 @@ export class SelectScene extends Phaser.Scene {
     card.indexText.setPosition(bx + badge / 2, metrics.faceCenter);
     const nameX = bx + badge + 10;
     card.name.setFontSize(cell.h < 84 ? 18 : 22);
-    const starBlock = card.unlocked ? 74 : 108;
+    if (!card.unlocked) {
+      card.status.setFontSize(16);
+      shrinkToWidth(card.status, Math.max(56, cell.w * 0.32), 12);
+    }
+    const starBlock = card.unlocked ? 74 : card.status.width + 42;
     const maxName = cell.w / 2 - 12 - starBlock - nameX;
     let size = cell.h < 84 ? 18 : 22;
     while (size > 14 && card.name.width > maxName) {

@@ -12,9 +12,10 @@ import {
   tintParallax,
 } from '../game/backdrop.js';
 import { createHud } from '../game/hud.js';
-import { addCandyText, createCandyButton, createCandyLogo } from '../game/candy.js';
+import { addCandyText, createCandyButton, createCandyLogo, shrinkToWidth } from '../game/candy.js';
 import { getSynth } from '../game/audio.js';
 import { cssInsetsToGame, readSafeAreaInsets, verticalCameraScroll } from '../game/viewport.js';
+import { t } from '../i18n/index.js';
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -26,18 +27,18 @@ export class MenuScene extends Phaser.Scene {
     this.parallax = createParallax(this);
     this.driftX = 0;
 
-    this.logo = createCandyLogo(this, '方块跑酷');
-    this.subtitle = addCandyText(this, 0, 0, '方块会自动向前跑\n点击、空格或上方向键跳跃\n收集星星，解锁后面的关卡', {
+    this.logo = createCandyLogo(this, t('app.name'));
+    this.subtitle = addCandyText(this, 0, 0, t('menu.subtitle'), {
       size: 22,
       color: '#ffffff',
       stroke: '#3b0764',
       strokeThickness: 5,
       align: 'center',
       lineSpacing: 8,
-    }).setDepth(10);
+    }).setScrollFactor(0).setDepth(10);
 
     this.start = createCandyButton(this, {
-      label: '选关',
+      label: t('menu.levels'),
       variant: 'pink',
       width: 188,
       fontSize: 34,
@@ -49,7 +50,7 @@ export class MenuScene extends Phaser.Scene {
     });
     // 无尽模式不看星星，和选关并排，样式仍是同一套糖果按钮。
     this.endlessButton = createCandyButton(this, {
-      label: '无尽模式',
+      label: t('menu.endless'),
       variant: 'grape',
       width: 210,
       fontSize: 32,
@@ -90,7 +91,17 @@ export class MenuScene extends Phaser.Scene {
     const topGuard = Math.max(layout.sound.y + 58, (insets.top || 0) + 72);
     const bottomGuard = viewH - Math.max(insets.bottom || 0, 0) - 28;
     const mid = (topGuard + bottomGuard) / 2;
+    const contentW = Math.min(680, viewW - Math.max(insets.left || 0, insets.right || 0) * 2 - 48);
     this.logo.setPosition(layout.centerX, mid - 128);
+    this.logo.fitWidth(contentW);
+    this.subtitle.setWordWrapWidth(contentW);
+    let subtitleSize = 22;
+    this.subtitle.setFontSize(subtitleSize);
+    while (subtitleSize > 16 && this.subtitle.height > 108) {
+      subtitleSize -= 1;
+      this.subtitle.setFontSize(subtitleSize);
+    }
+    shrinkToWidth(this.subtitle, contentW, 16);
     this.subtitle.setPosition(layout.centerX, mid - 4);
     const buttonY = mid + 116;
     const pairGap = 18;

@@ -374,7 +374,9 @@ describe('设置页布局', () => {
         centerBox(layout.back),
         centerBox(layout.cancel),
         centerBox(layout.confirm),
+        centerBox(layout.langLabel),
         ...layout.fxButtons.map(centerBox),
+        ...layout.langButtons.map(centerBox),
       ];
       for (const box of boxes) {
         expect(box.l).toBeGreaterThanOrEqual(0);
@@ -386,19 +388,24 @@ describe('设置页布局', () => {
         expect(cssH).toBeGreaterThanOrEqual(44);
         expect(cssW).toBeGreaterThanOrEqual(44);
       }
-      const rows = [layout.music, layout.sfx, layout.vibrate, layout.fps, layout.reset].map(centerBox);
+      const rows = [layout.music, layout.sfx, layout.vibrate, layout.fps, layout.language, layout.reset].map(centerBox);
       for (let i = 1; i < rows.length; i += 1) {
         expect(overlaps(rows[i - 1], rows[i])).toBe(false);
       }
       const fx = layout.fxButtons.map(centerBox);
       expect(overlaps(fx[0], fx[1])).toBe(false);
       expect(overlaps(fx[1], fx[2])).toBe(false);
+      const langs = layout.langButtons.map(centerBox);
+      expect(overlaps(centerBox(layout.langLabel), langs[0])).toBe(false);
+      for (let i = 1; i < langs.length; i += 1) {
+        expect(overlaps(langs[i - 1], langs[i])).toBe(false);
+      }
       expect(overlaps(centerBox(layout.cancel), centerBox(layout.confirm))).toBe(false);
       expect(overlaps(centerBox(layout.reset), centerBox(layout.back))).toBe(false);
     }
   });
 
-  it('小屏竖屏和横屏上，每一项和返回按钮都在安全区内', () => {
+  it('小屏竖屏和横屏上，每一项、语言和返回按钮都在安全区内', () => {
     // 刘海和底部横条按常见手机的 CSS 像素写，再换成游戏像素。断言只看布局，不看墙钟。
     const phones = [
       { w: 360, h: 640, css: { top: 48, right: 0, bottom: 34, left: 0 } },
@@ -411,9 +418,11 @@ describe('设置页布局', () => {
       centerBox(layout.sfx),
       centerBox(layout.vibrate),
       centerBox(layout.fps),
+      centerBox(layout.language),
       centerBox(layout.reset),
       centerBox(layout.back),
       ...layout.fxButtons.map(centerBox),
+      ...layout.langButtons.map(centerBox),
     ];
     for (const phone of phones) {
       const size = computeExpandSize(960, 540, phone.w, phone.h);
@@ -439,6 +448,7 @@ describe('设置页布局', () => {
       const boxes = [
         centerBox(layout.title),
         centerBox(layout.fxLabel),
+        centerBox(layout.langLabel),
         ...interactive(layout),
       ];
       for (const box of boxes) {
@@ -460,6 +470,7 @@ describe('设置页布局', () => {
         layout.vibrate,
         layout.fx,
         layout.fps,
+        layout.language,
         layout.reset,
       ].map(centerBox);
       for (let i = 1; i < stack.length; i += 1) {
@@ -470,6 +481,11 @@ describe('设置页布局', () => {
       expect(overlaps(centerBox(layout.fxLabel), fx[0])).toBe(false);
       expect(overlaps(fx[0], fx[1])).toBe(false);
       expect(overlaps(fx[1], fx[2])).toBe(false);
+      const langs = layout.langButtons.map(centerBox);
+      expect(overlaps(centerBox(layout.langLabel), langs[0]), `${phone.w}x${phone.h} 语言标签`).toBe(false);
+      for (let i = 1; i < langs.length; i += 1) {
+        expect(overlaps(langs[i - 1], langs[i]), `${phone.w}x${phone.h} 语言按钮`).toBe(false);
+      }
     }
   });
 

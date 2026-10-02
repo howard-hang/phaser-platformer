@@ -63,7 +63,16 @@ jobs:
           test -x "$AAPT"
           "$AAPT" dump badging fangkuai-paoku-debug.apk | tee badging.txt
           grep -q "package: name='com.fangkuai.paoku'" badging.txt
-          grep -q "application-label:'方块跑酷'" badging.txt
+          # 默认英语兜底。简体走 zh / zh-CN，繁体走 zh-TW / zh-HK，其它已翻译语言仍是 Block Runner。
+          grep -qx "application-label:'Block Runner'" badging.txt
+          grep -qx "application-label-zh:'方块跑酷'" badging.txt
+          grep -qx "application-label-zh-CN:'方块跑酷'" badging.txt
+          grep -qx "application-label-zh-TW:'方塊跑酷'" badging.txt
+          grep -qx "application-label-zh-HK:'方塊跑酷'" badging.txt
+          grep -qx "application-label-en:'Block Runner'" badging.txt
+          grep -qx "application-label-es:'Block Runner'" badging.txt
+          grep -qx "application-label-ja:'Block Runner'" badging.txt
+          grep -qx "application-label-ko:'Block Runner'" badging.txt
           "$AAPT" dump xmltree fangkuai-paoku-debug.apk AndroidManifest.xml | tee manifest.txt
           # aapt 把 sensorLandscape 编成整数 6（SCREEN_ORIENTATION_SENSOR_LANDSCAPE）。
           grep -q 'android:screenOrientation(0x0101001e)=(type 0x10)0x6' manifest.txt

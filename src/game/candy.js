@@ -361,8 +361,8 @@ export function createCandyButton(scene, {
   };
 }
 
-/** 主页上的大按钮，沿用原来的调用方式。 */
-export function createStartButton(scene, x, y, onClick, label = '开始游戏', width = 280) {
+/** 主页上的大按钮，沿用原来的调用方式。文案由调用方传入。 */
+export function createStartButton(scene, x, y, onClick, label = '', width = 280) {
   const button = createCandyButton(scene, {
     x,
     y,
@@ -384,11 +384,16 @@ const LOGO_GLYPHS = [
   { fill: '#38c6ff', extrude: '#0369a1' },
 ];
 
-/** 「方块跑酷」四个字分色，厚描边再加一层向下的立体阴影。 */
-export function createCandyLogo(scene, text = '方块跑酷') {
-  const size = 70;
+/**
+ * 游戏名分色，厚描边再加一层向下的立体阴影。
+ * 中文四个字用大号；Block Runner 这种长名字自动缩小，避免撑出屏幕。
+ */
+export function createCandyLogo(scene, text = '') {
+  const title = text || '';
+  const cjk = /[\u3400-\u9fff]/.test(title);
+  const size = cjk ? 70 : 58;
   const root = scene.add.container(0, 0).setScrollFactor(0).setDepth(12);
-  const chars = [...text].map((ch, index) => {
+  const chars = [...title].map((ch, index) => {
     const spec = LOGO_GLYPHS[index % LOGO_GLYPHS.length];
     const back = scene.add.text(0, 0, ch, textStyle({
       size,
@@ -410,8 +415,8 @@ export function createCandyLogo(scene, text = '方块跑酷') {
     root.add(front);
     return { back, front, w: front.width };
   });
-  const gap = -6;
-  const total = chars.reduce((sum, item) => sum + item.w, 0) + gap * (chars.length - 1);
+  const gap = cjk ? -6 : 1;
+  const total = chars.reduce((sum, item) => sum + item.w, 0) + gap * Math.max(0, chars.length - 1);
   let cursor = -total / 2;
   for (const item of chars) {
     const cx = cursor + item.w / 2;
@@ -421,10 +426,28 @@ export function createCandyLogo(scene, text = '方块跑酷') {
   }
   return {
     root,
+    width: total,
     setPosition(nx, ny) {
       root.setPosition(nx, ny);
     },
+    /** 名字比画面宽时整块缩小，字不会被裁掉。 */
+    fitWidth(maxWidth) {
+      const limit = Math.max(80, maxWidth);
+      const scale = total > limit ? limit / total : 1;
+      root.setScale(scale);
+    },
   };
+}
+
+/** 一段文字太宽时逐级减小字号，停在 minSize，避免被裁切。 */
+export function shrinkToWidth(text, maxWidth, minSize = 14) {
+  if (!text || !(maxWidth > 0)) return;
+  let size = parseInt(text.style.fontSize, 10);
+  if (!Number.isFinite(size)) return;
+  while (size > minSize && text.width > maxWidth) {
+    size -= 1;
+    text.setFontSize(size);
+  }
 }
 
 /** 通关面板和错误画面的圆角色块。实心底，底部一条紫色厚边。 */

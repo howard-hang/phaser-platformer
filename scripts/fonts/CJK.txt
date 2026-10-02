@@ -1,0 +1,5 @@
+日语假名、韩语谚文和西班牙语重音来自文泉驿微米黑（WenQuanYi Micro Hei）的子集。
+许可：Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+版权：Digitized data copyright Google Corporation；WenQuanYi Board of Trustees and Qianqian Fang。
+只把游戏文案里用到的字打进 src/assets/game-font-cjk.woff2，合成字的部件一并保留。

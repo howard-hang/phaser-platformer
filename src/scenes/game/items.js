@@ -5,7 +5,7 @@ import { getSynth } from '../../game/audio.js';
 import { feedback } from '../../game/haptics.js';
 import { removeObstacles } from '../../game/hazardClear.js';
 import { POWERUP_CONFIG } from '../../game/powerupConfig.js';
-import { spawnPowerupSprite } from '../../game/powerupActor.js';
+import { destroyPowerupLabel, spawnPowerupSprite } from '../../game/powerupActor.js';
 import {
   breakArmor,
   clearSpan,
@@ -30,9 +30,17 @@ export const itemMethods = {
       if (!sprite.active || !sprite.body) continue;
       const near = sprite.x >= viewLeft && sprite.x <= viewRight;
       sprite.body.enable = near;
-      if (!near) continue;
+      const label = sprite.getData('label');
+      if (!near) {
+        if (label?.active) label.setVisible(false);
+        continue;
+      }
       sprite.y = sprite.getData('baseY') + bob;
       sprite.refreshBody();
+      if (label?.active) {
+        label.setVisible(true);
+        label.setPosition(sprite.x, sprite.y - 30);
+      }
     }
   },
 
@@ -63,6 +71,7 @@ export const itemMethods = {
     if (!sprite?.active || sprite.getData('used') || this.won || this.dying) return;
     const type = sprite.getData('type');
     sprite.setData('used', true);
+    destroyPowerupLabel(sprite);
     sprite.disableBody(true, true);
     const index = this.powerSprites.indexOf(sprite);
     if (index >= 0) this.powerSprites.splice(index, 1);

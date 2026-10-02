@@ -27,6 +27,7 @@ import {
   starsToUnlock,
 } from '../../game/progress.js';
 import { playerGroundY } from '../../logic/world.js';
+import { t } from '../../i18n/index.js';
 import {
   isOutOfMap,
   isPowerInvulnerable,
@@ -168,15 +169,15 @@ export const effectMethods = {
     const progress = recordClear(loadProgress(), this.level.id, this.run.stars);
     saveProgress(progress);
     const upcoming = nextLevel(this.level.id);
-    let nextText = '最后一关';
+    let nextText = t('win.last');
     let nextEnabled = false;
     if (upcoming) {
       const short = starsToUnlock(progress, upcoming.id);
       if (short === 0) {
-        nextText = '下一关';
+        nextText = t('win.next');
         nextEnabled = true;
       } else {
-        nextText = `还差 ${short} 颗星`;
+        nextText = t('win.needStars', { count: short });
       }
     }
     this.levelLabel?.setVisible(false);

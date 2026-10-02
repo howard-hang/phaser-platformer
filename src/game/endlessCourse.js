@@ -16,6 +16,7 @@ import { POWERUP_CONFIG } from './powerupConfig.js';
 import { rollPowerType } from '../logic/powerups.js';
 import { findClearPath } from '../logic/search.js';
 import { HITBOX, TUNING } from '../logic/world.js';
+import { t } from '../i18n/index.js';
 
 export { START_X };
 
@@ -534,7 +535,7 @@ export function viewEndless(stream, viewWidth = 960) {
     : ENDLESS_CURVE.baseSpeed;
   return {
     id: 'endless',
-    name: '无尽模式',
+    name: t('menu.endless'),
     index: 0,
     speed,
     palette: 0,
@@ -560,7 +561,7 @@ export function buildEndlessLevel({ seed, distance, speedLock = null }) {
   const speed = speedLock ?? (stream.bands[0]?.speed || ENDLESS_CURVE.baseSpeed);
   return {
     id: 'endless',
-    name: '无尽模式',
+    name: t('menu.endless'),
     index: 0,
     speed,
     startX: START_X,

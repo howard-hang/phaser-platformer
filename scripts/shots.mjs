@@ -1,9 +1,11 @@
 /**
  * 固定截图。一条命令生成主菜单、关卡选择、游戏中、设置页。
- * 另外再截小屏竖屏和横屏的设置页，带上安全区。
+ * 另外按五种语言各截一张 360×640 的主菜单和设置页，再拼成两张对比图。
+ * 再截小屏竖屏和横屏的设置页，带上安全区。
  * 输出目录是仓库根下的 shots/。等待只设宽松上限，画面是否就绪看游戏帧。
  */
-import { existsSync, mkdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
@@ -11,6 +13,8 @@ import puppeteer from 'puppeteer-core';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const outDir = path.join(root, 'shots');
+const artifactDir = '/opt/cursor/artifacts/screenshots';
+const LOCALES = ['zh', 'en', 'es', 'ja', 'ko'];
 
 /** 页面没起来时的墙钟上限。截图时机按游戏帧，不按这段时间。 */
 const WAIT_MS = 60000;
@@ -46,6 +50,49 @@ async function waitFrames(page, count) {
   }, { timeout: WAIT_MS }, start, count);
 }
 
+/** 五种小屏截图横排成一张对比图。 */
+function stitch(names, outFile) {
+  const args = ['-y'];
+  for (const name of names) args.push('-i', path.join(outDir, name));
+  const layout = names.map((_, index) => {
+    if (index === 0) return '0_0';
+    const left = names.slice(0, index).map((_, i) => `w${i}`).join('+');
+    return `${left}_0`;
+  }).join('|');
+  args.push(
+    '-filter_complex',
+    `xstack=inputs=${names.length}:layout=${layout}`,
+    '-update',
+    '1',
+    path.join(outDir, outFile),
+  );
+  const result = spawnSync('ffmpeg', args, { stdio: 'inherit' });
+  if (result.status !== 0) throw new Error(`拼图失败 ${outFile}`);
+}
+
+/** 360×640 下截一种语言的主菜单和设置页。 */
+async function shootLocale(browser, locale) {
+  const page = await browser.newPage();
+  await page.setViewport({ width: 360, height: 640 });
+  page.on('pageerror', (error) => {
+    console.error(error);
+  });
+  await page.evaluateOnNewDocument((code) => {
+    localStorage.setItem('fangkuai-paoku-locale', code);
+  }, locale);
+  await page.goto('http://127.0.0.1:4191/', { waitUntil: 'domcontentloaded', timeout: WAIT_MS });
+  await waitScene(page, 'menu');
+  await waitFrames(page, 8);
+  await page.screenshot({ path: path.join(outDir, `menu-${locale}.png`) });
+  await page.evaluate(() => {
+    window.__PHASER_GAME__.scene.start('settings');
+  });
+  await waitScene(page, 'settings');
+  await waitFrames(page, 8);
+  await page.screenshot({ path: path.join(outDir, `settings-${locale}.png`) });
+  await page.close();
+}
+
 /** 换一个视口再截设置页。安全区用 CSS 变量，和游戏里读的是同一套。 */
 async function shootSettings(page, width, height, file, insets) {
   await page.setViewport({ width, height, isMobile: true, hasTouch: true });
@@ -72,6 +119,7 @@ async function shootSettings(page, width, height, file, insets) {
 
 async function main() {
   mkdirSync(outDir, { recursive: true });
+  mkdirSync(artifactDir, { recursive: true });
   const server = await createServer({
     server: { host: '127.0.0.1', port: 4191, strictPort: true },
     logLevel: 'error',
@@ -94,6 +142,9 @@ async function main() {
     const page = await browser.newPage();
     page.on('pageerror', (error) => {
       console.error(error);
+    });
+    await page.evaluateOnNewDocument(() => {
+      localStorage.setItem('fangkuai-paoku-locale', 'zh');
     });
     await page.goto('http://127.0.0.1:4191/', { waitUntil: 'domcontentloaded', timeout: WAIT_MS });
     await waitScene(page, 'menu');
@@ -132,13 +183,22 @@ async function main() {
     await waitFrames(page, 8);
     await page.screenshot({ path: path.join(outDir, 'settings.png') });
 
-    // 小屏设置页带上刘海和底部安全区，确认返回按钮没被挡住。
+    for (const locale of LOCALES) {
+      await shootLocale(browser, locale);
+    }
+    stitch(LOCALES.map((locale) => `menu-${locale}.png`), 'i18n-menus.png');
+    stitch(LOCALES.map((locale) => `settings-${locale}.png`), 'i18n-settings.png');
+    copyFileSync(path.join(outDir, 'i18n-menus.png'), path.join(artifactDir, 'i18n-menus.png'));
+    copyFileSync(path.join(outDir, 'i18n-settings.png'), path.join(artifactDir, 'i18n-settings.png'));
+    // 小屏设置页带上刘海和底部安全区，确认返回按钮和语言行没被挡住。
     await shootSettings(page, 360, 640, 'settings-portrait.png', {
       top: 48, right: 0, bottom: 34, left: 0,
     });
     await shootSettings(page, 844, 390, 'settings-landscape.png', {
       top: 0, right: 47, bottom: 21, left: 47,
     });
+    copyFileSync(path.join(outDir, 'settings-portrait.png'), path.join(artifactDir, 'settings-portrait.png'));
+    copyFileSync(path.join(outDir, 'settings-landscape.png'), path.join(artifactDir, 'settings-landscape.png'));
   } finally {
     await browser.close();
     await server.close();

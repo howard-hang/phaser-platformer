@@ -2,6 +2,4 @@
 <resources>
     <string name="app_name">Block Runner</string>
     <string name="title_activity_main">Block Runner</string>
-    <string name="package_name">com.fangkuai.paoku</string>
-    <string name="custom_url_scheme">com.fangkuai.paoku</string>
 </resources>

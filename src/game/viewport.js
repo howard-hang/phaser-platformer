@@ -369,9 +369,9 @@ export function layoutWinPanel({
 }
 
 /**
- * 设置页。标题、两条音量、震动、特效、帧率、底部两个按钮。
+ * 设置页。标题、两条音量、震动、特效、帧率、语言、底部两个按钮。
  * 全部排在刘海和底部安全区之间。竖屏游戏像素更高，行高跟着加到手指点得到。
- * 矮屏放不下时先压标题和间距，再整页缩小，一次就能看全。
+ * 矮屏放不下时先压标题和间距，再整页缩小，语言行和其它行一起留在画面里。
  * pxPerCss 是每个 CSS 像素对应多少游戏像素，和 Phaser displayScale 一致。
  */
 export function layoutSettings({
@@ -395,28 +395,30 @@ export function layoutSettings({
   // 44 CSS 像素大约是手指能点中的下限。竖屏上一个游戏像素更小，行要加高。
   // 多 0.05 游戏像素，避免除回去时浮点误差掉到 44 以下。
   const minTouch = 44 * px + 0.05;
+  // 标题下面七行：音乐、音效、震动、特效、帧率、语言、底部按钮。
+  const rowCount = 7;
   let rowH = Math.max(CANDY_BUTTON_H, minTouch);
   let titleH = 52;
   let gap = 4;
-  const blockOf = () => titleH + gap + 6 * rowH + 5 * gap;
+  const blockOf = () => titleH + rowCount * rowH + rowCount * gap;
   if (blockOf() > avail) {
-    const rows = 6 * rowH;
+    const rows = rowCount * rowH;
     const chromeBudget = avail - rows;
     if (chromeBudget >= 36) {
       // 先只压缩标题和间距，按钮高度保持能点。
-      const chrome = titleH + 6 * gap;
+      const chrome = titleH + rowCount * gap;
       const scale = chromeBudget / Math.max(1, chrome);
       titleH = Math.max(22, titleH * scale);
       gap = Math.max(1, gap * scale);
-      if (blockOf() > avail) gap = Math.max(0, (avail - titleH - rows) / 6);
+      if (blockOf() > avail) gap = Math.max(0, (avail - titleH - rows) / rowCount);
     } else {
-      // 安全区太矮，整页按比例缩小，仍然一次排完。
+      // 安全区太矮（横屏再加语言行时会走到这里），整页按比例缩小，仍然一次排完。
       const scale = avail / blockOf();
       rowH *= scale;
       titleH *= scale;
       gap *= scale;
     }
-    if (blockOf() > avail) rowH -= (blockOf() - avail) / 6;
+    if (blockOf() > avail) rowH -= (blockOf() - avail) / rowCount;
   }
   const block = blockOf();
   const y0 = top + Math.max(0, (avail - block) / 2);
@@ -434,6 +436,7 @@ export function layoutSettings({
   const vibrate = row();
   const fx = row();
   const fps = row();
+  const language = row();
   const actions = row();
 
   const actionGap = 16;
@@ -458,6 +461,30 @@ export function layoutSettings({
     x: fx.x - panelW / 2 + fxLabelW / 2,
     y: fx.y,
     w: fxLabelW,
+    h: rowH,
+  };
+
+  // 五种语言并排。窄面板先收标签，让每个按钮仍有约 44 CSS 像素宽。
+  const langGap = 8;
+  const langIds = ['zh', 'en', 'es', 'ja', 'ko'];
+  const langGaps = langGap * (langIds.length - 1);
+  let langLabelW = panelW < 560 ? 108 : 150;
+  let langW = (panelW - langLabelW - langGaps) / langIds.length;
+  if (langW < minTouch) {
+    langLabelW = Math.max(64, panelW - (minTouch * langIds.length + langGaps));
+    langW = (panelW - langLabelW - langGaps) / langIds.length;
+  }
+  const langButtons = langIds.map((id, index) => ({
+    id,
+    x: language.x - panelW / 2 + langLabelW + langW / 2 + index * (langW + langGap),
+    y: language.y,
+    w: langW,
+    h: rowH,
+  }));
+  const langLabel = {
+    x: language.x - panelW / 2 + langLabelW / 2,
+    y: language.y,
+    w: langLabelW,
     h: rowH,
   };
 
@@ -496,6 +523,9 @@ export function layoutSettings({
     fxLabel,
     fxButtons,
     fps,
+    language,
+    langLabel,
+    langButtons,
     reset,
     back,
     dialog,

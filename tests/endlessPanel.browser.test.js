@@ -99,6 +99,7 @@ describe('无尽结算按钮能点', () => {
 async function exercise(page, baseUrl, { name, mode, action, width, height }) {
   await page.evaluateOnNewDocument(() => {
     localStorage.removeItem('fangkuai-paoku-endless');
+    localStorage.setItem('fangkuai-paoku-locale', 'zh');
   });
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: WAIT_MS });
   await page.waitForFunction(
