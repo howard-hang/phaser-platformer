@@ -3,6 +3,7 @@
  * 跑过的段要销毁贴图和刚体，避免越跑对象越多。
  */
 import { HITBOX, TUNING, FLIP_CEILING_Y, obstaclePose, starPose } from '../logic/world.js';
+import { spawnPowerupSprite } from './powerupActor.js';
 import { THEME } from './theme.js';
 
 function applyHitbox(sprite, spec) {
@@ -19,9 +20,12 @@ function destroyObject(obj) {
 export function createEndlessGroups(scene) {
   const hazards = scene.physics.add.staticGroup();
   const stars = scene.physics.add.staticGroup();
+  const powerups = scene.physics.add.staticGroup();
+  // 道具先注册。同一帧里先记下吃到的，炸弹和飞机才能挡住这一下。
+  scene.physics.add.overlap(scene.player, powerups, (_player, sprite) => scene.onPowerup(sprite), null, scene);
   scene.physics.add.overlap(scene.player, hazards, () => scene.onHazard(), null, scene);
   scene.physics.add.overlap(scene.player, stars, (_player, star) => scene.onStar(star), null, scene);
-  return { hazards, stars };
+  return { hazards, stars, powerups };
 }
 
 /** 把一个已经算好坐标的片段摆进场景。 */
@@ -30,6 +34,7 @@ export function mountEndlessPiece(scene, groups, piece) {
   const crumbles = [];
   const flips = [];
   const decks = [];
+  const powers = [];
   const objects = [];
   // 每段自己的碰撞器。段拆掉时要一起销毁，否则会一直留在物理世界里。
   const colliders = [];
@@ -115,6 +120,14 @@ export function mountEndlessPiece(scene, groups, piece) {
     scene.courseNodes.push(node);
   }
 
+  for (const item of piece.powerups || []) {
+    const sprite = spawnPowerupSprite(scene, item);
+    groups.powerups.add(sprite);
+    objects.push(sprite);
+    powers.push(sprite);
+    scene.powerSprites.push(sprite);
+  }
+
   for (const star of piece.stars) {
     const pose = starPose(star);
     const sprite = scene.physics.add.staticSprite(pose.cx, pose.cy, pose.key);
@@ -161,6 +174,7 @@ export function mountEndlessPiece(scene, groups, piece) {
     crumbles,
     flips,
     decks,
+    powers,
     objects,
     colliders,
   };
@@ -181,6 +195,7 @@ export function unmountEndlessPiece(scene, handle) {
   }
   for (const item of handle.flips) pullFrom(scene.flipVisuals, item);
   for (const item of handle.decks) pullFrom(scene.deckNodes, item);
+  for (const sprite of handle.powers || []) pullFrom(scene.powerSprites, sprite);
   for (const collider of handle.colliders || []) collider.destroy();
   for (const obj of handle.objects) {
     pullFrom(scene.hazardSprites, obj);

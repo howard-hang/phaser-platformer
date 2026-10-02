@@ -182,6 +182,14 @@ export function compileLevel(def, index) {
     lift: event.lift || 0,
   }));
 
+  // 道具不挡路。不吃也能按原来的路线过关。
+  const powerups = (def.powerups || []).map((event, index) => ({
+    id: `${def.id}-power-${index + 1}`,
+    type: event.type,
+    x: xAt(event.t) + (event.dx || 0),
+    lift: event.lift || 0,
+  }));
+
   const checkpoints = [START_X];
   for (const t of def.checkpoints) checkpoints.push(xAt(t));
   checkpoints.sort((a, b) => a - b);
@@ -203,6 +211,7 @@ export function compileLevel(def, index) {
     checkpoints,
     obstacles,
     stars,
+    powerups,
     flips,
     decks,
     routes,

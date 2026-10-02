@@ -255,6 +255,9 @@
       "lift": 0
     }
   ],
+  "powerups": [
+    { "t": 25.975, "type": "bomb" }
+  ],
   "checkpoints": [
     10,
     21.32,

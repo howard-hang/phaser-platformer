@@ -56,6 +56,18 @@ describe('关卡配置', () => {
       checkpoints: [],
     }, 'level-01.json')).toThrow(/未知配色/);
 
+    expect(() => validateLevel({
+      id: 'level-1',
+      name: '道具',
+      speed: 300,
+      duration: 70,
+      palette: 'magenta',
+      obstacles: [],
+      stars: [{ t: 1 }, { t: 2 }, { t: 3 }],
+      checkpoints: [],
+      powerups: [{ t: 4, type: 'laser' }],
+    }, 'level-01.json')).toThrow(/powerups\[0\]\.type/);
+
     expect(() => validateManifest({
       levels: [
         { file: 'level-01.json', unlockStars: 0 },

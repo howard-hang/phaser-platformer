@@ -8,6 +8,8 @@ import {
   readMutedFlag,
   saveMutePreference,
   canPlaySfx,
+  cueWillPlay,
+  SFX_CUES,
   shouldCreateAudio,
   writeMutedFlag,
 } from '../src/game/audioPolicy.js';
@@ -66,6 +68,10 @@ describe('音乐和声音开关', () => {
   });
 
   it('静音时碎裂音效和其他音效一起关掉', () => {
+    expect(SFX_CUES).toContain('bomb');
+    expect(cueWillPlay('bomb', { muted: true, appActive: true, hasContext: true })).toBe(false);
+    expect(cueWillPlay('bomb', { muted: false, appActive: true, hasContext: true })).toBe(true);
+    expect(cueWillPlay('pickup', { muted: false, appActive: false, hasContext: true })).toBe(false);
     expect(canPlaySfx({ muted: true, appActive: true, hasContext: true })).toBe(false);
     expect(canPlaySfx({ muted: false, appActive: false, hasContext: true })).toBe(false);
     expect(canPlaySfx({ muted: false, appActive: true, hasContext: false })).toBe(false);

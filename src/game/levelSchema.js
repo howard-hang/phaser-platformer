@@ -5,6 +5,7 @@
 import { LEVEL_PALETTES } from './theme.js';
 
 const OBSTACLE_TYPES = ['spike', 'block', 'overhead', 'crumble', 'gate', 'flip'];
+const POWER_TYPES = ['double', 'bomb', 'plane'];
 
 function fail(file, path, message) {
   const where = path ? ` ${path}` : '';
@@ -34,7 +35,7 @@ function expectKeys(file, path, value, allowed) {
 /** 校验单个关卡对象。通过后原样返回。 */
 export function validateLevel(level, file = 'level.json') {
   if (!isObject(level)) fail(file, '', '关卡应该是一个对象');
-  expectKeys(file, '', level, ['id', 'name', 'speed', 'duration', 'palette', 'obstacles', 'stars', 'checkpoints', 'routes']);
+  expectKeys(file, '', level, ['id', 'name', 'speed', 'duration', 'palette', 'obstacles', 'stars', 'checkpoints', 'routes', 'powerups']);
   for (const key of ['id', 'name', 'speed', 'duration', 'palette', 'obstacles', 'stars', 'checkpoints']) {
     if (!(key in level)) fail(file, '', `缺少字段 ${key}`);
   }
@@ -64,6 +65,10 @@ export function validateLevel(level, file = 'level.json') {
     if (!Array.isArray(level.routes)) fail(file, 'routes', '应该是数组');
     level.routes.forEach((item, index) => validateRoute(item, file, `routes[${index}]`));
   }
+  if ('powerups' in level) {
+    if (!Array.isArray(level.powerups)) fail(file, 'powerups', '应该是数组');
+    level.powerups.forEach((item, index) => validatePowerup(item, file, `powerups[${index}]`));
+  }
   const lastObstacle = level.obstacles.reduce((max, item) => Math.max(max, item.t), 0);
   if (lastObstacle >= level.duration) {
     fail(file, 'obstacles', '有障碍的时间不早于终点');
@@ -71,7 +76,22 @@ export function validateLevel(level, file = 'level.json') {
   for (const star of level.stars) {
     if (star.t >= level.duration) fail(file, 'stars', '有星星的时间不早于终点');
   }
+  for (const item of level.powerups || []) {
+    if (item.t >= level.duration) fail(file, 'powerups', '有道具的时间不早于终点');
+  }
   return level;
+}
+
+function validatePowerup(item, file, path) {
+  if (!isObject(item)) fail(file, path, '道具应该是对象');
+  expectKeys(file, path, item, ['t', 'type', 'lift', 'dx']);
+  if (!('t' in item) || !('type' in item)) fail(file, path, '缺少 t 或 type');
+  expectNumber(file, `${path}.t`, item.t, { min: 0 });
+  if (!POWER_TYPES.includes(item.type)) {
+    fail(file, `${path}.type`, `未知类型 ${JSON.stringify(item.type)}。可用：${POWER_TYPES.join('、')}`);
+  }
+  if ('lift' in item) expectNumber(file, `${path}.lift`, item.lift, { min: 0, max: 340 });
+  if ('dx' in item) expectNumber(file, `${path}.dx`, item.dx, { min: -400, max: 400 });
 }
 
 function validateObstacle(item, file, path) {

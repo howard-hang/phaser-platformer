@@ -32,7 +32,11 @@ import { createDeathFx } from '../game/deathFx.js';
 import { displayPose } from '../game/motion.js';
 import { THEME, LEVEL_PALETTES } from '../game/theme.js';
 import { textStyle } from '../game/candy.js';
-import { createHud, isUiPointer, showEndlessPanel, showWinPanel } from '../game/hud.js';
+import { createBlastFx } from '../game/blastFx.js';
+import { removeObstacles } from '../game/hazardClear.js';
+import { createHud, createPowerHud, isUiPointer, showEndlessPanel, showWinPanel } from '../game/hud.js';
+import { POWERUP_CONFIG } from '../game/powerupConfig.js';
+import { spawnPowerupSprite } from '../game/powerupActor.js';
 import { isLevelUnlocked, loadProgress, recordClear, saveProgress, starsToUnlock } from '../game/progress.js';
 import { cssInsetsToGame, readSafeAreaInsets, verticalCameraScroll } from '../game/viewport.js';
 import {
@@ -48,6 +52,20 @@ import {
   starPose,
   sampleJump,
 } from '../logic/world.js';
+import {
+  canAirJump,
+  clearSpan,
+  createPowerState,
+  flightCenterY,
+  grantPower,
+  isPowerInvulnerable,
+  landingClearWindow,
+  landingY,
+  noteAirJump,
+  noteLand,
+  resolveJump,
+  tickPower,
+} from '../logic/powerups.js';
 import {
   createRunState,
   noteDeath,
@@ -87,6 +105,7 @@ export class GameScene extends Phaser.Scene {
         decks: [],
         routes: [],
         speedBands: [],
+        powerups: [],
         endless: true,
       };
       this.tuning = { ...TUNING, speed: ENDLESS_CURVE.baseSpeed };
@@ -109,6 +128,13 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.run = createRunState();
+    this.power = createPowerState();
+    this.powerClock = 0;
+    this._powerQueue = [];
+    this._touchGuard = false;
+    this._planeHeld = false;
+    this._landFromY = null;
+    this.powerSprites = [];
     this.won = false;
     this.ended = false;
     this.endlessBest = this.endless ? loadEndlessRecord().best : 0;
@@ -140,6 +166,8 @@ export class GameScene extends Phaser.Scene {
       variant: this.endless ? 'endless' : 'campaign',
       onHome: () => this.scene.start(this.endless ? 'menu' : 'select'),
     });
+    this.powerHud = createPowerHud(this);
+    this.blastFx = createBlastFx(this);
     this.deathFx = createDeathFx(this);
     const levelTitle = this.endless
       ? '无尽模式'
@@ -237,6 +265,7 @@ export class GameScene extends Phaser.Scene {
     this.crumbles = [];
     this.flipVisuals = [];
     this.deckNodes = [];
+    this.powerSprites = [];
     this._inFlip = false;
     this.endlessGroups = createEndlessGroups(this);
     this.syncEndlessWorld(this.level.startX + 2800);
@@ -311,6 +340,7 @@ export class GameScene extends Phaser.Scene {
     this.courseNodes = [];
     this.crumbles = [];
     this.flipVisuals = [];
+    this.powerSprites = [];
     this._inFlip = false;
 
     for (const obstacle of this.level.obstacles) {
@@ -365,6 +395,7 @@ export class GameScene extends Phaser.Scene {
       strokeThickness: 4,
     })).setDepth(7);
 
+    this.mountCampaignPowerups();
     this.physics.add.overlap(this.player, this.hazardSprites, () => this.onHazard(), null, this);
     this.physics.add.overlap(this.player, this.starSprites, (_player, star) => this.onStar(star), null, this);
     this.createDecks();
@@ -400,8 +431,9 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** 只有从上面落下来才站上平台，避免从底下被顶住。 */
+  /** 只有从上面落下来才站上平台，避免从底下被顶住。飞行时穿过去，免得被平台截住。 */
   canLandOnDeck(plat) {
+    if (this.power?.kind === 'plane') return false;
     const body = this.player?.body;
     const deck = plat.getData('deck');
     if (!body || !deck || body.velocity.y < 0) return false;
@@ -512,10 +544,36 @@ export class GameScene extends Phaser.Scene {
       // 镜头外的平台刚体关掉，和地面障碍同一套省帧办法。
       node.body.body.enable = near;
     }
+    this.syncPowerBob(time);
   }
 
-  /** 人在反转区里时，净重力变成原来的向上版本，大小不变。 */
+  /** 镜头里的道具轻轻浮动。吃掉的已经从列表拿掉，不再刷新刚体。 */
+  syncPowerBob(time) {
+    const sprites = this.powerSprites;
+    if (!sprites?.length) return;
+    const cam = this.cameras.main;
+    const viewLeft = cam.scrollX - 280;
+    const viewRight = cam.scrollX + cam.width + 520;
+    const bob = Math.sin(time * 6) * 4;
+    for (let i = 0; i < sprites.length; i += 1) {
+      const sprite = sprites[i];
+      if (!sprite.active || !sprite.body) continue;
+      const near = sprite.x >= viewLeft && sprite.x <= viewRight;
+      sprite.body.enable = near;
+      if (!near) continue;
+      sprite.y = sprite.getData('baseY') + bob;
+      sprite.refreshBody();
+    }
+  }
+
+  /** 人在反转区里时，净重力变成原来的向上版本，大小不变。飞机自己定高度，不吃这股力。 */
   syncFlipGravity() {
+    if (this.power?.kind === 'plane') {
+      this._inFlip = false;
+      this.player.body.setAllowGravity(false);
+      this.player.body.setGravityY(0);
+      return;
+    }
     const x = this.player.x;
     const zones = this.level.flips || [];
     let inside = false;
@@ -531,6 +589,7 @@ export class GameScene extends Phaser.Scene {
 
   /** 贴住天花板，避免反重力和碰撞来回挤。向下起跳时不打断。 */
   stickToCeiling() {
+    if (this.power?.kind === 'plane') return;
     if (!this._inFlip || !this.player?.body) return;
     const body = this.player.body;
     if (body.velocity.y > 30) return;
@@ -552,6 +611,9 @@ export class GameScene extends Phaser.Scene {
     this.player.body.updateFromGameObject();
     this.player.body.setVelocityX(this.runSpeed());
     this.physics.add.collider(this.player, this.ground);
+    // 翅膀和二段跳标记跟着方块，没有道具时不画。
+    this.ride = this.add.image(0, 0, 'ride-wings').setDepth(7).setVisible(false);
+    this.doubleMark = this.add.image(0, 0, 'power-double').setDepth(9).setVisible(false).setDisplaySize(28, 28);
 
     // 偏移让方块停在画面偏左，前方留出反应距离。垂直方向由边界锁死，跳跃不会把镜头抬起来。
     this.cameras.main.startFollow(this.player, true, 1, 1, -240, 0);
@@ -592,12 +654,23 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** 只有贴着地面或天花板才起跳。反转区里起跳速度反过来，大小不变。 */
+  /**
+   * 贴地或贴天花板时按普通跳起跳，速度和原来一样。
+   * 二段跳生效时，空中还能再起跳一次，初速度仍是普通跳的那一档。
+   */
   tryJump() {
     if (this.won || this.dying || this.time.now < this.invulnUntil) return;
-    if (!this.isGrounded()) return;
-    const launch = this._inFlip ? -TUNING.jumpVelocity : TUNING.jumpVelocity;
-    this.player.body.setVelocityY(launch);
+    if (this.power?.kind === 'plane') return;
+    const grounded = this.isGrounded();
+    const decision = resolveJump({
+      grounded,
+      airReady: canAirJump(this.power, grounded),
+      jumpVelocity: TUNING.jumpVelocity,
+      flipped: !!this._inFlip,
+    });
+    if (!decision.ok) return;
+    if (decision.usedAir) this.power = noteAirJump(this.power);
+    this.player.body.setVelocityY(decision.vy);
     this.rotating = true;
     this.airMs = 0;
     this.player.angle = 0;
@@ -629,9 +702,9 @@ export class GameScene extends Phaser.Scene {
     return false;
   }
 
-  /** 物理步里累加旋转，一整圈刚好赶在落地前转完。 */
+  /** 物理步里累加旋转，一整圈刚好赶在落地前转完。飞机保持平飞，不转圈。 */
   onWorldStep(delta) {
-    if (!this.rotating || this.won) return;
+    if (!this.rotating || this.won || this.power?.kind === 'plane') return;
     this.airMs += delta * 1000;
     const progress = Math.min(1, this.airMs / (this.airTimeMs * 0.92));
     this.player.angle = 360 * progress;
@@ -639,6 +712,10 @@ export class GameScene extends Phaser.Scene {
 
   onHazard() {
     if (this.won || this.dying || this.time.now < this.invulnUntil) return;
+    // 飞机，以及落地后的一小段，障碍打不中。同一帧先吃到炸弹时也先别死。
+    if (this._touchGuard || isPowerInvulnerable(this.power, this.powerClock)) return;
+    this._powerQueue.length = 0;
+    this._touchGuard = false;
     this.dying = true;
     this.run = noteDeath(this.run);
     this.activeCheckpoint = pickCheckpoint(this.level.checkpoints, this.player.x);
@@ -649,6 +726,8 @@ export class GameScene extends Phaser.Scene {
     const y = this.player.y;
     // 方块先藏起来，碎片从原来的位置炸开。刚体停住，避免特效期间又撞上别的障碍。
     this.player.setVisible(false);
+    this.ride?.setVisible(false);
+    this.doubleMark?.setVisible(false);
     this.player.body.enable = false;
     this.player.body.setVelocity(0, 0);
     this.player.body.setAllowGravity(false);
@@ -722,6 +801,9 @@ export class GameScene extends Phaser.Scene {
     this.endlessBest = outcome.best;
     this.refreshEndlessHud();
     this.levelLabel?.setVisible(false);
+    this.powerHud?.hide();
+    this.ride?.setVisible(false);
+    this.doubleMark?.setVisible(false);
     this.winUi = showEndlessPanel(this, {
       distance: outcome.distance,
       stars: this.run.stars,
@@ -734,15 +816,164 @@ export class GameScene extends Phaser.Scene {
     this.winUi.relayout(this.scale.width, this.scale.height, this._insets);
   }
 
+  /** 闯关里的道具。重叠先于障碍注册，同一帧吃到炸弹不会先被刺死。 */
+  mountCampaignPowerups() {
+    const items = this.level.powerups || [];
+    this.powerGroup = this.physics.add.staticGroup();
+    this.physics.add.overlap(this.player, this.powerGroup, (_player, sprite) => this.onPowerup(sprite), null, this);
+    for (let i = 0; i < items.length; i += 1) {
+      const sprite = spawnPowerupSprite(this, items[i]);
+      this.powerGroup.add(sprite);
+      this.powerSprites.push(sprite);
+    }
+  }
+
+  onPowerup(sprite) {
+    if (!sprite?.active || sprite.getData('used') || this.won || this.dying) return;
+    const type = sprite.getData('type');
+    sprite.setData('used', true);
+    sprite.disableBody(true, true);
+    const index = this.powerSprites.indexOf(sprite);
+    if (index >= 0) this.powerSprites.splice(index, 1);
+    if (type === 'bomb' || type === 'plane') this._touchGuard = true;
+    this._powerQueue.push(type);
+  }
+
+  /** 物理回调里只记账，清障碍放到这一帧的 update，避免刚体还在遍历时被拆掉。 */
+  flushPowerQueue() {
+    const queue = this._powerQueue;
+    if (!queue.length) {
+      this._touchGuard = false;
+      return;
+    }
+    this._powerQueue = [];
+    let bomb = false;
+    let other = false;
+    for (let i = 0; i < queue.length; i += 1) {
+      const granted = grantPower(this.power, queue[i], this.powerClock);
+      this.power = granted.state;
+      if (granted.bomb) {
+        this.detonateBomb();
+        bomb = true;
+      } else {
+        other = true;
+      }
+    }
+    this._touchGuard = false;
+    if (bomb) getSynth().play('bomb');
+    if (other) getSynth().play('pickup');
+  }
+
+  advancePower() {
+    const prev = this.power.phase;
+    this.power = tickPower(this.power, this.powerClock);
+    if (prev !== 'land' && this.power.phase === 'land') this.beginPlaneLanding();
+    if (this.power.kind === 'double' && this.isGrounded()) this.power = noteLand(this.power);
+    this.powerHud?.sync(this.power, this.powerClock);
+  }
+
+  detonateBomb() {
+    const cfg = POWERUP_CONFIG.bomb;
+    const { removed } = clearSpan(this.level.obstacles, this.player.x - cfg.behind, this.player.x + cfg.range);
+    const points = removeObstacles(this, removed);
+    this.blastFx?.play({ x: this.player.x + 72, y: this.player.y - 8 }, points);
+  }
+
+  /** 落地前清掉脚要落下去的那一段可炸障碍。平台留着。 */
+  beginPlaneLanding() {
+    const speed = Math.max(1, this.runSpeed());
+    const span = landingClearWindow(this.player.x, speed);
+    const { removed } = clearSpan(this.level.obstacles, span.x0, span.x1);
+    const points = removeObstacles(this, removed);
+    this._landFromY = this.player.y;
+    if (points.length) this.blastFx?.play({ x: this.player.x, y: this.player.y }, points);
+  }
+
+  /** 飞机先升到巡航高度，时间到了再按同一条曲线落到地面。 */
+  applyPlaneMotion(delta) {
+    const body = this.player?.body;
+    if (!body) return;
+    if (this.power.kind !== 'plane') {
+      if (!this._planeHeld) return;
+      this._planeHeld = false;
+      this._landFromY = null;
+      body.setAllowGravity(true);
+      const ground = playerGroundY();
+      if (!this._inFlip && this.player.y > ground - 28 && this.player.y <= ground + 6) {
+        this.player.setPosition(this.player.x, ground);
+        body.updateFromGameObject();
+        body.setVelocity(this.runSpeed(), 0);
+      }
+      return;
+    }
+    this._planeHeld = true;
+    body.setAllowGravity(false);
+    body.setGravityY(0);
+    const ground = playerGroundY();
+    const cruise = flightCenterY();
+    let y = this.player.y;
+    if (this.power.phase === 'land') {
+      if (this._landFromY == null) this._landFromY = y;
+      const dur = POWERUP_CONFIG.plane.landDuration;
+      const t = (this.powerClock - (this.power.landEndsAt - dur)) / dur;
+      y = landingY(this._landFromY, ground, t);
+    } else {
+      this._landFromY = null;
+      const k = 1 - Math.exp(-(delta || 16) / 140);
+      y += (cruise - y) * k;
+    }
+    this.player.setPosition(this.player.x, y);
+    body.updateFromGameObject();
+    body.setVelocity(this.runSpeed(), 0);
+    body.setAllowGravity(false);
+    this.rotating = false;
+    this.player.angle = 0;
+  }
+
+  /** 飞行高度够不着地面星星的碰撞盒，这里按距离再收一次。 */
+  collectPlaneStars() {
+    if (this.power.kind !== 'plane') return;
+    const catchX = POWERUP_CONFIG.plane.starCatchX;
+    const reach = POWERUP_CONFIG.plane.starReach;
+    const px = this.player.x;
+    const py = this.player.y;
+    const stars = this.starSprites || [];
+    for (let i = 0; i < stars.length; i += 1) {
+      const star = stars[i];
+      if (!star.active) continue;
+      if (Math.abs(star.x - px) <= catchX && Math.abs(star.y - py) <= reach) this.onStar(star);
+    }
+  }
+
+  syncPowerIcons() {
+    const plane = this.power.kind === 'plane';
+    const doubled = this.power.kind === 'double';
+    if (this.ride) {
+      this.ride.setVisible(plane);
+      if (plane) this.ride.setPosition(this.player.x, this.player.y + 2);
+    }
+    if (this.doubleMark) {
+      this.doubleMark.setVisible(doubled);
+      if (doubled) this.doubleMark.setPosition(this.player.x, this.player.y - 34);
+    }
+  }
+
   update(_time, delta) {
     this.suppressJump = false;
     this.deathFx?.update(delta);
+    this.blastFx?.update(delta);
     // 碎裂的这半秒里方块停在原地，特效结束再继续跑。
     if (!this.player || this.won || this.dying) return;
 
     this.elapsedMs += delta;
+    this.powerClock += delta / 1000;
     this.stickToCeiling();
     this.player.body.setVelocityX(this.runSpeed());
+    this.flushPowerQueue();
+    this.advancePower();
+    this.applyPlaneMotion(delta);
+    this.collectPlaneStars();
+    this.syncPowerIcons();
 
     const distance = this.player.x - this.level.startX;
     const next = noteProgress(this.run, distance, TUNING.pxPerScore);
@@ -826,6 +1057,9 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.levelLabel?.setVisible(false);
+    this.powerHud?.hide();
+    this.ride?.setVisible(false);
+    this.doubleMark?.setVisible(false);
     this.winUi = showWinPanel(this, {
       index: this.level.index,
       score: this.run.score,
@@ -859,7 +1093,8 @@ export class GameScene extends Phaser.Scene {
     const insets = cssInsetsToGame(readSafeAreaInsets(), this.scale.displayScale);
     this._insets = insets;
     layoutParallax(this.parallax, viewW, viewH, scrollY);
-    this.hud?.relayout({ viewWidth: viewW, viewHeight: viewH, insets });
+    const layout = this.hud?.relayout({ viewWidth: viewW, viewHeight: viewH, insets });
+    this.powerHud?.relayout(layout);
     this.deathFx?.layoutFlash();
     this.levelLabel?.setPosition(viewW / 2, viewH - (insets.bottom || 0) - 18);
     this.winUi?.relayout(viewW, viewH, insets);

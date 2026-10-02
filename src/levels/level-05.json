@@ -300,6 +300,10 @@
       "lift": 0
     }
   ],
+  "powerups": [
+    { "t": 26.683, "type": "bomb" },
+    { "t": 49.327, "type": "plane" }
+  ],
   "checkpoints": [
     13.84,
     21,

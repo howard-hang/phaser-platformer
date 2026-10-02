@@ -111,6 +111,18 @@ describe('全屏按钮和安全区', () => {
     expect(hud.sound.x).toBeLessThanOrEqual(1170);
   });
 
+  it('道具倒计时排在星星下面，不挡右上角按钮', () => {
+    const hud = layoutHud({
+      viewWidth: 960,
+      viewHeight: 540,
+      showHome: true,
+      showFullscreen: true,
+    });
+    expect(hud.power.y).toBeGreaterThan(hud.stars.y + 20);
+    expect(hud.power.x).toBe(hud.score.x);
+    expect(hud.power.x + hud.power.w).toBeLessThan(hud.home.x - 40);
+  });
+
   it('HUD 让开刘海和圆角安全区', () => {
     const hud = layoutHud({
       viewWidth: 1170,

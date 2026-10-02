@@ -10,7 +10,7 @@ import { isNativeShell } from '../platform/androidBack.js';
 import { renderShatterPcm } from './shatterSynth.js';
 import {
   audioContextAction,
-  canPlaySfx,
+  cueWillPlay,
   loadMutePreference,
   musicOutputGain,
   playbackPositionAfterRetry,
@@ -188,8 +188,8 @@ class Synth {
   }
 
   play(name) {
-    // 碎裂音效和跳跃、吃星共用这道门，声音开关关掉时一起静音。
-    if (!canPlaySfx({ muted: this.muted, appActive: this.appActive, hasContext: !!this.ctx })) return;
+    // 碎裂、跳跃、吃道具和爆炸共用这道门，声音开关关掉时一起静音。
+    if (!cueWillPlay(name, { muted: this.muted, appActive: this.appActive, hasContext: !!this.ctx })) return;
     const time = this.ctx.currentTime;
     if (name === 'jump') {
       tone(this.ctx, this.master, time, {
@@ -214,8 +214,48 @@ class Synth {
           freq, dur: 0.18, type: 'square', gain: 0.1,
         });
       });
+    } else if (name === 'pickup') {
+      tone(this.ctx, this.master, time, {
+        freq: 660, freqTo: 990, dur: 0.09, type: 'triangle', gain: 0.1,
+      });
+    } else if (name === 'bomb') {
+      // 程序合成的短爆炸：低频下滑加一小段噪声，不引用外部采样。
+      playBomb(this.ctx, this.master, time);
     }
   }
+}
+
+/** 爆炸声。噪声用固定数列生成，每次听起来一样，也方便静音时整段跳过。 */
+function playBomb(ctx, master, time) {
+  tone(ctx, master, time, {
+    freq: 150, freqTo: 46, dur: 0.22, type: 'sawtooth', gain: 0.16,
+  });
+  tone(ctx, master, time, {
+    freq: 520, freqTo: 80, dur: 0.12, type: 'square', gain: 0.06,
+  });
+  const dur = 0.18;
+  const length = Math.max(1, Math.floor(ctx.sampleRate * dur));
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  let seed = 0x6d2b79f5;
+  for (let i = 0; i < length; i += 1) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) | 0;
+    const env = 1 - i / length;
+    data[i] = ((seed & 65535) / 32768 - 1) * env * env;
+  }
+  const source = ctx.createBufferSource();
+  const filter = ctx.createBiquadFilter();
+  const amp = ctx.createGain();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(780, time);
+  amp.gain.setValueAtTime(0.2, time);
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+  source.buffer = buffer;
+  source.connect(filter);
+  filter.connect(amp);
+  amp.connect(master);
+  source.start(time);
+  source.stop(time + dur + 0.02);
 }
 
 let synth;
