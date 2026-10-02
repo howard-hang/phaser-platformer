@@ -1,8 +1,8 @@
 /**
- * 界面字体。站酷庆科黄油体的子集，圆润标题字，离线打进包里。
- * 缺字时再落到系统黑体，避免直接出现方框。
+ * 界面字体。站酷庆科黄油体的子集负责中文和拉丁字母。
+ * 日语假名和韩语谚文在 GameFontCJK 里，系统黑体再兜一层，避免方框。
  */
-export const FONT = 'GameFont, "ZCOOL QingKe HuangYou", "PingFang SC", "Microsoft YaHei", sans-serif';
+export const FONT = 'GameFont, GameFontCJK, "ZCOOL QingKe HuangYou", "PingFang SC", "Hiragino Sans", "Noto Sans CJK JP", "Noto Sans CJK KR", "Malgun Gothic", "Microsoft YaHei", sans-serif';
 
 export const THEME = {
   bg: '#c026d3',

@@ -5,6 +5,7 @@ import Phaser from 'phaser';
 import { CONFIG_ERROR } from '../game/level.js';
 import { PANEL, addCandyText, paintCandyPanel, textStyle } from '../game/candy.js';
 import { cssInsetsToGame, readSafeAreaInsets } from '../game/viewport.js';
+import { t } from '../i18n/index.js';
 
 export class ErrorScene extends Phaser.Scene {
   constructor() {
@@ -14,13 +15,13 @@ export class ErrorScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor('#2a0838');
     this.panel = this.add.graphics().setDepth(1);
-    this.title = addCandyText(this, 0, 0, '关卡配置有误', {
+    this.title = addCandyText(this, 0, 0, t('error.title'), {
       size: 34,
       color: PANEL.title,
       stroke: '#ffffff',
       strokeThickness: 5,
     }).setOrigin(0.5, 0).setDepth(2);
-    this.body = this.add.text(0, 0, CONFIG_ERROR || '未知配置错误', textStyle({
+    this.body = this.add.text(0, 0, CONFIG_ERROR || t('error.unknown'), textStyle({
       size: 20,
       color: PANEL.body,
       stroke: '#ffffff',

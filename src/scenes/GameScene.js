@@ -24,6 +24,7 @@ import { createDeathFx } from '../game/deathFx.js';
 import { createRunnerFx } from '../game/runnerFx.js';
 import { LEVEL_PALETTES } from '../game/theme.js';
 import { textStyle } from '../game/candy.js';
+import { levelName, t } from '../i18n/index.js';
 import { createBlastFx } from '../game/blastFx.js';
 import {
   createHud,
@@ -71,7 +72,7 @@ export class GameScene extends Phaser.Scene {
       this.endlessHandles = new Map();
       this.level = {
         id: 'endless',
-        name: '无尽模式',
+        name: t('menu.endless'),
         index: 0,
         speed: ENDLESS_CURVE.baseSpeed,
         palette: 0,
@@ -153,8 +154,8 @@ export class GameScene extends Phaser.Scene {
     this._dustCarry = 0;
     this.deathFx = createDeathFx(this);
     const levelTitle = this.endless
-      ? '无尽模式'
-      : `第 ${this.level.index} 关  ${this.level.name}`;
+      ? t('menu.endless')
+      : t('hud.levelTitle', { index: this.level.index, name: levelName(this.level) });
     this.levelLabel = this.add.text(0, 0, levelTitle, textStyle({
       size: 20,
       color: '#ffffff',

@@ -1,5 +1,5 @@
 /**
- * 设置页。音量、震动、特效、帧率和重置进度。
+ * 设置页。音量、震动、特效、帧率、语言和重置进度。
  * 控件按画面居中，点击区跟主页的糖果按钮一样高，鼠标和触屏都能点。
  */
 import Phaser from 'phaser';
@@ -11,7 +11,7 @@ import {
   scrollParallax,
   tintParallax,
 } from '../game/backdrop.js';
-import { addCandyText, createCandyButton, paintCandyPanel, textStyle } from '../game/candy.js';
+import { addCandyText, createCandyButton, paintCandyPanel, shrinkToWidth, textStyle } from '../game/candy.js';
 import { getSynth } from '../game/audio.js';
 import { syncFpsMeter } from '../game/fpsMeter.js';
 import {
@@ -24,8 +24,9 @@ import {
 } from '../game/settings.js';
 import { clampVolume } from '../game/audioPolicy.js';
 import { cssInsetsToGame, layoutSettings, readSafeAreaInsets, verticalCameraScroll } from '../game/viewport.js';
+import { LOCALES, getLocale, setLocale, t } from '../i18n/index.js';
 
-const FX_LABEL = { high: '高', low: '低', off: '关' };
+const FX_KEYS = { high: 'settings.fxHigh', low: 'settings.fxLow', off: 'settings.fxOff' };
 
 /**
  * 把热区登记进输入名单。
@@ -84,7 +85,7 @@ function createSlider(scene, { label, value, onChange }) {
 
   function paint() {
     const muted = getSynth().muted;
-    readout.setText(muted ? '静音' : String(Math.round(state.value * 100)));
+    readout.setText(muted ? t('settings.muted') : String(Math.round(state.value * 100)));
     track.clear();
     const w = state.trackW;
     const h = 18;
@@ -171,7 +172,12 @@ function createSlider(scene, { label, value, onChange }) {
       if (zone.input) zone.input.enabled = state.enabled;
       caption.setPosition(-row.w / 2 + 8, -8);
       readout.setPosition(row.w / 2 - 8, -8);
+      caption.setFontSize(26);
+      shrinkToWidth(caption, Math.max(80, row.w * 0.48), 14);
       paint();
+    },
+    setCaption(text) {
+      caption.setText(text);
     },
     refresh() {
       paint();
@@ -192,15 +198,15 @@ export class SettingsScene extends Phaser.Scene {
     const settings = currentSettings();
     const synth = getSynth();
 
-    this.title = addCandyText(this, 0, 0, '设置', {
+    this.title = addCandyText(this, 0, 0, t('settings.title'), {
       size: 40,
       color: '#ffe14a',
       stroke: '#3b0764',
       strokeThickness: 6,
-    }).setDepth(20);
+    }).setScrollFactor(0).setDepth(20);
 
     this.music = createSlider(this, {
-      label: '音乐音量',
+      label: t('settings.music'),
       value: synth.musicVolume,
       onChange: (value) => {
         getSynth().setMusicVolume(value);
@@ -208,7 +214,7 @@ export class SettingsScene extends Phaser.Scene {
       },
     });
     this.sfx = createSlider(this, {
-      label: '音效音量',
+      label: t('settings.sfx'),
       value: synth.sfxVolume,
       onChange: (value) => {
         getSynth().setSfxVolume(value);
@@ -217,7 +223,7 @@ export class SettingsScene extends Phaser.Scene {
     });
 
     this.vibrateBtn = createCandyButton(this, {
-      label: settings.vibrate ? '震动  开' : '震动  关',
+      label: settings.vibrate ? t('settings.vibrateOn') : t('settings.vibrateOff'),
       variant: settings.vibrate ? 'mint' : 'coral',
       width: 420,
       height: 76,
@@ -226,7 +232,7 @@ export class SettingsScene extends Phaser.Scene {
       onClick: () => this.toggleVibrate(),
     });
     this.fpsBtn = createCandyButton(this, {
-      label: '显示帧率  关',
+      label: t('settings.fpsOff'),
       variant: 'grape',
       width: 420,
       height: 76,
@@ -234,14 +240,14 @@ export class SettingsScene extends Phaser.Scene {
       depth: 30,
       onClick: () => this.toggleFps(),
     });
-    this.fxLabel = addCandyText(this, 0, 0, '画面特效', {
+    this.fxLabel = addCandyText(this, 0, 0, t('settings.fx'), {
       size: 26,
       color: '#ffffff',
       stroke: '#3b0764',
       strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(30);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(30);
     this.fxButtons = ['high', 'low', 'off'].map((id) => createCandyButton(this, {
-      label: FX_LABEL[id],
+      label: t(FX_KEYS[id]),
       variant: settings.fx === id ? 'lemon' : 'sky',
       width: 160,
       height: 76,
@@ -250,7 +256,7 @@ export class SettingsScene extends Phaser.Scene {
       onClick: () => this.setFx(id),
     }));
     this.resetBtn = createCandyButton(this, {
-      label: '重置进度',
+      label: t('settings.reset'),
       variant: 'coral',
       width: 240,
       height: 76,
@@ -259,7 +265,7 @@ export class SettingsScene extends Phaser.Scene {
       onClick: () => this.openConfirm(),
     });
     this.backBtn = createCandyButton(this, {
-      label: '返回',
+      label: t('settings.back'),
       variant: 'sky',
       width: 180,
       height: 76,
@@ -274,7 +280,22 @@ export class SettingsScene extends Phaser.Scene {
       .setDepth(200)
       .setVisible(false);
     this.dialog = this.add.graphics().setScrollFactor(0).setDepth(210).setVisible(false);
-    this.dialogText = this.add.text(0, 0, '确定清除星星、解锁记录和无尽最高纪录？', textStyle({
+    this.langLabel = addCandyText(this, 0, 0, t('settings.language'), {
+      size: 26,
+      color: '#ffffff',
+      stroke: '#3b0764',
+      strokeThickness: 5,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(30);
+    this.langButtons = LOCALES.map((id) => createCandyButton(this, {
+      label: t(`settings.lang.${id}`),
+      variant: getLocale() === id ? 'lemon' : 'sky',
+      width: 120,
+      height: 76,
+      fontSize: 22,
+      depth: 30,
+      onClick: () => this.chooseLocale(id),
+    }));
+    this.dialogText = this.add.text(0, 0, t('settings.confirmBody'), textStyle({
       size: 26,
       color: '#4a1468',
       stroke: '#ffffff',
@@ -283,7 +304,7 @@ export class SettingsScene extends Phaser.Scene {
       wordWrap: { width: 420 },
     })).setOrigin(0.5).setScrollFactor(0).setDepth(220).setVisible(false);
     this.cancelBtn = createCandyButton(this, {
-      label: '取消',
+      label: t('settings.cancel'),
       variant: 'sky',
       width: 168,
       height: 76,
@@ -292,7 +313,7 @@ export class SettingsScene extends Phaser.Scene {
       onClick: () => this.closeConfirm(),
     });
     this.confirmBtn = createCandyButton(this, {
-      label: '确定',
+      label: t('settings.ok'),
       variant: 'coral',
       width: 188,
       height: 76,
@@ -313,6 +334,7 @@ export class SettingsScene extends Phaser.Scene {
       fxHigh: this.fxButtons[0],
       fxLow: this.fxButtons[1],
       fxOff: this.fxButtons[2],
+      lang: this.langButtons,
       reset: this.resetBtn,
       back: this.backBtn,
       cancel: this.cancelBtn,
@@ -334,7 +356,7 @@ export class SettingsScene extends Phaser.Scene {
 
   /** 主控件在确认框打开时停用，避免点到后面的滑条。 */
   mainControls() {
-    return [this.music, this.sfx, this.vibrateBtn, this.fpsBtn, ...this.fxButtons, this.resetBtn, this.backBtn];
+    return [this.music, this.sfx, this.vibrateBtn, this.fpsBtn, ...this.fxButtons, ...this.langButtons, this.resetBtn, this.backBtn];
   }
 
   refreshAudioLabels() {
@@ -344,7 +366,7 @@ export class SettingsScene extends Phaser.Scene {
 
   refreshFpsLabel() {
     const on = shouldShowFps(currentSettings(), window.location.search);
-    this.fpsBtn.setLabel(on ? '显示帧率  开' : '显示帧率  关');
+    this.fpsBtn.setLabel(on ? t('settings.fpsOn') : t('settings.fpsOff'));
     this.fpsBtn.setVariant(on ? 'sky' : 'grape');
   }
 
@@ -352,7 +374,7 @@ export class SettingsScene extends Phaser.Scene {
     if (this.confirming) return;
     const next = !currentSettings().vibrate;
     updateSettings({ vibrate: next });
-    this.vibrateBtn.setLabel(next ? '震动  开' : '震动  关');
+    this.vibrateBtn.setLabel(next ? t('settings.vibrateOn') : t('settings.vibrateOff'));
     this.vibrateBtn.setVariant(next ? 'mint' : 'coral');
   }
 
@@ -403,11 +425,49 @@ export class SettingsScene extends Phaser.Scene {
   confirmReset() {
     resetAllProgress();
     saveSettings(currentSettings());
-    this.resetBtn.setLabel('已清除');
+    this._resetFlash = true;
+    this.resetBtn.setLabel(t('settings.resetDone'));
     this.closeConfirm();
     this.time.delayedCall(700, () => {
-      if (this.resetBtn?.setLabel) this.resetBtn.setLabel('重置进度');
+      this._resetFlash = false;
+      if (this.resetBtn?.setLabel) this.resetBtn.setLabel(t('settings.reset'));
     });
+  }
+
+  /** 设置里改语言。这一页立刻换字，其它场景下次进来时用新语言。 */
+  chooseLocale(id) {
+    if (this.confirming || id === getLocale()) return;
+    setLocale(id);
+    this.applyLanguage();
+  }
+
+  /** 把设置页上所有能看见的字换成当前语言。 */
+  applyLanguage() {
+    this.title.setText(t('settings.title'));
+    this.music.setCaption(t('settings.music'));
+    this.sfx.setCaption(t('settings.sfx'));
+    this.music.refresh();
+    this.sfx.refresh();
+    const settings = currentSettings();
+    this.vibrateBtn.setLabel(settings.vibrate ? t('settings.vibrateOn') : t('settings.vibrateOff'));
+    this.refreshFpsLabel();
+    this.fxLabel.setText(t('settings.fx'));
+    this.fxButtons.forEach((button, index) => {
+      const id = ['high', 'low', 'off'][index];
+      button.setLabel(t(FX_KEYS[id]));
+    });
+    this.langLabel.setText(t('settings.language'));
+    this.langButtons.forEach((button, index) => {
+      const id = LOCALES[index];
+      button.setLabel(t(`settings.lang.${id}`));
+      button.setVariant(id === getLocale() ? 'lemon' : 'sky');
+    });
+    this.resetBtn.setLabel(this._resetFlash ? t('settings.resetDone') : t('settings.reset'));
+    this.backBtn.setLabel(t('settings.back'));
+    this.dialogText.setText(t('settings.confirmBody'));
+    this.cancelBtn.setLabel(t('settings.cancel'));
+    this.confirmBtn.setLabel(t('settings.ok'));
+    if (this.layout) this.applyViewport();
   }
 
   applyViewport() {
@@ -428,9 +488,19 @@ export class SettingsScene extends Phaser.Scene {
     this.vibrateBtn.setPosition(layout.vibrate.x, layout.vibrate.y);
     this.fpsBtn.setSize(layout.fps.w, layout.fps.h);
     this.fpsBtn.setPosition(layout.fps.x, layout.fps.y);
+    this.fxLabel.setFontSize(26);
     this.fxLabel.setPosition(layout.fxLabel.x, layout.fxLabel.y);
+    shrinkToWidth(this.fxLabel, layout.fxLabel.w - 8, 14);
     this.fxButtons.forEach((button, index) => {
       const spot = layout.fxButtons[index];
+      button.setSize(spot.w, spot.h);
+      button.setPosition(spot.x, spot.y);
+    });
+    this.langLabel.setFontSize(26);
+    this.langLabel.setPosition(layout.langLabel.x, layout.langLabel.y);
+    shrinkToWidth(this.langLabel, layout.langLabel.w - 8, 14);
+    this.langButtons.forEach((button, index) => {
+      const spot = layout.langButtons[index];
       button.setSize(spot.w, spot.h);
       button.setPosition(spot.x, spot.y);
     });
@@ -443,7 +513,10 @@ export class SettingsScene extends Phaser.Scene {
     paintCandyPanel(this.dialog, layout.dialog.x, layout.dialog.y, layout.dialog.w, layout.dialog.h);
     this.dialogText.setPosition(layout.dialog.x + layout.dialog.w / 2, layout.dialog.y + 78);
     this.dialogText.setWordWrapWidth(layout.dialog.w - 48);
+    this.cancelBtn.setSize(layout.cancel.w, layout.cancel.h);
+    this.confirmBtn.setSize(layout.confirm.w, layout.confirm.h);
     this.cancelBtn.setPosition(layout.cancel.x, layout.cancel.y);
     this.confirmBtn.setPosition(layout.confirm.x, layout.confirm.y);
+    shrinkToWidth(this.dialogText, layout.dialog.w - 48, 16);
   }
 }

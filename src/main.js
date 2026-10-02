@@ -15,6 +15,7 @@ import { bindAndroidBack } from './platform/androidBack.js';
 import { bindAudioLifecycle, getSynth } from './game/audio.js';
 import { syncFpsMeter } from './game/fpsMeter.js';
 import { applyViewportFill } from './game/viewport.js';
+import { initLocale } from './i18n/index.js';
 
 const config = {
   type: Phaser.AUTO,
@@ -66,9 +67,12 @@ function bindViewportFill() {
 
 async function main() {
   bindViewportFill();
+  // 第一帧标题就要用对的语言，所以先于场景创建。
+  initLocale();
   if (document.fonts?.load) {
     try {
       await document.fonts.load('32px GameFont');
+      await document.fonts.load('32px GameFontCJK');
       await document.fonts.ready;
     } catch {
       // 字体失败时仍启动游戏，系统字体可以顶上。

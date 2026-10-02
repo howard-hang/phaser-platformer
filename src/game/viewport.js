@@ -369,8 +369,8 @@ export function layoutWinPanel({
 }
 
 /**
- * 设置页。标题、两条音量、震动、特效、帧率、底部两个按钮。
- * 高度按 540 排得下，每个控件的点击区都不低于糖果按钮，方便手指。
+ * 设置页。标题、两条音量、震动、特效、帧率、语言、底部两个按钮。
+ * 540 高的小屏会把行高压到仍能点的高度，七行都留在画面里。
  */
 export function layoutSettings({
   viewWidth,
@@ -381,11 +381,17 @@ export function layoutSettings({
   const bottomInset = (insets.bottom || 0) + 8;
   const side = Math.max(insets.left || 0, insets.right || 0) + 28;
   const panelW = Math.max(420, Math.min(720, viewWidth - side * 2));
-  const rowH = CANDY_BUTTON_H;
-  const gap = 4;
-  const titleH = 36;
-  const avail = Math.max(rowH, viewHeight - top - bottomInset);
-  const block = titleH + gap + 6 * rowH + 5 * gap;
+  const titleH = 40;
+  const rowCount = 7;
+  const avail = Math.max(CANDY_BUTTON_H, viewHeight - top - bottomInset);
+  let gap = 4;
+  let rowH = CANDY_BUTTON_H;
+  const blockOf = () => titleH + rowCount * rowH + rowCount * gap;
+  while (blockOf() > avail && gap > 2) gap -= 1;
+  while (blockOf() > avail && rowH > 66) rowH -= 1;
+  while (blockOf() > avail && gap > 1) gap -= 1;
+  while (blockOf() > avail && rowH > 52) rowH -= 1;
+  const block = blockOf();
   const y0 = top + Math.max(0, (avail - block) / 2);
   let cursor = y0;
   const cx = viewWidth / 2;
@@ -401,6 +407,7 @@ export function layoutSettings({
   const vibrate = row();
   const fx = row();
   const fps = row();
+  const language = row();
   const actions = row();
 
   const actionGap = 16;
@@ -425,6 +432,26 @@ export function layoutSettings({
     x: fx.x - panelW / 2 + fxLabelW / 2,
     y: fx.y,
     w: fxLabelW,
+    h: rowH,
+  };
+
+  // 五种语言并排。标签窄一点，按钮仍够手指点。
+  const langGap = 8;
+  const langLabelW = panelW < 560 ? 108 : 150;
+  const langIds = ['zh', 'en', 'es', 'ja', 'ko'];
+  const langInner = panelW - langLabelW;
+  const langW = (langInner - langGap * (langIds.length - 1)) / langIds.length;
+  const langButtons = langIds.map((id, index) => ({
+    id,
+    x: language.x - panelW / 2 + langLabelW + langW / 2 + index * (langW + langGap),
+    y: language.y,
+    w: langW,
+    h: rowH,
+  }));
+  const langLabel = {
+    x: language.x - panelW / 2 + langLabelW / 2,
+    y: language.y,
+    w: langLabelW,
     h: rowH,
   };
 
@@ -460,6 +487,9 @@ export function layoutSettings({
     fxLabel,
     fxButtons,
     fps,
+    language,
+    langLabel,
+    langButtons,
     reset,
     back,
     dialog,

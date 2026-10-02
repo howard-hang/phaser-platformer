@@ -12,9 +12,11 @@ import {
   createCandyButton,
   createFixedDigits,
   paintCandyPanel,
+  shrinkToWidth,
   textStyle,
 } from './candy.js';
 import { powerIconKey, powerRatio } from '../logic/powerups.js';
+import { t } from '../i18n/index.js';
 
 const HUD_SIZE = 26;
 
@@ -71,13 +73,13 @@ export function createHud(scene, {
   let stars;
   if (showStats) {
     if (endless) {
-      score = createStat(scene, '距离', '#3de4ff', 5);
-      deaths = createStat(scene, '星星', '#ffffff', 4);
-      stars = createStat(scene, '纪录', '#ffe14a', 5);
+      score = createStat(scene, t('hud.distance'), '#3de4ff', 5);
+      deaths = createStat(scene, t('hud.stars'), '#ffffff', 4);
+      stars = createStat(scene, t('hud.record'), '#ffe14a', 5);
     } else {
-      score = createStat(scene, 'SCORE', '#3de4ff', 4);
-      deaths = createStat(scene, 'DEATHS', '#ff3b30', 3);
-      stars = createStat(scene, 'STARS', '#ffffff', 1);
+      score = createStat(scene, t('hud.score'), '#3de4ff', 4);
+      deaths = createStat(scene, t('hud.deaths'), '#ff3b30', 3);
+      stars = createStat(scene, t('hud.stars'), '#ffffff', 1);
     }
   }
 
@@ -224,7 +226,7 @@ function formatTime(ms) {
  */
 export function showWinPanel(scene, stats, actions) {
   const panel = scene.add.graphics().setScrollFactor(0).setDepth(200).setData('ui', true);
-  const title = addCandyText(scene, 0, 0, `第 ${stats.index} 关通关`, {
+  const title = addCandyText(scene, 0, 0, t('win.title', { index: stats.index }), {
     size: 36,
     color: PANEL.title,
     stroke: '#ffffff',
@@ -259,7 +261,7 @@ export function showWinPanel(scene, stats, actions) {
     return icon;
   });
   const replay = createCandyButton(scene, {
-    label: '再玩一次',
+    label: t('win.replay'),
     variant: 'pink',
     width: 180,
     fontSize: 26,
@@ -276,7 +278,7 @@ export function showWinPanel(scene, stats, actions) {
     onClick: () => scene.time.delayedCall(0, actions.onNext),
   });
   const select = createCandyButton(scene, {
-    label: '选关',
+    label: t('win.select'),
     variant: 'sky',
     width: 156,
     fontSize: 26,
@@ -300,8 +302,14 @@ export function showWinPanel(scene, stats, actions) {
       starIcons.forEach((icon, index) => {
         icon.setPosition(layout.stars.x + (index - 1) * 52, layout.stars.y);
       });
-      body.setText(`分数 ${stats.score}    死亡 ${stats.deaths}\n用时 ${formatTime(stats.timeMs)}`);
+      body.setText(t('win.body', {
+        score: stats.score,
+        deaths: stats.deaths,
+        time: formatTime(stats.timeMs),
+      }));
+      shrinkToWidth(body, layout.body.w, 16);
       body.setPosition(layout.body.x, layout.body.y);
+      shrinkToWidth(title, layout.title.w, 22);
       buttons.forEach((button, index) => {
         const slot = layout.buttons[index];
         button.setPosition(slot.x, slot.y);
@@ -318,7 +326,7 @@ export function showWinPanel(scene, stats, actions) {
  */
 export function showEndlessPanel(scene, stats, actions) {
   const panel = scene.add.graphics().setScrollFactor(0).setDepth(200).setData('ui', true);
-  const title = addCandyText(scene, 0, 0, stats.improved ? '新纪录' : '本局结束', {
+  const title = addCandyText(scene, 0, 0, stats.improved ? t('endless.titleNew') : t('endless.titleOver'), {
     size: 36,
     color: PANEL.title,
     stroke: '#ffffff',
@@ -326,9 +334,9 @@ export function showEndlessPanel(scene, stats, actions) {
     shadow: true,
   }).setScrollFactor(0).setDepth(210).setData('ui', true);
   const recordLine = stats.improved
-    ? '打破了最高纪录'
-    : `最高纪录 ${stats.best} 米`;
-  const body = scene.add.text(0, 0, `距离 ${stats.distance} 米\n星星 ${stats.stars}\n${recordLine}`, textStyle({
+    ? t('endless.improved')
+    : t('endless.bestLine', { best: stats.best });
+  const body = scene.add.text(0, 0, `${t('endless.distanceLine', { distance: stats.distance })}\n${t('endless.starsLine', { stars: stats.stars })}\n${recordLine}`, textStyle({
     size: 24,
     color: PANEL.body,
     stroke: '#ffffff',
@@ -338,7 +346,7 @@ export function showEndlessPanel(scene, stats, actions) {
     shadow: false,
   })).setOrigin(0.5).setScrollFactor(0).setDepth(210).setData('ui', true);
   const replay = createCandyButton(scene, {
-    label: '再来一次',
+    label: t('endless.replay'),
     variant: 'pink',
     width: 220,
     fontSize: 28,
@@ -346,7 +354,7 @@ export function showEndlessPanel(scene, stats, actions) {
     onClick: () => scene.time.delayedCall(0, actions.onReplay),
   });
   const home = createCandyButton(scene, {
-    label: '回主页',
+    label: t('endless.home'),
     variant: 'sky',
     width: 200,
     fontSize: 28,
@@ -371,7 +379,9 @@ export function showEndlessPanel(scene, stats, actions) {
       });
       paintCandyPanel(panel, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
       title.setPosition(layout.title.x, layout.title.y);
+      shrinkToWidth(title, layout.title.w, 22);
       body.setPosition(layout.body.x, layout.body.y);
+      shrinkToWidth(body, layout.body.w, 16);
       buttons.forEach((button, index) => {
         const slot = layout.buttons[index];
         button.setPosition(slot.x, slot.y);

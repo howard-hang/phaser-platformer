@@ -13,7 +13,7 @@
 | `boot` | `src/scenes/BootScene.js` | 烤贴图，然后进标题。配置不合法时进错误页 |
 | `menu` | `src/scenes/MenuScene.js` | 标题。选关、无尽模式、右上角设置 |
 | `select` | `src/scenes/SelectScene.js` | 翻页选关，按累计星星解锁 |
-| `settings` | `src/scenes/SettingsScene.js` | 音量、震动、特效、帧率、重置进度 |
+| `settings` | `src/scenes/SettingsScene.js` | 音量、震动、特效、帧率、语言、重置进度 |
 | `game` | `src/scenes/GameScene.js` | 闯关和无尽。本身不实现障碍和手感 |
 | `error` | `src/scenes/ErrorScene.js` | 把关卡 JSON 的错误写成中文，避免白屏 |
 
@@ -126,6 +126,36 @@ JSON 由 `src/game/levelSchema.js` 对照 `src/levels/level.schema.json` 检查�
 
 `fxProfile` 把特效档位收成灰尘速率、残影条数和镜头震动比例。音量和原来的静音开关联动，静音键是 `fangkuai-audio-muted`。
 
+语言不放进上面这个对象。键是 `fangkuai-paoku-locale`，值是 `zh`、`en`、`es`、`ja`、`ko`。没写过这个键时按系统语言选，对不上就用英语。玩家在设置里点过之后才写入，下次打开以玩家的选择为准。
+
+## 界面语言
+
+玩家能看见的字都在 `src/i18n/`。代码里用 `t('键')`，带数字的用 `t('键', { count })`。五种文件的键要一致：
+
+| 文件 | 语言 |
+| --- | --- |
+| `src/i18n/zh.json` | 中文。游戏名是「方块跑酷」 |
+| `src/i18n/en.json` | 英语。没有对应语言时用这份 |
+| `src/i18n/es.json` | 西班牙语 |
+| `src/i18n/ja.json` | 日语 |
+| `src/i18n/ko.json` | 韩语 |
+
+英语、西班牙语、日语、韩语的游戏名都是 Block Runner。入口在 `src/i18n/index.js`：`initLocale` 在 `src/main.js` 里、场景创建之前调用；`setLocale` 立刻改当前语言并写入 localStorage。设置页改完会当场刷新自己的字，其它场景下次进来时读新语言。
+
+关卡 JSON 里的 `name` 仍是中文原文，选关和关卡标题显示的是 `level.1` 到 `level.20`。校验失败时的长错误还是中文诊断，只在配置坏掉时出现；错误页的标题走 `error.title`。
+
+安卓桌面名字跟着系统语言，不看游戏里的选择。默认 `android/app/src/main/res/values/strings.xml` 是 Block Runner，`values-zh` 是「方块跑酷」，`values-es`、`values-ja`、`values-ko`、`values-en` 也是 Block Runner。
+
+日语假名和韩语谚文不在站酷黄油体里。`scripts/subset-font.mjs` 另收一份 `src/assets/game-font-cjk.woff2`（Droid Sans Fallback 子集），`GameFontCJK` 排在标题字后面。缺字再落到系统黑体。
+
+### 加一条文字
+
+1. 五个 JSON 都加上同一个键。占位符写成 `{name}`，五种语言的占位符名字要一样。
+2. 调用处写 `t('键')` 或 `t('键', { name })`，不要把中文直接写进场景。
+3. 句子比较长时，按钮走 `createCandyButton` 自带的缩小，普通文字用 `shrinkToWidth`，避免 360×640 上被裁切。
+4. 跑 `node scripts/subset-font.mjs`，把新字收进字体。日语、韩语、西班牙语重音会进 CJK 兜底。
+5. `npm test`。`tests/i18n.test.js` 会核对五种文件的键和占位符。
+
 ## 加一种障碍
 
 要改的文件是固定的几处，不用再把 `GameScene.js` 通读一遍。
@@ -189,7 +219,9 @@ Node 里直接跑，不打开浏览器，也不依赖墙钟。碰撞、计分、
 | `tests/audio.test.js` | 静音、音量、视差色调 |
 | `tests/deathFx.test.js` | 碎裂时长、碎片、音效文件 |
 | `tests/androidBack.test.js` | 返回键去向 |
-| `tests/fontSubset.test.js` | 字体子集含界面用字 |
+| `tests/fontSubset.test.js` | 字体子集含界面用字，日语韩语在兜底字体里 |
+| `tests/i18n.test.js` | 五种语言文件对齐，切换后文案变化 |
+| `tests/i18n.browser.test.js` | 菜单和设置页跟着语言变，小屏不溢出 |
 
 ### 浏览器
 
@@ -223,5 +255,7 @@ npm run shots
 | `shots/select.png` | 关卡选择 |
 | `shots/playing.png` | 游戏中（第 1 关已经跑起来） |
 | `shots/settings.png` | 设置页 |
+| `shots/i18n-menus.png` | 五种语言的主菜单拼在一起（360×640） |
+| `shots/i18n-settings.png` | 五种语言的设置页拼在一起（360×640） |
 
-这个目录是生成物，不提交。
+这个目录是生成物，不提交。经典四张图固定用中文。对比图按 zh、en、es、ja、ko 从左到右排。

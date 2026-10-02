@@ -374,7 +374,9 @@ describe('设置页布局', () => {
         centerBox(layout.back),
         centerBox(layout.cancel),
         centerBox(layout.confirm),
+        centerBox(layout.langLabel),
         ...layout.fxButtons.map(centerBox),
+        ...layout.langButtons.map(centerBox),
       ];
       for (const box of boxes) {
         expect(box.l).toBeGreaterThanOrEqual(0);
@@ -386,15 +388,61 @@ describe('设置页布局', () => {
         expect(cssH).toBeGreaterThanOrEqual(44);
         expect(cssW).toBeGreaterThanOrEqual(44);
       }
-      const rows = [layout.music, layout.sfx, layout.vibrate, layout.fps, layout.reset].map(centerBox);
+      const rows = [layout.music, layout.sfx, layout.vibrate, layout.fps, layout.language, layout.reset].map(centerBox);
       for (let i = 1; i < rows.length; i += 1) {
         expect(overlaps(rows[i - 1], rows[i])).toBe(false);
       }
       const fx = layout.fxButtons.map(centerBox);
       expect(overlaps(fx[0], fx[1])).toBe(false);
       expect(overlaps(fx[1], fx[2])).toBe(false);
+      const langs = layout.langButtons.map(centerBox);
+      expect(overlaps(centerBox(layout.langLabel), langs[0])).toBe(false);
+      for (let i = 1; i < langs.length; i += 1) {
+        expect(overlaps(langs[i - 1], langs[i])).toBe(false);
+      }
       expect(overlaps(centerBox(layout.cancel), centerBox(layout.confirm))).toBe(false);
       expect(overlaps(centerBox(layout.reset), centerBox(layout.back))).toBe(false);
+    }
+  });
+
+  it('360×640 和横过来的小屏上，语言行也完整留在画面里', () => {
+    const screens = [[360, 640], [640, 360]];
+    for (const [screenW, screenH] of screens) {
+      const size = computeExpandSize(960, 540, screenW, screenH);
+      const layout = layoutSettings({
+        viewWidth: size.gameWidth,
+        viewHeight: size.gameHeight,
+      });
+      const boxes = [
+        centerBox(layout.title),
+        centerBox(layout.music),
+        centerBox(layout.sfx),
+        centerBox(layout.vibrate),
+        centerBox(layout.fx),
+        centerBox(layout.fps),
+        centerBox(layout.language),
+        centerBox(layout.langLabel),
+        centerBox(layout.reset),
+        centerBox(layout.back),
+        ...layout.fxButtons.map(centerBox),
+        ...layout.langButtons.map(centerBox),
+      ];
+      for (const box of boxes) {
+        expect(box.t, `${screenW}x${screenH}`).toBeGreaterThanOrEqual(0);
+        expect(box.b, `${screenW}x${screenH}`).toBeLessThanOrEqual(size.gameHeight + 0.5);
+        expect(box.l, `${screenW}x${screenH}`).toBeGreaterThanOrEqual(0);
+        expect(box.r, `${screenW}x${screenH}`).toBeLessThanOrEqual(size.gameWidth + 0.5);
+      }
+      const rows = [layout.music, layout.sfx, layout.vibrate, layout.fx, layout.fps, layout.language, layout.reset].map(centerBox);
+      for (let i = 1; i < rows.length; i += 1) {
+        expect(overlaps(rows[i - 1], rows[i]), `${screenW}x${screenH}`).toBe(false);
+      }
+      if (screenW > screenH) {
+        const cssH = layout.langButtons[0].h * size.scale;
+        const cssW = layout.langButtons[0].w * size.scale;
+        expect(cssH, `${screenW}x${screenH} 语言按钮高`).toBeGreaterThanOrEqual(44);
+        expect(cssW, `${screenW}x${screenH} 语言按钮宽`).toBeGreaterThanOrEqual(44);
+      }
     }
   });
 

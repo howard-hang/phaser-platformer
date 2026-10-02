@@ -125,6 +125,8 @@ export function mountEndlessPiece(scene, groups, piece) {
     const sprite = spawnPowerupSprite(scene, item);
     groups.powerups.add(sprite);
     objects.push(sprite);
+    const label = sprite.getData('label');
+    if (label) objects.push(label);
     powers.push(sprite);
     scene.powerSprites.push(sprite);
   }

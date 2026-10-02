@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { describe, expect, it } from 'vitest';
-import { collectChars, literalsInSource } from '../scripts/subset-font.mjs';
+import { collectChars, collectCjkChars, literalsInSource } from '../scripts/subset-font.mjs';
 
 describe('字体子集', () => {
   it('从字符串里收字，不把注释收进去', () => {
@@ -30,5 +30,16 @@ describe('字体子集', () => {
     expect(bytes).toBe(meta.bytes);
     expect(bytes).toBeLessThan(500 * 1024);
     expect(bytes).toBeGreaterThan(8 * 1024);
+  });
+
+  it('日语和韩语的字在兜底字体里，不会靠方框顶上', () => {
+    const meta = JSON.parse(fs.readFileSync('scripts/fonts/cjk-subset-meta.json', 'utf8'));
+    const bytes = fs.statSync('src/assets/game-font-cjk.woff2').size;
+    expect(meta.chars).toBe(collectCjkChars());
+    expect(bytes).toBe(meta.bytes);
+    expect(bytes).toBeLessThan(900 * 1024);
+    for (const ch of '設定言語ひこうき한국어설정') {
+      expect(meta.chars.includes(ch), ch).toBe(true);
+    }
   });
 });

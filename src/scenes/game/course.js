@@ -14,6 +14,7 @@ import {
 } from '../../game/endlessActors.js';
 import { THEME } from '../../game/theme.js';
 import { textStyle } from '../../game/candy.js';
+import { t } from '../../i18n/index.js';
 import {
   TUNING,
   HITBOX,
@@ -38,7 +39,7 @@ export const courseMethods = {
     this._inFlip = false;
     this.endlessGroups = createEndlessGroups(this);
     this.syncEndlessWorld(this.level.startX + 2800);
-    this.add.text(this.level.startX + 300, TUNING.groundY - 110, '点击 / 空格跳跃', textStyle({
+    this.add.text(this.level.startX + 300, TUNING.groundY - 110, t('hint.jump'), textStyle({
       size: 26,
       color: '#ffffff',
       stroke: '#2a0840',
@@ -157,7 +158,7 @@ export const courseMethods = {
       this.flags.push({ x, pole, cloth });
     }
 
-    this.add.text(this.level.startX + 300, TUNING.groundY - 110, '点击 / 空格跳跃', textStyle({
+    this.add.text(this.level.startX + 300, TUNING.groundY - 110, t('hint.jump'), textStyle({
       size: 26,
       color: '#ffffff',
       stroke: '#2a0840',
@@ -321,7 +322,7 @@ export const courseMethods = {
     const x = this.level.finishX;
     this.add.rectangle(x, TUNING.groundY - 78, 8, 156, THEME.finish).setDepth(6);
     this.add.rectangle(x + 46, TUNING.groundY - 78, 8, 156, THEME.finish).setDepth(6);
-    this.add.text(x + 23, TUNING.groundY - 180, '终点', textStyle({
+    this.add.text(x + 23, TUNING.groundY - 180, t('hint.finish'), textStyle({
       size: 28,
       color: '#ffe14a',
       stroke: '#3b0764',
