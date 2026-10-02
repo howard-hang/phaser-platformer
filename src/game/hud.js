@@ -54,16 +54,23 @@ function createStat(scene, label, color, digits) {
   };
 }
 
-/** 创建常驻 HUD。onHome 只在关卡里需要。 */
-export function createHud(scene, { onHome = null, showStats = true } = {}) {
+/** 创建常驻 HUD。onHome 只在关卡里需要。无尽模式换成距离、星星和纪录。 */
+export function createHud(scene, { onHome = null, showStats = true, variant = 'campaign' } = {}) {
   const showFullscreen = shouldShowFullscreenButton(isNativeShell());
+  const endless = variant === 'endless';
   let score;
   let deaths;
   let stars;
   if (showStats) {
-    score = createStat(scene, 'SCORE', '#3de4ff', 4);
-    deaths = createStat(scene, 'DEATHS', '#ff3b30', 3);
-    stars = createStat(scene, 'STARS', '#ffffff', 1);
+    if (endless) {
+      score = createStat(scene, '距离', '#3de4ff', 5);
+      deaths = createStat(scene, '星星', '#ffffff', 4);
+      stars = createStat(scene, '纪录', '#ffe14a', 5);
+    } else {
+      score = createStat(scene, 'SCORE', '#3de4ff', 4);
+      deaths = createStat(scene, 'DEATHS', '#ff3b30', 3);
+      stars = createStat(scene, 'STARS', '#ffffff', 1);
+    }
   }
 
   const sound = createCandyButton(scene, {
@@ -135,6 +142,12 @@ export function createHud(scene, { onHome = null, showStats = true } = {}) {
     jumpGuard: { left: 740, bottom: 120 },
     setStats(state) {
       if (!showStats) return;
+      if (endless) {
+        score.setValue(state.distance ?? 0);
+        deaths.setValue(state.stars ?? 0);
+        stars.setValue(state.best ?? 0);
+        return;
+      }
       score.setValue(state.score);
       deaths.setValue(state.deaths);
       stars.setValue(state.stars);
@@ -258,6 +271,76 @@ export function showWinPanel(scene, stats, actions) {
         icon.setPosition(layout.stars.x + (index - 1) * 52, layout.stars.y);
       });
       body.setText(`分数 ${stats.score}    死亡 ${stats.deaths}\n用时 ${formatTime(stats.timeMs)}`);
+      body.setPosition(layout.body.x, layout.body.y);
+      buttons.forEach((button, index) => {
+        const slot = layout.buttons[index];
+        button.setPosition(slot.x, slot.y);
+      });
+    },
+  };
+  view.relayout(scene.scale.width, scene.scale.height);
+  return view;
+}
+
+/**
+ * 无尽模式结算。距离、星星、有没有刷新纪录。
+ * 再来一次和回主页都是糖果按钮，热区和按钮一样大。
+ */
+export function showEndlessPanel(scene, stats, actions) {
+  const panel = scene.add.graphics().setScrollFactor(0).setDepth(200).setData('ui', true);
+  const title = addCandyText(scene, 0, 0, stats.improved ? '新纪录' : '本局结束', {
+    size: 36,
+    color: PANEL.title,
+    stroke: '#ffffff',
+    strokeThickness: 5,
+    shadow: true,
+  }).setScrollFactor(0).setDepth(210).setData('ui', true);
+  const recordLine = stats.improved
+    ? '打破了最高纪录'
+    : `最高纪录 ${stats.best} 米`;
+  const body = scene.add.text(0, 0, `距离 ${stats.distance} 米\n星星 ${stats.stars}\n${recordLine}`, textStyle({
+    size: 24,
+    color: PANEL.body,
+    stroke: '#ffffff',
+    strokeThickness: 3,
+    align: 'center',
+    lineSpacing: 8,
+    shadow: false,
+  })).setOrigin(0.5).setScrollFactor(0).setDepth(210).setData('ui', true);
+  const replay = createCandyButton(scene, {
+    label: '再来一次',
+    variant: 'pink',
+    width: 220,
+    fontSize: 28,
+    depth: 260,
+    onClick: () => scene.time.delayedCall(0, actions.onReplay),
+  });
+  const home = createCandyButton(scene, {
+    label: '回主页',
+    variant: 'sky',
+    width: 200,
+    fontSize: 28,
+    depth: 260,
+    onClick: () => scene.time.delayedCall(0, actions.onHome),
+  });
+  const buttons = [replay, home];
+  const view = {
+    panel,
+    title,
+    body,
+    buttons,
+    relayout(viewWidth, viewHeight, insets = { top: 0, right: 0, bottom: 0, left: 0 }) {
+      if (!panel.scene?.sys || !panel.active) return;
+      const layout = layoutWinPanel({
+        viewWidth,
+        viewHeight,
+        insets,
+        buttonWidths: [220, 200],
+        starRow: false,
+        bodyLines: 3,
+      });
+      paintCandyPanel(panel, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
+      title.setPosition(layout.title.x, layout.title.y);
       body.setPosition(layout.body.x, layout.body.y);
       buttons.forEach((button, index) => {
         const slot = layout.buttons[index];

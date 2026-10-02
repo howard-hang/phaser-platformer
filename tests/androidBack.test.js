@@ -7,6 +7,11 @@ describe('安卓返回键', () => {
     expect(androidBackAction({ gameActive: true, selectActive: true })).toBe('select');
   });
 
+  it('无尽模式进行中回到标题', () => {
+    expect(androidBackAction({ gameActive: true, selectActive: false, endless: true })).toBe('menu');
+    expect(androidBackAction({ gameActive: true, selectActive: true, endless: true })).toBe('menu');
+  });
+
   it('选关界面回到标题', () => {
     expect(androidBackAction({ gameActive: false, selectActive: true })).toBe('menu');
   });

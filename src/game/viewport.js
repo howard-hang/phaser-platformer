@@ -304,6 +304,8 @@ export function layoutWinPanel({
   buttonWidths = [180, 248, 156],
   buttonHeight = CANDY_BUTTON_H,
   buttonGap = 14,
+  starRow = true,
+  bodyLines = 2,
 } = {}) {
   const topLimit = (insets.top || 0) + 96;
   const bottomLimit = viewHeight - ((insets.bottom || 0) + 12);
@@ -320,13 +322,13 @@ export function layoutWinPanel({
   }
   const w = Math.min(680, Math.max(buttonsTotal + 40, Math.min(640, maxW)));
   const availH = Math.max(220, bottomLimit - topLimit);
-  const h = Math.min(372, availH);
-  const x = (viewWidth - w) / 2;
-  const y = topLimit + Math.max(0, (availH - h) / 2);
   const pad = 18;
   const titleH = 52;
-  const starH = 46;
-  const bodyH = 62;
+  const starH = starRow ? 46 : 0;
+  const bodyH = bodyLines > 2 ? 96 : 62;
+  const h = Math.min(372 + (bodyLines > 2 ? 34 : 0), availH);
+  const x = (viewWidth - w) / 2;
+  const y = topLimit + Math.max(0, (availH - h) / 2);
   let cursorY = y + pad;
   const title = { x: viewWidth / 2, y: cursorY + titleH / 2, w: w - 48, h: titleH };
   cursorY += titleH + 8;

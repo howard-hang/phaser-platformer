@@ -16,6 +16,7 @@ import {
   playerCenterOnSurface,
   playerGroundY,
   rectsOverlap,
+  speedAtX,
   starRect,
 } from './world.js';
 
@@ -45,8 +46,8 @@ function canStepOnto(fromH, deckH) {
  * mustTouch 要求路径曾经站上这块平台；avoidDecks 里的平台当成不存在。
  */
 export function findClearPath(level, tuning = TUNING, options = {}) {
-  const speed = tuning.speed;
-  const step = speed * STEP;
+  // 一帧的步长跟着所在分段的速度走。闯关只有一个速度，算出来和原来相同。
+  const stepAt = (x) => speedAtX(x, level, tuning) * STEP;
   const groundY = playerGroundY(tuning);
   const ceilingY = playerCeilingY();
   const finishX = level.finishX;
@@ -87,7 +88,7 @@ export function findClearPath(level, tuning = TUNING, options = {}) {
     rect: starRect(star, tuning),
   }));
 
-  const horizon = speed * 0.95;
+  const horizonAt = (x) => speedAtX(x, level, tuning) * 0.95;
 
   function timeAt(x) {
     return courseTime(x, level, tuning);
@@ -140,7 +141,7 @@ export function findClearPath(level, tuning = TUNING, options = {}) {
 
   /** 前方一个跳跃距离内还有要处理的东西，才值得逐帧分叉。 */
   function interesting(x, mask, surface) {
-    const far = x + horizon;
+    const far = x + horizonAt(x);
     const back = x - 48;
     for (let i = firstObstacleIndex(back); i < indexed.length; i += 1) {
       const item = indexed[i];
@@ -214,7 +215,7 @@ export function findClearPath(level, tuning = TUNING, options = {}) {
     const deck = deckById.get(surface);
     while (cx < finishX) {
       if (interesting(cx, nextMask, surface)) break;
-      const nx = cx + step;
+      const nx = cx + stepAt(cx);
       if (deck && nx > deck.x1 - 8) break;
       if (surface === 'floor' && gravitySignAt(nx, level) < 0) break;
       if (surface === 'ceiling' && gravitySignAt(nx, level) > 0) break;
@@ -279,12 +280,12 @@ export function findClearPath(level, tuning = TUNING, options = {}) {
       continue;
     }
     // 跑进反转区会浮到天花板，跑出反转区会落回地面。这两段没有选择。
-    if (state.surface === 'floor' && gravitySignAt(state.x + step, level) < 0) {
+    if (state.surface === 'floor' && gravitySignAt(state.x + stepAt(state.x), level) < 0) {
       const risen = integrate(state.x, y, 0, state.mask, state.touch);
       if (risen) stack.push(risen);
       continue;
     }
-    if (state.surface === 'ceiling' && gravitySignAt(state.x + step, level) > 0) {
+    if (state.surface === 'ceiling' && gravitySignAt(state.x + stepAt(state.x), level) > 0) {
       const fallen = integrate(state.x, y, 0, state.mask, state.touch);
       if (fallen) stack.push(fallen);
       continue;
@@ -303,7 +304,7 @@ export function findClearPath(level, tuning = TUNING, options = {}) {
     const jumped = integrate(state.x, y, jumpVy, state.mask, state.touch);
     if (jumped) stack.push(jumped);
 
-    const nx = state.x + step;
+    const nx = state.x + stepAt(state.x);
     if (deck && nx > deck.x1 - 4) continue;
     if (!hitsAt(nx, y)) {
       stack.push({

@@ -1,6 +1,6 @@
 /**
  * 标题页。背景仍是关卡那套视差，标题和按钮随画面居中。
- * 「方块跑酷」用分色厚描边，选关是一颗糖果主按钮。
+ * 「方块跑酷」用分色厚描边。选关和无尽模式都是糖果按钮，无尽模式一开始就能进。
  */
 import Phaser from 'phaser';
 import { TUNING } from '../logic/world.js';
@@ -39,12 +39,24 @@ export class MenuScene extends Phaser.Scene {
     this.start = createCandyButton(this, {
       label: '选关',
       variant: 'pink',
-      width: 280,
+      width: 188,
       fontSize: 34,
       depth: 20,
       onClick: () => {
         getSynth().unlock();
         this.scene.start('select');
+      },
+    });
+    // 无尽模式不看星星，和选关并排，样式仍是同一套糖果按钮。
+    this.endlessButton = createCandyButton(this, {
+      label: '无尽模式',
+      variant: 'grape',
+      width: 210,
+      fontSize: 32,
+      depth: 20,
+      onClick: () => {
+        getSynth().unlock();
+        this.scene.start('game', { mode: 'endless' });
       },
     });
 
@@ -76,7 +88,11 @@ export class MenuScene extends Phaser.Scene {
     const mid = (topGuard + bottomGuard) / 2;
     this.logo.setPosition(layout.centerX, mid - 128);
     this.subtitle.setPosition(layout.centerX, mid - 4);
-    this.start.setPosition(layout.centerX, mid + 116);
+    const buttonY = mid + 116;
+    const pairGap = 18;
+    const pair = 188 + 210 + pairGap;
+    this.start.setPosition(layout.centerX - pair / 2 + 188 / 2, buttonY);
+    this.endlessButton.setPosition(layout.centerX + pair / 2 - 210 / 2, buttonY);
     tintParallax(this.parallax, 0);
   }
 }
