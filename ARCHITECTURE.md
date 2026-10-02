@@ -223,5 +223,7 @@ npm run shots
 | `shots/select.png` | 关卡选择 |
 | `shots/playing.png` | 游戏中（第 1 关已经跑起来） |
 | `shots/settings.png` | 设置页 |
+| `shots/settings-portrait.png` | 设置页，360×640，带安全区 |
+| `shots/settings-landscape.png` | 设置页，844×390，带安全区 |
 
 这个目录是生成物，不提交。
