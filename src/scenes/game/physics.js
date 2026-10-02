@@ -93,23 +93,13 @@ export const physicsMethods = {
       this._dustCarry = 0;
     }
     visual.setPosition(this.player.x, this.player.y);
-    visual.setScale(next.scaleX, next.scaleY);
-    visual.setAngle(next.angle);
+    // 方块保持正方形，不跟着跑动压扁，也不在空中旋转。
+    visual.setScale(1, 1);
+    visual.setAngle(0);
     const flicker = !this.power?.kind
       && this.power?.invulnUntil > this.powerClock
       && Math.floor(this.powerClock * 16) % 2 === 0;
     visual.setAlpha(flicker ? 0.35 : 1);
-    const ghosts = this.trail || [];
-    for (let i = 0; i < ghosts.length; i += 1) {
-      const ghost = ghosts[i];
-      const show = !held && i < profile.trails && !!next.trail && visual.visible;
-      ghost.setVisible(show);
-      if (!show) continue;
-      const gap = 32 + i * 20;
-      ghost.setPosition(this.player.x - gap, this.player.y);
-      ghost.setScale(next.scaleX * (0.92 - i * 0.06), next.scaleY);
-      ghost.setAngle(0);
-    }
     if (this.shield) {
       const armed = this.power?.kind === 'armor' && visual.visible;
       this.shield.setVisible(armed);
@@ -175,13 +165,9 @@ export const physicsMethods = {
     this.player.body.updateFromGameObject();
     this.player.body.setVelocityX(this.runSpeed());
     this.physics.add.collider(this.player, this.ground);
-    // 碰撞体不缩放、不旋转。看得见的挤压、残影和转角画在另一张贴图上。
+    // 碰撞体不缩放、不旋转。看得见的方块是另一张同尺寸贴图，只负责彩色灰尘。
     this.player.setVisible(false);
     this.runner = this.add.image(this.level.startX, y, 'player').setDepth(8);
-    this.trail = [0.45, 0.28, 0.16].map((alpha) => this.add.image(this.level.startX, y, 'player-ghost')
-      .setDepth(7)
-      .setAlpha(alpha)
-      .setVisible(false));
     this.shield = this.add.image(this.level.startX, y, 'armor-shield').setDepth(9).setVisible(false);
     // 翅膀和二段跳标记跟着方块，没有道具时不画。
     this.ride = this.add.image(0, 0, 'ride-wings').setDepth(7).setVisible(false);
@@ -216,12 +202,9 @@ export const physicsMethods = {
     return false;
   },
 
-  /** 物理步里累加旋转，一整圈刚好赶在落地前转完。飞机保持平飞，不转圈。 */
-  onWorldStep(delta) {
-    if (!this.rotating || this.won || this.power?.kind === 'plane') return;
-    this.airMs += delta * 1000;
-    const progress = Math.min(1, this.airMs / (this.airTimeMs * 0.92));
-    this.player.angle = 360 * progress;
+  /** 物理步钩子。方块不再空中转圈，这里不再改角度。 */
+  onWorldStep() {
+    // 以前在这里把刚体转到 360 度。现在贴图保持正的，碰撞盒也不转。
   },
 
   /**

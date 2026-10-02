@@ -67,24 +67,26 @@ describe('显示位置外推', () => {
 });
 
 describe('奔跑动画', () => {
-  it('挤压和转角只改贴图比例，空中慢慢转，落地压扁', () => {
+  it('不再压扁和旋转，起跳和落地仍标出灰尘', () => {
     let visual = { phase: 0, land: 0, angle: 0, grounded: true };
     visual = stepRunnerVisual(visual, { grounded: true, vy: 0, dt: 1 / 60, held: false });
-    expect(visual.scaleX).toBeGreaterThan(0.9);
-    expect(visual.scaleY).toBeLessThan(1.1);
+    expect(visual.scaleX).toBe(1);
+    expect(visual.scaleY).toBe(1);
     expect(visual.angle).toBe(0);
+    expect(visual.trail).toBe(false);
     visual = stepRunnerVisual(visual, { grounded: false, vy: -740, dt: 0.2, held: false });
-    expect(visual.scaleY).toBeGreaterThan(1.1);
-    expect(visual.scaleX).toBeLessThan(1);
-    expect(visual.angle).toBeCloseTo(22);
+    expect(visual.scaleX).toBe(1);
+    expect(visual.scaleY).toBe(1);
+    expect(visual.angle).toBe(0);
     expect(visual.burst).toBe('jump');
     const landed = stepRunnerVisual(visual, { grounded: true, vy: 40, dt: 1 / 60, held: false });
     expect(landed.puff).toBe(true);
     expect(landed.burst).toBe('land');
-    expect(landed.scaleY).toBeLessThan(0.9);
+    expect(landed.scaleY).toBe(1);
     expect(landed.angle).toBe(0);
     const flying = stepRunnerVisual(visual, { grounded: false, vy: 0, dt: 0.2, held: true });
     expect(flying.scaleX).toBe(1);
     expect(flying.angle).toBe(0);
+    expect(flying.burst).toBeNull();
   });
 });

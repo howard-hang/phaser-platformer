@@ -36,60 +36,30 @@ export function displayPose(pose, velocity, extraMs, stepMs, options) {
 }
 
 /**
- * 白方块的挤压和空中转角。只给贴图用，碰撞体保持原尺寸。
- * 起跳拉长，落地压扁，奔跑时轻轻起伏，空中慢慢转。
+ * 方块贴图保持原样，不再压扁、拉伸、转圈或拖残影。
+ * 仍标出起跳和落地那一帧，彩色灰尘靠这个多撒一撮。碰撞体尺寸也不变。
  */
-export function stepRunnerVisual(prev, { grounded, vy, dt, held }) {
+export function stepRunnerVisual(prev, { grounded, dt, held }) {
   const step = Math.max(0, dt || 0);
   const wasGrounded = !!prev?.grounded;
   const phase = (prev?.phase || 0) + step;
-  let land = prev?.land || 0;
-  let angle = prev?.angle || 0;
   let puff = false;
   // jump 是离地那一帧，land 是落地那一帧。灰尘在这两帧多撒一些。
   let burst = null;
-  if (held) {
-    return {
-      phase, land: 0, angle: 0, scaleX: 1, scaleY: 1, puff: false, burst: null, grounded: !!grounded, trail: false,
-    };
-  }
-  if (!grounded) {
-    if (wasGrounded) burst = 'jump';
-    angle += 110 * step;
-    land = 0;
-  } else {
-    if (!wasGrounded) {
-      land = 0.12;
-      puff = true;
-      burst = 'land';
-    }
-    angle = 0;
-    land = Math.max(0, land - step);
-  }
-  let scaleX = 1;
-  let scaleY = 1;
-  if (!grounded) {
-    const rising = vy < -30;
-    scaleY = rising ? 1.16 : 1.08;
-    scaleX = rising ? 0.86 : 0.94;
-  } else if (land > 0) {
-    const t = land / 0.12;
-    scaleY = 1 + (0.78 - 1) * t;
-    scaleX = 1 + (1.22 - 1) * t;
-  } else {
-    const bob = Math.sin(phase * 20);
-    scaleY = 1 + bob * 0.08;
-    scaleX = 1 - bob * 0.06;
+  if (!held && !grounded && wasGrounded) burst = 'jump';
+  if (!held && grounded && !wasGrounded) {
+    puff = true;
+    burst = 'land';
   }
   return {
     phase,
-    land,
-    angle,
-    scaleX,
-    scaleY,
+    land: 0,
+    angle: 0,
+    scaleX: 1,
+    scaleY: 1,
     puff,
     burst,
     grounded: !!grounded,
-    trail: grounded && land <= 0,
+    trail: false,
   };
 }

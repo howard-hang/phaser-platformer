@@ -45,6 +45,30 @@ async function waitFrames(page, count) {
   }, { timeout: WAIT_MS }, start, count);
 }
 
+/** 换一个视口再截设置页。安全区用 CSS 变量，和游戏里读的是同一套。 */
+async function shootSettings(page, width, height, file, insets) {
+  await page.setViewport({ width, height, isMobile: true, hasTouch: true });
+  await page.evaluate((safe) => {
+    const root = document.documentElement;
+    root.style.setProperty('--safe-area-inset-top', `${safe.top}px`);
+    root.style.setProperty('--safe-area-inset-right', `${safe.right}px`);
+    root.style.setProperty('--safe-area-inset-bottom', `${safe.bottom}px`);
+    root.style.setProperty('--safe-area-inset-left', `${safe.left}px`);
+    window.dispatchEvent(new Event('resize'));
+  }, insets);
+  // 等画布跟着视口变完，再进设置页。超时只是页面没起来时的上限。
+  await page.waitForFunction((w, h) => {
+    const bounds = window.__PHASER_GAME__?.scale?.canvasBounds;
+    return bounds && Math.abs(bounds.width - w) < 2 && Math.abs(bounds.height - h) < 2;
+  }, { timeout: WAIT_MS }, width, height);
+  await page.evaluate(() => {
+    window.__PHASER_GAME__.scene.start('settings');
+  });
+  await waitScene(page, 'settings');
+  await waitFrames(page, 8);
+  await page.screenshot({ path: path.join(outDir, file) });
+}
+
 async function main() {
   mkdirSync(outDir, { recursive: true });
   const server = await createServer({
@@ -106,6 +130,14 @@ async function main() {
     await waitScene(page, 'settings');
     await waitFrames(page, 8);
     await page.screenshot({ path: path.join(outDir, 'settings.png') });
+
+    // 小屏设置页带上刘海和底部安全区，确认返回按钮没被挡住。
+    await shootSettings(page, 360, 640, 'settings-portrait.png', {
+      top: 48, right: 0, bottom: 34, left: 0,
+    });
+    await shootSettings(page, 844, 390, 'settings-landscape.png', {
+      top: 0, right: 47, bottom: 21, left: 47,
+    });
   } finally {
     await browser.close();
     await server.close();

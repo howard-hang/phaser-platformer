@@ -398,6 +398,81 @@ describe('设置页布局', () => {
     }
   });
 
+  it('小屏竖屏和横屏上，每一项和返回按钮都在安全区内', () => {
+    // 刘海和底部横条按常见手机的 CSS 像素写，再换成游戏像素。断言只看布局，不看墙钟。
+    const phones = [
+      { w: 360, h: 640, css: { top: 48, right: 0, bottom: 34, left: 0 } },
+      { w: 390, h: 844, css: { top: 47, right: 0, bottom: 34, left: 0 } },
+      { w: 412, h: 915, css: { top: 32, right: 0, bottom: 24, left: 0 } },
+      { w: 844, h: 390, css: { top: 0, right: 47, bottom: 21, left: 47 } },
+    ];
+    const interactive = (layout) => [
+      centerBox(layout.music),
+      centerBox(layout.sfx),
+      centerBox(layout.vibrate),
+      centerBox(layout.fps),
+      centerBox(layout.reset),
+      centerBox(layout.back),
+      ...layout.fxButtons.map(centerBox),
+    ];
+    for (const phone of phones) {
+      const size = computeExpandSize(960, 540, phone.w, phone.h);
+      const pxPerCss = size.gameHeight / phone.h;
+      const insets = {
+        top: phone.css.top * pxPerCss,
+        right: phone.css.right * pxPerCss,
+        bottom: phone.css.bottom * pxPerCss,
+        left: phone.css.left * pxPerCss,
+      };
+      const layout = layoutSettings({
+        viewWidth: size.gameWidth,
+        viewHeight: size.gameHeight,
+        insets,
+        pxPerCss,
+      });
+      const safe = {
+        l: insets.left,
+        t: insets.top,
+        r: size.gameWidth - insets.right,
+        b: size.gameHeight - insets.bottom,
+      };
+      const boxes = [
+        centerBox(layout.title),
+        centerBox(layout.fxLabel),
+        ...interactive(layout),
+      ];
+      for (const box of boxes) {
+        expect(box.l, `${phone.w}x${phone.h} 左边`).toBeGreaterThanOrEqual(safe.l - 0.5);
+        expect(box.r, `${phone.w}x${phone.h} 右边`).toBeLessThanOrEqual(safe.r + 0.5);
+        expect(box.t, `${phone.w}x${phone.h} 上边`).toBeGreaterThanOrEqual(safe.t - 0.5);
+        expect(box.b, `${phone.w}x${phone.h} 下边`).toBeLessThanOrEqual(safe.b + 0.5);
+      }
+      for (const box of interactive(layout)) {
+        const cssH = (box.b - box.t) / pxPerCss;
+        const cssW = (box.r - box.l) / pxPerCss;
+        expect(cssH, `${phone.w}x${phone.h} 高度`).toBeGreaterThanOrEqual(44);
+        expect(cssW, `${phone.w}x${phone.h} 宽度`).toBeGreaterThanOrEqual(44);
+      }
+      const stack = [
+        layout.title,
+        layout.music,
+        layout.sfx,
+        layout.vibrate,
+        layout.fx,
+        layout.fps,
+        layout.reset,
+      ].map(centerBox);
+      for (let i = 1; i < stack.length; i += 1) {
+        expect(overlaps(stack[i - 1], stack[i]), `${phone.w}x${phone.h} 第 ${i} 行`).toBe(false);
+      }
+      expect(overlaps(centerBox(layout.reset), centerBox(layout.back))).toBe(false);
+      const fx = layout.fxButtons.map(centerBox);
+      expect(overlaps(centerBox(layout.fxLabel), fx[0])).toBe(false);
+      expect(overlaps(fx[0], fx[1])).toBe(false);
+      expect(overlaps(fx[1], fx[2])).toBe(false);
+    }
+  });
+
   it('主页的设置按钮挨在全屏左边，不和声音叠在一起', () => {
     const hud = layoutHud({
       viewWidth: 960,

@@ -169,8 +169,12 @@ function createSlider(scene, { label, value, onChange }) {
       hitConfig.hitArea.setSize(row.w, row.h);
       syncInput(zone, hitConfig);
       if (zone.input) zone.input.enabled = state.enabled;
-      caption.setPosition(-row.w / 2 + 8, -8);
-      readout.setPosition(row.w / 2 - 8, -8);
+      // 行变矮时字也缩小，避免「音乐音量」高出格子。
+      const labelSize = Math.max(16, Math.min(26, Math.round(row.h * 0.34)));
+      caption.setFontSize(labelSize);
+      readout.setFontSize(labelSize);
+      caption.setPosition(-row.w / 2 + 8, -row.h * 0.12);
+      readout.setPosition(row.w / 2 - 8, -row.h * 0.12);
       paint();
     },
     refresh() {
@@ -192,12 +196,13 @@ export class SettingsScene extends Phaser.Scene {
     const settings = currentSettings();
     const synth = getSynth();
 
+    // 跟按钮一样钉在画面上。镜头为了多留天空会上移，不钉住的话标题会滚出屏幕。
     this.title = addCandyText(this, 0, 0, '设置', {
       size: 40,
       color: '#ffe14a',
       stroke: '#3b0764',
       strokeThickness: 6,
-    }).setDepth(20);
+    }).setScrollFactor(0).setDepth(20);
 
     this.music = createSlider(this, {
       label: '音乐音量',
@@ -239,7 +244,7 @@ export class SettingsScene extends Phaser.Scene {
       color: '#ffffff',
       stroke: '#3b0764',
       strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(30);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(30);
     this.fxButtons = ['high', 'low', 'off'].map((id) => createCandyButton(this, {
       label: FX_LABEL[id],
       variant: settings.fx === id ? 'lemon' : 'sky',
@@ -419,31 +424,41 @@ export class SettingsScene extends Phaser.Scene {
     const insets = cssInsetsToGame(readSafeAreaInsets(), this.scale.displayScale);
     layoutParallax(this.parallax, viewW, viewH, scrollY);
     tintParallax(this.parallax, 0);
-    const layout = layoutSettings({ viewWidth: viewW, viewHeight: viewH, insets });
+    // displayScale 是游戏像素 / CSS 像素。竖屏这个数更大，布局会把行加高。
+    const pxPerCss = this.scale.displayScale?.y;
+    const layout = layoutSettings({
+      viewWidth: viewW,
+      viewHeight: viewH,
+      insets,
+      pxPerCss: Number.isFinite(pxPerCss) && pxPerCss > 0 ? pxPerCss : 1,
+    });
     this.layout = layout;
+    this.title.setFontSize(layout.titleFont);
     this.title.setPosition(layout.title.x, layout.title.y);
     this.music.setLayout(layout.music, layout.musicTrack);
     this.sfx.setLayout(layout.sfx, layout.sfxTrack);
-    this.vibrateBtn.setSize(layout.vibrate.w, layout.vibrate.h);
-    this.vibrateBtn.setPosition(layout.vibrate.x, layout.vibrate.y);
-    this.fpsBtn.setSize(layout.fps.w, layout.fps.h);
-    this.fpsBtn.setPosition(layout.fps.x, layout.fps.y);
+    this.placeButton(this.vibrateBtn, layout.vibrate, layout.rowFont);
+    this.placeButton(this.fpsBtn, layout.fps, layout.rowFont);
+    this.fxLabel.setFontSize(Math.max(16, Math.min(26, layout.rowFont)));
     this.fxLabel.setPosition(layout.fxLabel.x, layout.fxLabel.y);
     this.fxButtons.forEach((button, index) => {
-      const spot = layout.fxButtons[index];
-      button.setSize(spot.w, spot.h);
-      button.setPosition(spot.x, spot.y);
+      this.placeButton(button, layout.fxButtons[index], layout.rowFont);
     });
-    this.resetBtn.setSize(layout.reset.w, layout.reset.h);
-    this.resetBtn.setPosition(layout.reset.x, layout.reset.y);
-    this.backBtn.setSize(layout.back.w, layout.back.h);
-    this.backBtn.setPosition(layout.back.x, layout.back.y);
+    this.placeButton(this.resetBtn, layout.reset, layout.rowFont);
+    this.placeButton(this.backBtn, layout.back, layout.rowFont);
     this.overlay.setPosition(viewW / 2, viewH / 2);
     this.overlay.setSize(viewW, viewH);
     paintCandyPanel(this.dialog, layout.dialog.x, layout.dialog.y, layout.dialog.w, layout.dialog.h);
     this.dialogText.setPosition(layout.dialog.x + layout.dialog.w / 2, layout.dialog.y + 78);
     this.dialogText.setWordWrapWidth(layout.dialog.w - 48);
-    this.cancelBtn.setPosition(layout.cancel.x, layout.cancel.y);
-    this.confirmBtn.setPosition(layout.confirm.x, layout.confirm.y);
+    this.placeButton(this.cancelBtn, layout.cancel, layout.rowFont);
+    this.placeButton(this.confirmBtn, layout.confirm, layout.rowFont);
+  }
+
+  /** 按钮的点击区跟布局格子一样大，字号跟着行高走。 */
+  placeButton(button, box, fontSize) {
+    button.setFontSize(fontSize);
+    button.setSize(box.w, box.h, true);
+    button.setPosition(box.x, box.y);
   }
 }
