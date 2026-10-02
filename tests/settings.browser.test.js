@@ -23,6 +23,12 @@ const VIEWPORTS = [
 
 const SHOTS = '/opt/cursor/artifacts/screenshots';
 
+/**
+ * 墙钟只作为等待上限。CI 上 Chrome 和打包抢 CPU 时，一秒墙钟可能只推进几帧。
+ * 灰尘、滞空这些判断看游戏帧和物理步，不看墙上过了多久。
+ */
+const WAIT_MS = 45000;
+
 describe('设置页能点', () => {
   let server;
   let baseUrl;
@@ -35,7 +41,7 @@ describe('设置页能点', () => {
     });
     await server.listen();
     baseUrl = 'http://127.0.0.1:4183/';
-  }, 30000);
+  }, 60000);
 
   afterAll(async () => {
     await server?.close();
@@ -68,7 +74,7 @@ describe('设置页能点', () => {
     } finally {
       await browser.close();
     }
-  }, 240000);
+  }, 360000);
 
   it('跑动和落地都会撒彩色灰尘，关掉特效后不再撒', async () => {
     expect(chromePath, '找不到 Chrome，灰尘截图没法跑').toBeTruthy();
@@ -89,53 +95,117 @@ describe('设置页能点', () => {
       const page = await browser.newPage();
       const errors = [];
       page.on('pageerror', (err) => errors.push(err.message));
-      await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-      await page.waitForFunction(() => window.__PHASER_GAME__?.scene?.getScene?.('menu')?.scene?.isActive?.(), { timeout: 15000 });
+      await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: WAIT_MS });
+      await page.waitForFunction(() => window.__PHASER_GAME__?.scene?.getScene?.('menu')?.scene?.isActive?.(), { timeout: WAIT_MS });
       await page.evaluate(() => {
         window.__PHASER_GAME__.scene.getScene('menu').scene.start('game', { levelId: 'level-1' });
       });
       await page.waitForFunction(() => {
         const scene = window.__PHASER_GAME__.scene.getScene('game');
         return scene?.scene?.isActive?.() && scene.runnerFx && scene.player?.body;
-      }, { timeout: 10000 });
-      const running = await page.evaluate(() => new Promise((resolve) => {
+      }, { timeout: WAIT_MS });
+      // 在游戏循环里记帧数和物理步。Puppeteer 轮询会漏掉慢机器上被一帧吞掉的滞空。
+      await page.evaluate(() => {
         const scene = window.__PHASER_GAME__.scene.getScene('game');
-        let max = 0;
-        let frames = 0;
-        const tick = () => {
-          max = Math.max(max, scene.runnerFx.aliveCount());
-          frames += 1;
-          if (frames >= 45) {
-            scene.events.off('update', tick);
-            resolve(max);
+        const world = scene.physics.world;
+        const dust = {
+          runningFrames: 0,
+          runningMax: 0,
+          runningDone: false,
+          phase: 'run',
+          leftGround: false,
+          airSteps: 0,
+          landed: false,
+          landDust: 0,
+          landSimMs: 0,
+        };
+        scene.__dust = dust;
+        // 物理步发生在场景 update 之前。滞空必须在这里数，不能等页面轮询。
+        const onStep = () => {
+          if (dust.phase !== 'jump' || dust.landed) return;
+          if (!scene.isGrounded()) {
+            dust.leftGround = true;
+            dust.airSteps += 1;
           }
         };
-        scene.events.on('update', tick);
-      }));
-      expect(running).toBeGreaterThan(0);
-      expect(running).toBeLessThanOrEqual(32);
+        world.on('worldstep', onStep);
+        const noteRunning = () => {
+          if (dust.runningDone) return;
+          dust.runningMax = Math.max(dust.runningMax, scene.runnerFx.aliveCount());
+        };
+        const finishLand = () => {
+          if (dust.phase !== 'jump' || dust.landed || !dust.leftGround || !scene.isGrounded()) return;
+          // 落地灰尘在 postupdate 里才放出来，这里读到的才是落地那一撮。
+          dust.landDust = Math.max(dust.landDust, scene.runnerFx.aliveCount());
+          if (dust.landDust <= 0) return;
+          dust.landed = true;
+          dust.landSimMs = dust.airSteps * world._frameTimeMS;
+          world.off('worldstep', onStep);
+          scene.events.off('update', onUpdate);
+          scene.events.off('postupdate', onPost);
+        };
+        const onUpdate = () => {
+          noteRunning();
+          if (!dust.runningDone) dust.runningFrames += 1;
+        };
+        const onPost = () => {
+          noteRunning();
+          if (!dust.runningDone && dust.runningFrames >= 45) dust.runningDone = true;
+          finishLand();
+        };
+        scene.events.on('update', onUpdate);
+        scene.events.on('postupdate', onPost);
+      });
+      await page.waitForFunction(
+        () => window.__PHASER_GAME__.scene.getScene('game')?.__dust?.runningDone === true,
+        { timeout: WAIT_MS },
+      );
+      const running = await page.evaluate(() => {
+        const dust = window.__PHASER_GAME__.scene.getScene('game').__dust;
+        return { frames: dust.runningFrames, max: dust.runningMax };
+      });
+      expect(running.frames).toBeGreaterThanOrEqual(45);
+      expect(running.max).toBeGreaterThan(0);
+      expect(running.max).toBeLessThanOrEqual(32);
       await page.screenshot({ path: `${SHOTS}/running-dust.png` });
 
-      await page.evaluate(() => window.__PHASER_GAME__.scene.getScene('game').tryJump());
-      await page.waitForFunction(() => {
+      await page.evaluate(() => {
         const scene = window.__PHASER_GAME__.scene.getScene('game');
-        if (!scene?.player) return false;
-        if (!scene.isGrounded()) scene.__leftGround = true;
-        return !!scene.__leftGround && scene.isGrounded() && scene.runnerFx.aliveCount() > 0;
-      }, { timeout: 8000 });
+        scene.__dust.phase = 'jump';
+        scene.tryJump();
+      });
+      await page.waitForFunction(
+        () => window.__PHASER_GAME__.scene.getScene('game')?.__dust?.landed === true,
+        { timeout: WAIT_MS },
+      );
+      const landing = await page.evaluate(() => {
+        const dust = window.__PHASER_GAME__.scene.getScene('game').__dust;
+        return {
+          leftGround: dust.leftGround,
+          landDust: dust.landDust,
+          landSimMs: dust.landSimMs,
+          airSteps: dust.airSteps,
+        };
+      });
+      // 普通跳大约 867 毫秒模拟时间。太短是一帧闪一下，太长是没落地。
+      expect(landing.leftGround).toBe(true);
+      expect(landing.airSteps).toBeGreaterThan(0);
+      expect(landing.landSimMs).toBeGreaterThan(200);
+      expect(landing.landSimMs).toBeLessThan(2000);
+      expect(landing.landDust).toBeGreaterThan(0);
       await page.screenshot({ path: `${SHOTS}/landing-dust.png` });
 
       await page.evaluate(() => {
         window.__PHASER_GAME__.scene.getScene('game').scene.start('menu');
       });
-      await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('menu')?.scene?.isActive?.(), { timeout: 8000 });
+      await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('menu')?.scene?.isActive?.(), { timeout: WAIT_MS });
       // 从主页再进设置，点「关」，让这一局里的特效档位真正变成关闭。
       const gear = await page.evaluate(() => {
         const scene = window.__PHASER_GAME__.scene.getScene('menu');
         return { x: scene.hud.settings.zone.x, y: scene.hud.settings.zone.y };
       });
       await clickGame(page, gear.x, gear.y, 'mouse');
-      await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('settings')?.scene?.isActive?.(), { timeout: 8000 });
+      await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('settings')?.scene?.isActive?.(), { timeout: WAIT_MS });
       const off = await page.evaluate(() => {
         const scene = window.__PHASER_GAME__.scene.getScene('settings');
         return { x: scene.ui.fxOff.zone.x, y: scene.ui.fxOff.zone.y };
@@ -144,34 +214,48 @@ describe('设置页能点', () => {
       await page.waitForFunction(() => {
         const raw = localStorage.getItem('fangkuai-paoku-settings');
         return raw && JSON.parse(raw).fx === 'off';
-      }, { timeout: 4000 });
+      }, { timeout: WAIT_MS });
       await page.evaluate(() => {
         window.__PHASER_GAME__.scene.getScene('settings').scene.start('game', { levelId: 'level-1' });
       });
       await page.waitForFunction(() => {
         const scene = window.__PHASER_GAME__.scene.getScene('game');
         return scene?.scene?.isActive?.() && scene.runnerFx;
-      }, { timeout: 8000 });
-      const quiet = await page.evaluate(() => new Promise((resolve) => {
+      }, { timeout: WAIT_MS });
+      await page.evaluate(() => {
         const scene = window.__PHASER_GAME__.scene.getScene('game');
-        let max = 0;
-        let frames = 0;
-        const tick = () => {
-          max = Math.max(max, scene.runnerFx.aliveCount());
-          frames += 1;
-          if (frames >= 40) {
-            scene.events.off('update', tick);
-            resolve(max);
+        const quiet = { frames: 0, max: 0, done: false };
+        scene.__quiet = quiet;
+        const note = () => {
+          quiet.max = Math.max(quiet.max, scene.runnerFx.aliveCount());
+        };
+        const onUpdate = () => {
+          note();
+          quiet.frames += 1;
+        };
+        const onPost = () => {
+          note();
+          if (quiet.frames >= 40) {
+            quiet.done = true;
+            scene.events.off('update', onUpdate);
+            scene.events.off('postupdate', onPost);
           }
         };
-        scene.events.on('update', tick);
-      }));
-      expect(quiet).toBe(0);
+        scene.events.on('update', onUpdate);
+        scene.events.on('postupdate', onPost);
+      });
+      await page.waitForFunction(
+        () => window.__PHASER_GAME__.scene.getScene('game')?.__quiet?.done === true,
+        { timeout: WAIT_MS },
+      );
+      const quiet = await page.evaluate(() => window.__PHASER_GAME__.scene.getScene('game').__quiet);
+      expect(quiet.frames).toBeGreaterThanOrEqual(40);
+      expect(quiet.max).toBe(0);
       expect(errors, errors.join('\n')).toEqual([]);
     } finally {
       await browser.close();
     }
-  }, 180000);
+  }, 300000);
 });
 
 async function exercise(page, baseUrl, { name, mode, width, height }) {
@@ -184,15 +268,15 @@ async function exercise(page, baseUrl, { name, mode, width, height }) {
     localStorage.removeItem('fangkuai-audio-muted');
   });
   await page.setViewport({ width, height, hasTouch: true, isMobile: true });
-  await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-  await page.waitForFunction(() => window.__PHASER_GAME__?.scene?.getScene?.('menu')?.scene?.isActive?.(), { timeout: 15000 });
+  await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: WAIT_MS });
+  await page.waitForFunction(() => window.__PHASER_GAME__?.scene?.getScene?.('menu')?.scene?.isActive?.(), { timeout: WAIT_MS });
 
   const gear = await page.evaluate(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('menu');
     return { x: scene.hud.settings.zone.x, y: scene.hud.settings.zone.y };
   });
   await clickGame(page, gear.x, gear.y, mode);
-  await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('settings')?.scene?.isActive?.(), { timeout: 8000 });
+  await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('settings')?.scene?.isActive?.(), { timeout: WAIT_MS });
 
   if (mode === 'mouse' && name === '16:9') {
     await page.screenshot({ path: `${SHOTS}/settings.png` });
@@ -220,43 +304,43 @@ async function exercise(page, baseUrl, { name, mode, width, height }) {
   await page.waitForFunction(() => {
     const data = JSON.parse(localStorage.getItem('fangkuai-paoku-settings') || '{}');
     return data.musicVolume > 0.05 && data.musicVolume < 0.45;
-  }, { timeout: 4000 });
+  }, { timeout: WAIT_MS });
 
   await clickGame(page, points.sfx.x + points.sfx.track * 0.25, points.sfx.y, mode);
   await page.waitForFunction(() => {
     const data = JSON.parse(localStorage.getItem('fangkuai-paoku-settings') || '{}');
     return data.sfxVolume > 0.55 && data.sfxVolume < 0.95
       && data.musicVolume > 0.05 && data.musicVolume < 0.45;
-  }, { timeout: 4000 });
+  }, { timeout: WAIT_MS });
 
   await clickGame(page, points.vibrate.x, points.vibrate.y, mode);
   await page.waitForFunction(() => {
     const data = JSON.parse(localStorage.getItem('fangkuai-paoku-settings') || '{}');
     return data.vibrate === false;
-  }, { timeout: 4000 });
+  }, { timeout: WAIT_MS });
   await clickGame(page, points.vibrate.x, points.vibrate.y, mode);
   await page.waitForFunction(() => {
     const data = JSON.parse(localStorage.getItem('fangkuai-paoku-settings') || '{}');
     return data.vibrate === true;
-  }, { timeout: 4000 });
+  }, { timeout: WAIT_MS });
 
   await clickGame(page, points.low.x, points.low.y, mode);
-  await page.waitForFunction(() => JSON.parse(localStorage.getItem('fangkuai-paoku-settings') || '{}').fx === 'low', { timeout: 4000 });
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('fangkuai-paoku-settings') || '{}').fx === 'low', { timeout: WAIT_MS });
   await clickGame(page, points.off.x, points.off.y, mode);
-  await page.waitForFunction(() => JSON.parse(localStorage.getItem('fangkuai-paoku-settings') || '{}').fx === 'off', { timeout: 4000 });
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('fangkuai-paoku-settings') || '{}').fx === 'off', { timeout: WAIT_MS });
   await clickGame(page, points.high.x, points.high.y, mode);
-  await page.waitForFunction(() => JSON.parse(localStorage.getItem('fangkuai-paoku-settings') || '{}').fx === 'high', { timeout: 4000 });
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('fangkuai-paoku-settings') || '{}').fx === 'high', { timeout: WAIT_MS });
 
   await clickGame(page, points.fps.x, points.fps.y, mode);
-  await page.waitForFunction(() => !!document.getElementById('fps-meter'), { timeout: 4000 });
+  await page.waitForFunction(() => !!document.getElementById('fps-meter'), { timeout: WAIT_MS });
   await clickGame(page, points.fps.x, points.fps.y, mode);
-  await page.waitForFunction(() => !document.getElementById('fps-meter'), { timeout: 4000 });
+  await page.waitForFunction(() => !document.getElementById('fps-meter'), { timeout: WAIT_MS });
 
   await clickGame(page, points.reset.x, points.reset.y, mode);
   await page.waitForFunction(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('settings');
     return scene?.confirming === true && scene.dialogText?.visible === true;
-  }, { timeout: 4000 });
+  }, { timeout: WAIT_MS });
   if (mode === 'mouse' && name === '16:9') {
     await page.screenshot({ path: `${SHOTS}/reset-confirm.png` });
   }
@@ -268,19 +352,19 @@ async function exercise(page, baseUrl, { name, mode, width, height }) {
   expect(stillThere.endless).toContain('42');
 
   await clickGame(page, points.cancel.x, points.cancel.y, mode);
-  await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('settings')?.confirming === false, { timeout: 4000 });
+  await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('settings')?.confirming === false, { timeout: WAIT_MS });
   const afterCancel = await page.evaluate(() => localStorage.getItem('fangkuai-paoku-progress'));
   expect(afterCancel).toContain('level-2');
 
   await clickGame(page, points.reset.x, points.reset.y, mode);
-  await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('settings')?.confirming === true, { timeout: 4000 });
+  await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('settings')?.confirming === true, { timeout: WAIT_MS });
   await clickGame(page, points.confirm.x, points.confirm.y, mode);
   await page.waitForFunction(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('settings');
     return scene?.confirming === false
       && localStorage.getItem('fangkuai-paoku-progress') == null
       && localStorage.getItem('fangkuai-paoku-endless') == null;
-  }, { timeout: 4000 });
+  }, { timeout: WAIT_MS });
 
   // 两条音量都归零后，主页声音按钮要显示静音；再点一次回到满音量。
   const ends = await page.evaluate(() => {
@@ -292,10 +376,10 @@ async function exercise(page, baseUrl, { name, mode, width, height }) {
   });
   await clickGame(page, ends.music.x - ends.music.track / 2 - 12, ends.music.y, mode);
   await clickGame(page, ends.sfx.x - ends.sfx.track / 2 - 12, ends.sfx.y, mode);
-  await page.waitForFunction(() => localStorage.getItem('fangkuai-audio-muted') === '1', { timeout: 4000 });
+  await page.waitForFunction(() => localStorage.getItem('fangkuai-audio-muted') === '1', { timeout: WAIT_MS });
 
   await clickGame(page, points.back.x, points.back.y, mode);
-  await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('menu')?.scene?.isActive?.(), { timeout: 8000 });
+  await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('menu')?.scene?.isActive?.(), { timeout: WAIT_MS });
   const icon = await page.evaluate(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('menu');
     return {
@@ -311,7 +395,7 @@ async function exercise(page, baseUrl, { name, mode, width, height }) {
     return localStorage.getItem('fangkuai-audio-muted') === '0'
       && data.musicVolume === 1
       && data.sfxVolume === 1;
-  }, { timeout: 4000 });
+  }, { timeout: WAIT_MS });
   const restored = await page.evaluate(() => window.__PHASER_GAME__.scene.getScene('menu').hud.sound.icon.texture.key);
   expect(restored).toBe('icon-sound');
 }
