@@ -370,22 +370,55 @@ export function layoutWinPanel({
 
 /**
  * 设置页。标题、两条音量、震动、特效、帧率、底部两个按钮。
- * 高度按 540 排得下，每个控件的点击区都不低于糖果按钮，方便手指。
+ * 全部排在刘海和底部安全区之间。竖屏游戏像素更高，行高跟着加到手指点得到。
+ * 矮屏放不下时先压标题和间距，再整页缩小，一次就能看全。
+ * pxPerCss 是每个 CSS 像素对应多少游戏像素，和 Phaser displayScale 一致。
  */
 export function layoutSettings({
   viewWidth,
   viewHeight,
   insets = { top: 0, right: 0, bottom: 0, left: 0 },
+  pxPerCss = 1,
 } = {}) {
-  const top = (insets.top || 0) + 8;
-  const bottomInset = (insets.bottom || 0) + 8;
-  const side = Math.max(insets.left || 0, insets.right || 0) + 28;
-  const panelW = Math.max(420, Math.min(720, viewWidth - side * 2));
-  const rowH = CANDY_BUTTON_H;
-  const gap = 4;
-  const titleH = 36;
-  const avail = Math.max(rowH, viewHeight - top - bottomInset);
-  const block = titleH + gap + 6 * rowH + 5 * gap;
+  const pad = 8;
+  const topInset = Math.max(0, insets.top || 0);
+  const bottomInset = Math.max(0, insets.bottom || 0);
+  const leftInset = Math.max(0, insets.left || 0);
+  const rightInset = Math.max(0, insets.right || 0);
+  const top = topInset + pad;
+  const bottomLimit = viewHeight - bottomInset - pad;
+  const avail = Math.max(1, bottomLimit - top);
+  const side = Math.max(leftInset, rightInset) + 28;
+  // 面板不能比安全区更宽，否则左右会被刘海盖住。
+  const panelW = Math.min(720, Math.max(180, viewWidth - side * 2));
+  const px = Number.isFinite(pxPerCss) && pxPerCss > 0 ? pxPerCss : 1;
+  // 44 CSS 像素大约是手指能点中的下限。竖屏上一个游戏像素更小，行要加高。
+  // 多 0.05 游戏像素，避免除回去时浮点误差掉到 44 以下。
+  const minTouch = 44 * px + 0.05;
+  let rowH = Math.max(CANDY_BUTTON_H, minTouch);
+  let titleH = 52;
+  let gap = 4;
+  const blockOf = () => titleH + gap + 6 * rowH + 5 * gap;
+  if (blockOf() > avail) {
+    const rows = 6 * rowH;
+    const chromeBudget = avail - rows;
+    if (chromeBudget >= 36) {
+      // 先只压缩标题和间距，按钮高度保持能点。
+      const chrome = titleH + 6 * gap;
+      const scale = chromeBudget / Math.max(1, chrome);
+      titleH = Math.max(22, titleH * scale);
+      gap = Math.max(1, gap * scale);
+      if (blockOf() > avail) gap = Math.max(0, (avail - titleH - rows) / 6);
+    } else {
+      // 安全区太矮，整页按比例缩小，仍然一次排完。
+      const scale = avail / blockOf();
+      rowH *= scale;
+      titleH *= scale;
+      gap *= scale;
+    }
+    if (blockOf() > avail) rowH -= (blockOf() - avail) / 6;
+  }
+  const block = blockOf();
   const y0 = top + Math.max(0, (avail - block) / 2);
   let cursor = y0;
   const cx = viewWidth / 2;
@@ -437,17 +470,20 @@ export function layoutSettings({
     h: 28,
   });
 
-  const dialogW = Math.min(560, Math.max(360, panelW));
-  const dialogH = 280;
+  const safeW = Math.max(180, viewWidth - leftInset - rightInset - 16);
+  const dialogW = Math.min(560, Math.max(280, Math.min(panelW, safeW)));
+  const dialogRow = Math.min(rowH, CANDY_BUTTON_H);
+  const safeH = Math.max(dialogRow + 80, viewHeight - topInset - bottomInset);
+  let dialogH = Math.min(280, safeH - 8);
   const dialog = {
-    x: cx - dialogW / 2,
-    y: Math.max(12, (viewHeight - dialogH) / 2),
+    x: Math.max(leftInset + 8, (viewWidth - dialogW) / 2),
+    y: topInset + Math.max(8, (safeH - dialogH) / 2),
     w: dialogW,
     h: dialogH,
   };
-  const dialogBtnY = dialog.y + dialogH - 16 - rowH / 2;
-  const cancel = { x: cx - 104, y: dialogBtnY, w: 168, h: rowH };
-  const confirm = { x: cx + 112, y: dialogBtnY, w: 188, h: rowH };
+  const dialogBtnY = dialog.y + dialogH - 16 - dialogRow / 2;
+  const cancel = { x: cx - 104, y: dialogBtnY, w: 168, h: dialogRow };
+  const confirm = { x: cx + 112, y: dialogBtnY, w: 188, h: dialogRow };
 
   return {
     title,
@@ -466,5 +502,8 @@ export function layoutSettings({
     cancel,
     confirm,
     panelW,
+    // 场景按这个字号画，避免字比格子高，贴到下一行上。
+    titleFont: titleH >= 50 ? 40 : Math.max(18, Math.round(titleH * 0.72)),
+    rowFont: Math.max(16, Math.min(36, Math.round(rowH * 0.4))),
   };
 }
