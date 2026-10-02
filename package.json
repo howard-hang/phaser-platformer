@@ -9,6 +9,7 @@
     "build": "node scripts/subset-font.mjs && vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4173",
     "test": "vitest run",
+    "shots": "node scripts/shots.mjs",
     "android:sync": "cap sync android",
     "android:apk": "npm run build && cap sync android && cd android && ./gradlew assembleDebug"
   },

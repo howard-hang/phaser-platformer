@@ -41,13 +41,9 @@ jobs:
           yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: 安装依赖并跑现有测试
-        run: |
-          npm ci
-          wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo apt-get update
-          sudo apt-get install -y /tmp/chrome.deb || (sudo apt-get install -y -f && sudo apt-get install -y /tmp/chrome.deb)
-          npm test
+      # 测试只在 test-and-pages 里跑一次。这里只装依赖，不再装 Chrome。
+      - name: 安装依赖
+        run: npm ci
 
       - name: 构建网页并同步进安卓工程
         run: |

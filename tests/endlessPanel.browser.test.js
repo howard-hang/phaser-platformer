@@ -21,6 +21,12 @@ const VIEWPORTS = [
   { name: '20:9', width: 1000, height: 450 },
 ];
 
+/**
+ * 墙钟只作为等待上限。结算是否出现，按游戏帧和场景 update 累加的 delta 断言。
+ * CI 上 Chrome 抢 CPU 时，一秒墙钟可能只推进几帧。
+ */
+const WAIT_MS = 60000;
+
 describe('无尽结算按钮能点', () => {
   let server;
   let baseUrl;
@@ -33,7 +39,7 @@ describe('无尽结算按钮能点', () => {
     });
     await server.listen();
     baseUrl = 'http://127.0.0.1:4181/';
-  }, 30000);
+  }, 60000);
 
   afterAll(async () => {
     await server?.close();
@@ -72,6 +78,10 @@ describe('无尽结算按钮能点', () => {
         expect(result.body, JSON.stringify(result)).toContain('米');
         expect(result.body, JSON.stringify(result)).toContain('星星');
         expect(result.labels, JSON.stringify(result)).toEqual(['再来一次', '回主页']);
+        // 撞上尖刺后，结算出现在死亡特效的游戏内时间走完之后，不看墙上过了多久。
+        expect(result.hitFrames, JSON.stringify(result)).toBeGreaterThan(0);
+        expect(result.hitSim, JSON.stringify(result)).toBeGreaterThanOrEqual(400);
+        expect(result.hitSim, JSON.stringify(result)).toBeLessThan(2000);
         if (result.action === 'replay') {
           expect(result.after).toMatchObject({ game: true, endless: true, ended: false, menu: false });
           expect(result.after.x).toBeLessThan(500);
@@ -83,17 +93,17 @@ describe('无尽结算按钮能点', () => {
     } finally {
       await browser.close();
     }
-  }, 120000);
+  }, 360000);
 });
 
 async function exercise(page, baseUrl, { name, mode, action, width, height }) {
   await page.evaluateOnNewDocument(() => {
     localStorage.removeItem('fangkuai-paoku-endless');
   });
-  await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+  await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: WAIT_MS });
   await page.waitForFunction(
     () => window.__PHASER_GAME__?.scene?.getScene?.('menu')?.scene?.isActive?.(),
-    { timeout: 15000 },
+    { timeout: WAIT_MS },
   );
   const entry = await page.evaluate(() => {
     const menu = window.__PHASER_GAME__.scene.getScene('menu');
@@ -115,9 +125,10 @@ async function exercise(page, baseUrl, { name, mode, action, width, height }) {
   await page.waitForFunction(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     return scene?.scene?.isActive?.() && scene.endless === true && scene.player?.body && scene.level?.obstacles?.length;
-  }, { timeout: 10000 });
+  }, { timeout: WAIT_MS });
   // 跑出地面碰撞体原来的范围，确认挪地面不会把场景打崩。
-  await page.evaluate(async () => {
+  // 等的是游戏帧，墙钟只给一个宽松上限。
+  const farFrame = await page.evaluate(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     const y = scene.player.y;
     const far = scene.ground.x + 2900;
@@ -125,7 +136,15 @@ async function exercise(page, baseUrl, { name, mode, action, width, height }) {
     scene._physicsPose = { x: far, y, angle: 0 };
     scene.player.setPosition(far, y);
     scene.player.body.reset(far, y);
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return scene.game.loop.frame;
+  });
+  await page.waitForFunction((start) => {
+    const scene = window.__PHASER_GAME__.scene.getScene('game');
+    return scene.game.loop.frame >= start + 2;
+  }, { timeout: WAIT_MS }, farFrame);
+  await page.evaluate(() => {
+    const scene = window.__PHASER_GAME__.scene.getScene('game');
+    const y = scene.player.y;
     const back = scene.level.startX;
     scene._physicsPose = { x: back, y, angle: 0 };
     scene.player.setPosition(back, y);
@@ -140,18 +159,31 @@ async function exercise(page, baseUrl, { name, mode, action, width, height }) {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     const spike = scene.level.obstacles.find((item) => item.type === 'spike' && !item.rise);
     scene._physicsPose = null;
+    scene.__hitSim = 0;
+    scene.__hitFrames = 0;
+    const onUpdate = (_time, delta) => {
+      if (scene.ended) {
+        scene.events.off('update', onUpdate);
+        return;
+      }
+      scene.__hitSim += delta;
+      scene.__hitFrames += 1;
+    };
+    scene.events.on('update', onUpdate);
     scene.player.body.reset(spike.x, scene.player.y);
     scene.player.body.setVelocity(80, 0);
   });
   await page.waitForFunction(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     return scene?.ended === true && scene.winUi?.buttons?.length === 2;
-  }, { timeout: 8000 });
+  }, { timeout: WAIT_MS });
   const state = await page.evaluate(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     return {
       title: scene.winUi.title?.text ?? '',
       body: scene.winUi.body?.text ?? '',
+      hitSim: scene.__hitSim,
+      hitFrames: scene.__hitFrames,
       buttons: scene.winUi.buttons.map((button) => ({
         x: button.zone.x,
         y: button.zone.y,
@@ -177,7 +209,7 @@ async function exercise(page, baseUrl, { name, mode, action, width, height }) {
         && scene.endless === true
         && scene.ended === false
         && scene.player?.x < 500;
-    }, { timeout: 8000 }, action);
+    }, { timeout: WAIT_MS }, action);
   } catch (error) {
     const debug = await page.evaluate(() => {
       const game = window.__PHASER_GAME__;
@@ -214,6 +246,8 @@ async function exercise(page, baseUrl, { name, mode, action, width, height }) {
     height,
     panelTitle: state.title,
     body: state.body,
+    hitSim: state.hitSim,
+    hitFrames: state.hitFrames,
     labels: state.buttons.map((item) => item.label),
     after,
   };

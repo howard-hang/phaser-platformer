@@ -22,6 +22,12 @@ const VIEWPORTS = [
   { name: '20:9', width: 1000, height: 450 },
 ];
 
+/**
+ * 墙钟只作为等待上限。过线后多久弹框，按游戏帧和物理步断言。
+ * CI 上 Chrome 抢 CPU 时，一秒墙钟可能只推进几帧。
+ */
+const WAIT_MS = 60000;
+
 describe('通关按钮能点', () => {
   let server;
   let baseUrl;
@@ -34,7 +40,7 @@ describe('通关按钮能点', () => {
     });
     await server.listen();
     baseUrl = 'http://127.0.0.1:4179/';
-  }, 30000);
+  }, 60000);
 
   afterAll(async () => {
     await server?.close();
@@ -88,20 +94,20 @@ describe('通关按钮能点', () => {
     } finally {
       await browser.close();
     }
-  }, 180000);
+  }, 360000);
 });
 
 async function exercise(page, baseUrl, { name, mode, action, width, height }) {
   await page.evaluateOnNewDocument(() => {
     localStorage.setItem('fangkuai-paoku-progress', JSON.stringify({ best: { 'level-1': 3 } }));
   });
-  await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-  await page.waitForFunction(() => window.__PHASER_GAME__?.scene?.getScene?.('menu')?.scene?.isActive?.(), { timeout: 15000 });
+  await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: WAIT_MS });
+  await page.waitForFunction(() => window.__PHASER_GAME__?.scene?.getScene?.('menu')?.scene?.isActive?.(), { timeout: WAIT_MS });
   await page.evaluate(() => window.__PHASER_GAME__.scene.start('game', { levelId: 'level-1' }));
   await page.waitForFunction(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     return scene?.scene?.isActive?.() && scene.player?.body;
-  }, { timeout: 10000 });
+  }, { timeout: WAIT_MS });
   await page.evaluate(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     const speed = scene.tuning.speed;
@@ -137,7 +143,7 @@ async function exercise(page, baseUrl, { name, mode, action, width, height }) {
   await page.waitForFunction(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     return scene?.won === true && scene.__panel;
-  }, { timeout: 15000 });
+  }, { timeout: WAIT_MS });
   const state = await page.evaluate(() => {
     const scene = window.__PHASER_GAME__.scene.getScene('game');
     const labels = ['replay', 'next', 'select'];
@@ -211,7 +217,7 @@ async function exercise(page, baseUrl, { name, mode, action, width, height }) {
       const select = game.scene.getScene('select');
       if (kind === 'select') return !!select?.scene?.isActive?.();
       return !!scene?.scene?.isActive?.() && scene.won === false && scene.player?.x < 500;
-    }, { timeout: 8000 }, action);
+    }, { timeout: WAIT_MS }, action);
   } catch (error) {
     const debug = await page.evaluate((gx, gy) => {
       const scene = window.__PHASER_GAME__.scene.getScene('game');
