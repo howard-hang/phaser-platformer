@@ -27,7 +27,7 @@ const SHOTS = '/opt/cursor/artifacts/screenshots';
  * 墙钟只作为等待上限。CI 上 Chrome 和打包抢 CPU 时，一秒墙钟可能只推进几帧。
  * 灰尘、滞空这些判断看游戏帧和物理步，不看墙上过了多久。
  */
-const WAIT_MS = 45000;
+const WAIT_MS = 60000;
 
 describe('设置页能点', () => {
   let server;
