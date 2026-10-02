@@ -35,7 +35,10 @@ function browserStorage() {
   }
 }
 
-/** 把 zh-CN、es-MX 这类标签收成五种语言之一。认不出来就返回 null。 */
+/**
+ * 把 zh-CN、zh-HK、es-MX 这类标签收成五种语言之一。认不出来就返回 null。
+ * 繁体（zh-TW、zh-HK、zh-Hant）也进简体界面，游戏名仍是「方块跑酷」。
+ */
 export function matchLocale(language) {
   const tag = String(language || '').toLowerCase().replace(/_/g, '-');
   if (tag.startsWith('zh')) return 'zh';
@@ -81,9 +84,10 @@ export function t(key, vars) {
   return text;
 }
 
-/** 游戏名。中文用「方块跑酷」，其它语言用 Block Runner。 */
+/** 游戏名。简体和繁体系统语言都用「方块跑酷」，其它语言用 Block Runner。 */
 export function gameTitle(locale = current) {
-  return locale === 'zh' ? CATALOGS.zh['app.name'] : CATALOGS.en['app.name'];
+  const code = LOCALES.includes(locale) ? locale : detectLocale(locale);
+  return code === 'zh' ? CATALOGS.zh['app.name'] : CATALOGS.en['app.name'];
 }
 
 /** 关卡名。语言文件里没有时退回 JSON 里的原文。 */

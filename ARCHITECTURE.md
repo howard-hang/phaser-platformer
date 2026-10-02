@@ -144,7 +144,7 @@ JSON 由 `src/game/levelSchema.js` 对照 `src/levels/level.schema.json` 检查�
 
 关卡 JSON 里的 `name` 仍是中文原文，选关和关卡标题显示的是 `level.1` 到 `level.20`。校验失败时的长错误还是中文诊断，只在配置坏掉时出现；错误页的标题走 `error.title`。
 
-安卓桌面名字跟着系统语言，不看游戏里的选择。默认 `android/app/src/main/res/values/strings.xml` 是 Block Runner，`values-zh` 是「方块跑酷」，`values-es`、`values-ja`、`values-ko`、`values-en` 也是 Block Runner。
+安卓桌面名字跟着系统语言，不看游戏里的选择。默认 `android/app/src/main/res/values/strings.xml` 是 Block Runner。`values-zh` 覆盖 zh 和 zh-CN，名字是「方块跑酷」。`values-zh-rTW` 和 `values-zh-rHK` 是「方塊跑酷」。`values-en`、`values-es`、`values-ja`、`values-ko` 仍是 Block Runner。游戏里遇到繁体系统语言时界面用简体，标题仍显示「方块跑酷」。
 
 日语假名和韩语谚文不在站酷黄油体里。`scripts/subset-font.mjs` 另收一份 `src/assets/game-font-cjk.woff2`（Droid Sans Fallback 子集），`GameFontCJK` 排在标题字后面。缺字再落到系统黑体。
 

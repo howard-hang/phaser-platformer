@@ -58,6 +58,8 @@ describe('语言文件', () => {
     expect(ja['app.name']).toBe('Block Runner');
     expect(ko['app.name']).toBe('Block Runner');
     expect(gameTitle('zh')).toBe('方块跑酷');
+    expect(gameTitle('zh-TW')).toBe('方块跑酷');
+    expect(gameTitle('zh-HK')).toBe('方块跑酷');
     expect(gameTitle('es')).toBe('Block Runner');
   });
 });
@@ -65,6 +67,8 @@ describe('语言文件', () => {
 describe('语言选择', () => {
   it('认系统语言，没有对应的就用英语', () => {
     expect(detectLocale('zh-CN')).toBe('zh');
+    expect(detectLocale('zh-TW')).toBe('zh');
+    expect(detectLocale('zh-HK')).toBe('zh');
     expect(detectLocale('zh-Hant')).toBe('zh');
     expect(detectLocale('es-MX')).toBe('es');
     expect(detectLocale('ja-JP')).toBe('ja');
@@ -92,6 +96,14 @@ describe('语言选择', () => {
 
     expect(initLocale(storage, 'zh-CN')).toBe('ko');
     expect(t('settings.title')).toBe(ko['settings.title']);
+
+    const traditional = memoryStorage();
+    expect(initLocale(traditional, 'zh-HK')).toBe('zh');
+    expect(t('app.name')).toBe('方块跑酷');
+    expect(t('settings.title')).toBe(zh['settings.title']);
+    expect(gameTitle()).toBe('方块跑酷');
+    expect(initLocale(traditional, 'zh-TW')).toBe('zh');
+    expect(t('menu.endless')).toBe(zh['menu.endless']);
   });
 
   it('切换语言后同一条文案会变成另一种说法', () => {
