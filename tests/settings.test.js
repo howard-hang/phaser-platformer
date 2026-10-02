@@ -144,7 +144,13 @@ describe('画面特效档位', () => {
   });
 
   it('关卡里按档位决定灰尘、残影和震动', () => {
-    const scene = readFileSync('src/scenes/GameScene.js', 'utf8');
+    // 这些调用跟场景拆到了物理、特效和道具模块，合在一起看仍要接上。
+    const scene = [
+      'src/scenes/GameScene.js',
+      'src/scenes/game/physics.js',
+      'src/scenes/game/effects.js',
+      'src/scenes/game/items.js',
+    ].map((file) => readFileSync(file, 'utf8')).join('\n');
     expect(scene).toContain('planDustEmits');
     expect(scene).toContain('fxProfile');
     expect(scene).toContain('feedback(\'death\')');

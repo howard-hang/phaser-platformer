@@ -120,6 +120,7 @@ describe('设置页能点', () => {
           landSimMs: 0,
         };
         scene.__dust = dust;
+        dust.groundY = scene.player.y;
         // 物理步发生在场景 update 之前。滞空必须在这里数，不能等页面轮询。
         const onStep = () => {
           if (dust.phase !== 'jump' || dust.landed) return;
@@ -169,11 +170,39 @@ describe('设置页能点', () => {
       expect(running.max).toBeLessThanOrEqual(32);
       await page.screenshot({ path: `${SHOTS}/running-dust.png` });
 
-      await page.evaluate(() => {
+      const jumped = await page.evaluate(() => {
         const scene = window.__PHASER_GAME__.scene.getScene('game');
-        scene.__dust.phase = 'jump';
+        const dust = scene.__dust;
+        const y = dust.groundY;
+        // 慢帧的 delta 更大，45 帧可能已经撞上障碍。拉回起跑点再跳，落地时间仍按物理步算。
+        scene._deathToken += 1;
+        scene.deathFx?.cancel();
+        scene.dying = false;
+        scene.won = false;
+        scene.invulnUntil = 0;
+        scene._inFlip = false;
+        scene.rotating = false;
+        scene.player.body.enable = true;
+        scene.player.body.setAllowGravity(true);
+        scene.player.body.setGravityY(0);
+        scene._physicsPose = null;
+        scene.player.body.reset(scene.level.startX, y);
+        // reset 会把碰撞盒放到贴图左上角，这里再对齐，否则判定还停在空中。
+        scene.player.body.updateFromGameObject();
+        scene.player.body.prev.copy(scene.player.body.position);
+        scene.player.body.setVelocity(scene.runSpeed(), 0);
+        dust.phase = 'jump';
+        dust.leftGround = false;
+        dust.airSteps = 0;
+        dust.landed = false;
+        dust.landDust = 0;
+        dust.landSimMs = 0;
+        const grounded = scene.isGrounded();
         scene.tryJump();
+        return { grounded, vy: scene.player.body.velocity.y };
       });
+      expect(jumped.grounded, JSON.stringify(jumped)).toBe(true);
+      expect(jumped.vy, JSON.stringify(jumped)).toBeLessThan(0);
       await page.waitForFunction(
         () => window.__PHASER_GAME__.scene.getScene('game')?.__dust?.landed === true,
         { timeout: WAIT_MS },
