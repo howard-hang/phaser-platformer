@@ -13,6 +13,7 @@ import {
   paintCandyPanel,
   textStyle,
 } from './candy.js';
+import { powerIconKey, powerRatio } from '../logic/powerups.js';
 
 const HUD_SIZE = 26;
 
@@ -349,6 +350,78 @@ export function showEndlessPanel(scene, stats, actions) {
     },
   };
   view.relayout(scene.scale.width, scene.scale.height);
+  return view;
+}
+
+/**
+ * 当前道具的图标和倒计时条。没有生效的道具时藏起来。
+ * 图标用矢量贴图，不用 emoji。
+ */
+export function createPowerHud(scene) {
+  const icon = scene.add.image(0, 0, 'power-double')
+    .setScrollFactor(0)
+    .setDepth(246)
+    .setVisible(false);
+  const bar = scene.add.graphics().setScrollFactor(0).setDepth(245);
+  const view = {
+    slot: null,
+    shown: false,
+    kind: null,
+    ratio: 1,
+    icon,
+    bar,
+    hide() {
+      view.shown = false;
+      icon.setVisible(false);
+      bar.clear();
+      bar.setVisible(false);
+    },
+    relayout(layout) {
+      view.slot = layout?.power || view.slot;
+      if (view.shown) view.draw();
+    },
+    sync(power, now) {
+      if (!power?.kind) {
+        if (view.shown) view.hide();
+        return;
+      }
+      view.shown = true;
+      view.kind = power.kind;
+      view.ratio = powerRatio(power, now);
+      const key = powerIconKey(power.kind);
+      if (icon.texture?.key !== key) icon.setTexture(key);
+      icon.setVisible(true);
+      bar.setVisible(true);
+      view.draw();
+    },
+    draw() {
+      const slot = view.slot;
+      if (!slot) return;
+      bar.clear();
+      icon.setDisplaySize(28, 28);
+      // 护甲没有倒计时，只留一枚图标。
+      if (view.kind === 'armor') {
+        bar.fillStyle(0x2a0840, 0.72);
+        bar.fillRoundedRect(slot.x, slot.y, 40, slot.h, 12);
+        icon.setPosition(slot.x + 20, slot.y + slot.h / 2);
+        return;
+      }
+      bar.fillStyle(0x2a0840, 0.72);
+      bar.fillRoundedRect(slot.x, slot.y, slot.w, slot.h, 12);
+      icon.setPosition(slot.x + 20, slot.y + slot.h / 2);
+      const barX = slot.x + 40;
+      const barW = slot.w - 52;
+      const barH = 12;
+      const barY = slot.y + (slot.h - barH) / 2;
+      bar.fillStyle(0xffffff, 0.35);
+      bar.fillRoundedRect(barX, barY, barW, barH, 6);
+      const fillW = Math.max(0, barW * view.ratio);
+      if (fillW > 1) {
+        bar.fillStyle(view.kind === 'plane' ? 0x3ec6ff : 0x2ee6a6, 1);
+        bar.fillRect(barX, barY, fillW, barH);
+      }
+    },
+  };
   return view;
 }
 

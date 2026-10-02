@@ -15,9 +15,12 @@ import {
   buildEndlessLevel,
   createEndlessStream,
   ensureAhead,
+  offerEndlessPower,
   playableSegments,
   recycleBehind,
 } from '../src/game/endlessCourse.js';
+import { POWERUP_CONFIG } from '../src/game/powerupConfig.js';
+import { obstacleIntervalX } from '../src/logic/powerups.js';
 import {
   PX_PER_METER,
   commitEndlessRecord,
@@ -137,6 +140,36 @@ describe('无尽跑道', () => {
     expect(dropped).toBeGreaterThan(10);
     expect(stream.kept).toBeNull();
     expect(stream.live.length).toBeGreaterThan(0);
+  }, 60000);
+
+  it('同一颗种子的道具位置相同，并且落在空档里', () => {
+    const rolls = [0.1, 0, 0.99];
+    let cursor = 0;
+    const stream = { lastPowerX: null, powerRng: () => rolls[cursor++] };
+    expect(offerEndlessPower(stream, 1000, 800)).toBe('double');
+    expect(offerEndlessPower(stream, 1400, 1200)).toBeNull();
+    expect(cursor).toBe(2);
+    const missed = { lastPowerX: null, powerRng: () => 0.99 };
+    expect(offerEndlessPower(missed, 500, 400)).toBeNull();
+    expect(missed.lastPowerX).toBe(500 - POWERUP_CONFIG.endless.spacing + POWERUP_CONFIG.endless.retry);
+
+    const first = buildEndlessLevel({ seed: 21, distance: 18000 });
+    const again = buildEndlessLevel({ seed: 21, distance: 18000 });
+    expect(first.powerups).toEqual(again.powerups);
+    expect(first.powerups.length).toBeGreaterThan(0);
+    for (const item of first.powerups) {
+      expect(['double', 'armor', 'plane']).toContain(item.type);
+      for (const obstacle of first.obstacles) {
+        const [left, right] = obstacleIntervalX(obstacle);
+        expect(item.x > left - 4 && item.x < right + 4, `${item.id} 压到 ${obstacle.id}`).toBe(false);
+      }
+      for (const star of first.stars) {
+        expect(Math.abs(star.x - item.x)).toBeGreaterThan(36);
+      }
+    }
+    const other = buildEndlessLevel({ seed: 99, distance: 18000 });
+    const stamp = (level) => level.powerups.map((item) => `${item.type}@${item.x}`).join('|');
+    expect(stamp(other)).not.toBe(stamp(first));
   }, 60000);
 
   it('最高纪录只在更远时写入本机', () => {

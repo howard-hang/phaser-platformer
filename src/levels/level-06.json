@@ -330,6 +330,10 @@
       "lift": 200
     }
   ],
+  "powerups": [
+    { "t": 17.082, "type": "plane" },
+    { "t": 45.112, "type": "double" }
+  ],
   "checkpoints": [
     10.32,
     21,

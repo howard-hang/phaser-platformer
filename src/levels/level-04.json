@@ -294,6 +294,10 @@
       "lift": 0
     }
   ],
+  "powerups": [
+    { "t": 25.394, "type": "double" },
+    { "t": 50.449, "type": "armor" }
+  ],
   "checkpoints": [
     13.84,
     21,

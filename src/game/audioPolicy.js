@@ -46,11 +46,19 @@ export function shouldCreateAudio(interacted) {
 }
 
 /**
- * 音效能不能出声。碎裂、跳跃、吃星走同一道门。
+ * 音效能不能出声。碎裂、跳跃、吃星、爆炸走同一道门。
  * 静音、进后台、还没建好音频上下文时都不播。
  */
 export function canPlaySfx({ muted, appActive, hasContext }) {
   return !!hasContext && !muted && !!appActive;
+}
+
+/** 会出声的音效名。爆炸也在里面，静音时和碎裂一起关掉。 */
+export const SFX_CUES = ['jump', 'death', 'star', 'checkpoint', 'win', 'pickup', 'armor'];
+
+export function cueWillPlay(name, flags) {
+  if (!SFX_CUES.includes(name)) return false;
+  return canPlaySfx(flags);
 }
 
 /**

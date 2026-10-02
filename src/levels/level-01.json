@@ -223,6 +223,9 @@
       "lift": 0
     }
   ],
+  "powerups": [
+    { "t": 48.366, "type": "double" }
+  ],
   "checkpoints": [
     10.96,
     21.64,

@@ -25,6 +25,10 @@
       "type": "array",
       "items": { "type": "number", "minimum": 0 }
     },
+    "powerups": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/powerup" }
+    },
     "routes": {
       "type": "array",
       "items": { "$ref": "#/$defs/route" }
@@ -61,6 +65,17 @@
           "then": { "required": ["span"] }
         }
       ]
+    },
+    "powerup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["t", "type"],
+      "properties": {
+        "t": { "type": "number", "minimum": 0 },
+        "type": { "enum": ["double", "armor", "plane"] },
+        "lift": { "type": "number", "minimum": 0, "maximum": 340 },
+        "dx": { "type": "number", "minimum": -400, "maximum": 400 }
+      }
     },
     "star": {
       "type": "object",

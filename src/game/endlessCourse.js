@@ -12,6 +12,8 @@ import {
   tierRange,
 } from './endlessCurve.js';
 import { SEGMENTS } from './segments.js';
+import { POWERUP_CONFIG } from './powerupConfig.js';
+import { rollPowerType } from '../logic/powerups.js';
 import { findClearPath } from '../logic/search.js';
 import { HITBOX, TUNING } from '../logic/world.js';
 
@@ -353,7 +355,54 @@ export function createEndlessStream(seed, options = {}) {
     bands: [],
     live: [],
     kept: options.keepAll === true ? [] : null,
+    // 和片段用的不是同一条随机数列，投放道具不会把后面的路打乱。
+    powerRng: createRng((((seed >>> 0) || 1) ^ 0x51f15e0d) >>> 0 || 1),
+    lastPowerX: null,
   };
+}
+
+/**
+ * 这个位置要不要放道具。
+ * 隔得太近就跳过；没投中也会把下一次尝试往后推，开局才不会扎堆。
+ */
+export function offerEndlessPower(stream, x, distance) {
+  const cfg = POWERUP_CONFIG.endless;
+  if (stream.lastPowerX != null && x - stream.lastPowerX < cfg.spacing) return null;
+  const type = rollPowerType(stream.powerRng, distance);
+  if (!type) {
+    stream.lastPowerX = x - cfg.spacing + cfg.retry;
+    return null;
+  }
+  stream.lastPowerX = x;
+  return type;
+}
+
+function placePower(piece, id, type, x) {
+  if (!piece.powerups) piece.powerups = [];
+  piece.powerups.push({ id, type, x, lift: 0 });
+}
+
+/** 热身空地上可以先放一个，方便开局就看见道具。 */
+function maybeIntroPower(stream, piece) {
+  piece.powerups = [];
+  const x = Math.round(piece.x0 + piece.speed * 1.8);
+  const type = offerEndlessPower(stream, x, x - START_X);
+  if (!type) return;
+  placePower(piece, 'en-intro-power', type, x);
+}
+
+/** 道具放在片段后面的空档上，不压到障碍，也不贴着喘息星星。 */
+function maybeGapPower(stream, piece) {
+  piece.powerups = piece.powerups || [];
+  const gapW = piece.x1 - piece.contentX1;
+  if (gapW < 80) return;
+  const rest = (piece.stars || []).find((star) => String(star.id).endsWith('rest-star'));
+  const frac = rest ? 0.8 : 0.5;
+  let x = Math.round(piece.contentX1 + gapW * frac);
+  if (rest && Math.abs(x - rest.x) < 52) x = Math.min(piece.x1 - 24, Math.round(rest.x + 72));
+  const type = offerEndlessPower(stream, x, x - START_X);
+  if (!type) return;
+  placePower(piece, `${piece.id}-power`, type, x);
 }
 
 function remember(stream, piece) {
@@ -399,8 +448,10 @@ function pullPiece(stream) {
       decks: [],
       routes: [],
       stars: [],
+      powerups: [],
       intro: true,
     };
+    maybeIntroPower(stream, piece);
     remember(stream, piece);
     return piece;
   }
@@ -434,6 +485,7 @@ function pullPiece(stream) {
       lift: 0,
     });
   }
+  maybeGapPower(stream, placed);
   remember(stream, pieceBounds(placed));
   return stream.live[stream.live.length - 1];
 }
@@ -461,6 +513,7 @@ function gather(pieces) {
   const flips = [];
   const decks = [];
   const routes = [];
+  const powerups = [];
   for (let i = 0; i < pieces.length; i += 1) {
     const piece = pieces[i];
     obstacles.push(...piece.obstacles);
@@ -468,8 +521,9 @@ function gather(pieces) {
     flips.push(...piece.flips);
     decks.push(...piece.decks);
     routes.push(...piece.routes);
+    if (piece.powerups) powerups.push(...piece.powerups);
   }
-  return { obstacles, stars, flips, decks, routes };
+  return { obstacles, stars, flips, decks, routes, powerups };
 }
 
 /** 给正在跑的局面用：只含还活着的障碍，加上完整的速度分段。 */

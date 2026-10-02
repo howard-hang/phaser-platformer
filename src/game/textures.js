@@ -46,6 +46,12 @@ function drawPlayer(ctx) {
   ctx.fillRect(13, 13, 16, 16);
 }
 
+/** 奔跑残影。只要一块淡方块，不要黑边和中心，叠在背景上才看得出。 */
+function drawPlayerGhost(ctx) {
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(6, 6, 30, 30);
+}
+
 function drawSpike(ctx) {
   ctx.beginPath();
   ctx.moveTo(18, 2);
@@ -227,6 +233,121 @@ function drawSpeaker(ctx, muted) {
   ctx.stroke();
 }
 
+function traceRoundRect(ctx, x, y, w, h, r) {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
+/** 糖果徽章底。先画深色厚边，再盖一层亮面。 */
+function drawBadge(ctx, face, lip) {
+  ctx.fillStyle = lip;
+  traceRoundRect(ctx, 1, 5, 34, 30, 10);
+  ctx.fill();
+  ctx.fillStyle = face;
+  traceRoundRect(ctx, 1, 1, 34, 30, 10);
+  ctx.fill();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  traceRoundRect(ctx, 1, 1, 34, 30, 10);
+  ctx.stroke();
+}
+
+/** 二段跳：两道向上的折线，表示还能再跳一次。 */
+function drawPowerDouble(ctx) {
+  drawBadge(ctx, '#2ee6a6', '#0c8f62');
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  [11, 18].forEach((y) => {
+    ctx.beginPath();
+    ctx.moveTo(11, y + 5);
+    ctx.lineTo(18, y);
+    ctx.lineTo(25, y + 5);
+    ctx.stroke();
+  });
+}
+
+/** 护甲图标：一圈盾环，不用表情符号。 */
+function drawPowerArmor(ctx) {
+  drawBadge(ctx, '#7af0ff', '#147a96');
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(18, 20, 8, 0.6, Math.PI * 2 - 0.2);
+  ctx.stroke();
+  ctx.fillStyle = '#ffe14a';
+  ctx.beginPath();
+  ctx.arc(24, 12, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** 套在方块外面的护罩。中间留空，让白方块露出来。 */
+function drawArmorShield(ctx) {
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(36, 36, 28, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = '#7af0ff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(36, 36, 23, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = '#ffe14a';
+  ctx.beginPath();
+  ctx.arc(22, 20, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** 飞机：一块几何机翼，飞行时另外有更大的翅膀贴图。 */
+function drawPowerPlane(ctx) {
+  drawBadge(ctx, '#3ec6ff', '#0277b8');
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(8, 21);
+  ctx.lineTo(27, 16);
+  ctx.lineTo(27, 25);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#ffe14a';
+  ctx.fillRect(15, 12, 5, 14);
+  ctx.fillStyle = '#3ec6ff';
+  ctx.fillRect(22, 18, 4, 4);
+}
+
+/** 挂在方块两侧的翅膀。中间留给玩家方块，所以中间留空。 */
+function drawRideWings(ctx) {
+  ctx.fillStyle = '#ffe14a';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(2, 18);
+  ctx.lineTo(28, 6);
+  ctx.lineTo(28, 30);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(82, 18);
+  ctx.lineTo(56, 6);
+  ctx.lineTo(56, 30);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#3ec6ff';
+  ctx.fillRect(30, 12, 24, 12);
+  ctx.strokeRect(30, 12, 24, 12);
+}
+
 /** 进游戏前生成全部贴图，场景重启时不用再画。 */
 export function generateTextures(scene) {
   const make = (key, width, height, draw) => {
@@ -237,6 +358,7 @@ export function generateTextures(scene) {
   };
 
   make('player', HITBOX.player.w, HITBOX.player.h, drawPlayer);
+  make('player-ghost', HITBOX.player.w, HITBOX.player.h, drawPlayerGhost);
   make('spike', HITBOX.spike.w, HITBOX.spike.h, drawSpike);
   make('spike-down', HITBOX.spike.w, HITBOX.spike.h, drawSpikeDown);
   make('block', HITBOX.block.w, HITBOX.block.h, drawBlock);
@@ -250,4 +372,9 @@ export function generateTextures(scene) {
   make('icon-mute', 64, 64, (ctx) => drawSpeaker(ctx, true));
   make('icon-fullscreen', 64, 64, (ctx) => drawFullscreen(ctx, false));
   make('icon-fullscreen-exit', 64, 64, (ctx) => drawFullscreen(ctx, true));
+  make('power-double', 36, 36, drawPowerDouble);
+  make('power-armor', 36, 36, drawPowerArmor);
+  make('armor-shield', 72, 72, drawArmorShield);
+  make('power-plane', 36, 36, drawPowerPlane);
+  make('ride-wings', 84, 36, drawRideWings);
 }

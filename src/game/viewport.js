@@ -179,6 +179,13 @@ export function layoutHud({
     score: { x: left, y: statsTop },
     deaths: { x: left, y: statsTop + HUD_LINE },
     stars: { x: left, y: statsTop + HUD_LINE * 2 },
+    // 当前道具的图标和倒计时，贴在三行计数下面。
+    power: {
+      x: left,
+      y: statsTop + HUD_LINE * 3 + 8,
+      w: 176,
+      h: 36,
+    },
     fps,
     sound,
     fullscreen,
