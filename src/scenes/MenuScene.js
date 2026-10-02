@@ -60,7 +60,11 @@ export class MenuScene extends Phaser.Scene {
       },
     });
 
-    this.hud = createHud(this, { showStats: false });
+    this.hud = createHud(this, {
+      showStats: false,
+      showSettings: true,
+      onSettings: () => this.scene.start('settings'),
+    });
     this.scale.on('resize', this.applyViewport, this);
     this.events.once('shutdown', () => {
       this.scale.off('resize', this.applyViewport, this);

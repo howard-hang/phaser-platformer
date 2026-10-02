@@ -336,6 +336,25 @@ export function createCandyButton(scene, {
       icon?.setTexture(key);
       redraw();
     },
+    setVariant(name) {
+      state.variant = name;
+      fitLabel();
+      redraw();
+    },
+    /** 设置页按画面宽度改按钮。圆形图标按钮不走这里。 */
+    setSize(width, height = state.height) {
+      if (shape === 'circle') return;
+      state.width = width;
+      state.height = height;
+      const hitW = Math.max(state.width, CANDY_BUTTON_H);
+      const hitH = Math.max(state.height, CANDY_BUTTON_H);
+      root.setSize(hitW, hitH);
+      zone.setSize(hitW, hitH);
+      hitConfig.hitArea.setSize(hitW, hitH);
+      fitLabel();
+      redraw();
+      syncInput();
+    },
   };
 }
 

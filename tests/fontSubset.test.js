@@ -15,6 +15,9 @@ describe('字体子集', () => {
     for (const ch of '方块跑酷选择关卡累计星星上一页下一页返回标题选关还差颗通关再玩一次无尽模式距离纪录回主页新纪录本局结束米打破了最高') {
       expect(chars.includes(ch), ch).toBe(true);
     }
+    for (const ch of '设置音乐音量效震动画面特高显示帧率重置进度确定清除解锁记录无尽最高取消已静音') {
+      expect(chars.includes(ch), ch).toBe(true);
+    }
     const level = JSON.parse(fs.readFileSync('src/levels/level-20.json', 'utf8'));
     for (const ch of level.name) expect(chars.includes(ch), ch).toBe(true);
     for (const ch of 'SCOREDEATHS0123456789') expect(chars.includes(ch), ch).toBe(true);

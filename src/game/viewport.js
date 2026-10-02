@@ -160,6 +160,7 @@ export function layoutHud({
   insets = { top: 0, right: 0, bottom: 0, left: 0 },
   showHome = false,
   showFullscreen = false,
+  showSettings = false,
   showFps = false,
 } = {}) {
   const top = (insets.top || 0) + HUD_MARGIN_Y;
@@ -170,11 +171,14 @@ export function layoutHud({
   const fullscreen = showFullscreen ? { x: cursor, y: top + 32 } : null;
   if (showFullscreen) cursor -= BUTTON_GAP;
   const home = showHome ? { x: cursor, y: top + 32 } : null;
+  if (showHome) cursor -= BUTTON_GAP;
+  // 设置在主页按钮左边。主页没有主页按钮时，它就挨着全屏或声音。
+  const settings = showSettings ? { x: cursor, y: top + 32 } : null;
 
   // ?fps 计数器占左上角一条，计数文字往下让，避免盖住 SCORE。
   const fps = showFps ? { x: left, y: top, w: 96, h: 26 } : null;
   const statsTop = top + (fps ? fps.h + 10 : 0);
-  const leftmost = home?.x ?? fullscreen?.x ?? sound.x;
+  const leftmost = settings?.x ?? home?.x ?? fullscreen?.x ?? sound.x;
   return {
     score: { x: left, y: statsTop },
     deaths: { x: left, y: statsTop + HUD_LINE },
@@ -190,6 +194,7 @@ export function layoutHud({
     sound,
     fullscreen,
     home,
+    settings,
     centerX: viewWidth / 2,
     centerY: viewHeight / 2,
     // 右上角整块按钮区。点这里只按按钮，不起跳。
@@ -360,5 +365,106 @@ export function layoutWinPanel({
     stars,
     body,
     buttons,
+  };
+}
+
+/**
+ * 设置页。标题、两条音量、震动、特效、帧率、底部两个按钮。
+ * 高度按 540 排得下，每个控件的点击区都不低于糖果按钮，方便手指。
+ */
+export function layoutSettings({
+  viewWidth,
+  viewHeight,
+  insets = { top: 0, right: 0, bottom: 0, left: 0 },
+} = {}) {
+  const top = (insets.top || 0) + 8;
+  const bottomInset = (insets.bottom || 0) + 8;
+  const side = Math.max(insets.left || 0, insets.right || 0) + 28;
+  const panelW = Math.max(420, Math.min(720, viewWidth - side * 2));
+  const rowH = CANDY_BUTTON_H;
+  const gap = 4;
+  const titleH = 36;
+  const avail = Math.max(rowH, viewHeight - top - bottomInset);
+  const block = titleH + gap + 6 * rowH + 5 * gap;
+  const y0 = top + Math.max(0, (avail - block) / 2);
+  let cursor = y0;
+  const cx = viewWidth / 2;
+  const title = { x: cx, y: cursor + titleH / 2, w: panelW, h: titleH };
+  cursor += titleH + gap;
+  const row = () => {
+    const item = { x: cx, y: cursor + rowH / 2, w: panelW, h: rowH };
+    cursor += rowH + gap;
+    return item;
+  };
+  const music = row();
+  const sfx = row();
+  const vibrate = row();
+  const fx = row();
+  const fps = row();
+  const actions = row();
+
+  const actionGap = 16;
+  const resetW = Math.min(280, Math.floor((panelW - actionGap) * 0.56));
+  const backW = Math.min(220, panelW - actionGap - resetW);
+  const pair = resetW + actionGap + backW;
+  const reset = { x: cx - pair / 2 + resetW / 2, y: actions.y, w: resetW, h: rowH };
+  const back = { x: cx + pair / 2 - backW / 2, y: actions.y, w: backW, h: rowH };
+
+  const fxGap = 12;
+  const fxLabelW = 168;
+  const fxInner = panelW - fxLabelW;
+  const fxW = (fxInner - fxGap * 2) / 3;
+  const fxButtons = ['high', 'low', 'off'].map((id, index) => ({
+    id,
+    x: fx.x - panelW / 2 + fxLabelW + fxW / 2 + index * (fxW + fxGap),
+    y: fx.y,
+    w: fxW,
+    h: rowH,
+  }));
+  const fxLabel = {
+    x: fx.x - panelW / 2 + fxLabelW / 2,
+    y: fx.y,
+    w: fxLabelW,
+    h: rowH,
+  };
+
+  // 滑条左右留一点，避免圆钮贴到屏幕边。数值按这条轨道换算。
+  const trackPad = 22;
+  const trackOf = (rowBox) => ({
+    x: rowBox.x,
+    y: rowBox.y + 10,
+    w: rowBox.w - trackPad * 2,
+    h: 28,
+  });
+
+  const dialogW = Math.min(560, Math.max(360, panelW));
+  const dialogH = 280;
+  const dialog = {
+    x: cx - dialogW / 2,
+    y: Math.max(12, (viewHeight - dialogH) / 2),
+    w: dialogW,
+    h: dialogH,
+  };
+  const dialogBtnY = dialog.y + dialogH - 16 - rowH / 2;
+  const cancel = { x: cx - 104, y: dialogBtnY, w: 168, h: rowH };
+  const confirm = { x: cx + 112, y: dialogBtnY, w: 188, h: rowH };
+
+  return {
+    title,
+    music,
+    sfx,
+    musicTrack: trackOf(music),
+    sfxTrack: trackOf(sfx),
+    vibrate,
+    fx,
+    fxLabel,
+    fxButtons,
+    fps,
+    reset,
+    back,
+    dialog,
+    cancel,
+    confirm,
+    panelW,
   };
 }

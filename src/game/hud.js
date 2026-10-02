@@ -4,6 +4,7 @@
  */
 import { getSynth } from './audio.js';
 import { isNativeShell } from '../platform/androidBack.js';
+import { currentSettings, shouldShowFps } from './settings.js';
 import { layoutHud, layoutWinPanel, nextFullscreenAction, shouldShowFullscreenButton } from './viewport.js';
 import {
   PANEL,
@@ -56,7 +57,13 @@ function createStat(scene, label, color, digits) {
 }
 
 /** 创建常驻 HUD。onHome 只在关卡里需要。无尽模式换成距离、星星和纪录。 */
-export function createHud(scene, { onHome = null, showStats = true, variant = 'campaign' } = {}) {
+export function createHud(scene, {
+  onHome = null,
+  showStats = true,
+  variant = 'campaign',
+  showSettings = false,
+  onSettings = null,
+} = {}) {
   const showFullscreen = shouldShowFullscreenButton(isNativeShell());
   const endless = variant === 'endless';
   let score;
@@ -118,6 +125,25 @@ export function createHud(scene, { onHome = null, showStats = true, variant = 'c
     });
   }
 
+  let settingsBtn = null;
+  if (showSettings) {
+    settingsBtn = createCandyButton(scene, {
+      x: 608,
+      y: 48,
+      width: 62,
+      height: 62,
+      shape: 'circle',
+      variant: 'coral',
+      iconKey: 'icon-settings',
+      depth: 250,
+      onClick: () => {
+        getSynth().unlock();
+        const go = onSettings || (() => scene.scene.start('settings'));
+        scene.time.delayedCall(0, go);
+      },
+    });
+  }
+
   let home = null;
   if (onHome) {
     home = createCandyButton(scene, {
@@ -160,9 +186,10 @@ export function createHud(scene, { onHome = null, showStats = true, variant = 'c
         insets,
         showHome: !!onHome,
         showFullscreen,
-        // 计数器出现时，左上角分数往下让一截。
+        showSettings,
+        // 计数器出现时，左上角分数往下让一截。设置里的开关优先于网址上的 ?fps。
         showFps: typeof window !== 'undefined'
-          && new URLSearchParams(window.location.search).has('fps'),
+          && shouldShowFps(currentSettings(), window.location.search),
       });
       if (showStats) {
         score.setPosition(layout.score.x, layout.score.y);
@@ -172,12 +199,14 @@ export function createHud(scene, { onHome = null, showStats = true, variant = 'c
       sound.setPosition(layout.sound.x, layout.sound.y);
       fullscreen?.setPosition(layout.fullscreen.x, layout.fullscreen.y);
       home?.setPosition(layout.home.x, layout.home.y);
+      settingsBtn?.setPosition(layout.settings.x, layout.settings.y);
       hud.jumpGuard = layout.jumpGuard;
       return layout;
     },
     home,
     sound,
     fullscreen,
+    settings: settingsBtn,
   };
   return hud;
 }

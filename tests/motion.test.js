@@ -77,8 +77,10 @@ describe('奔跑动画', () => {
     expect(visual.scaleY).toBeGreaterThan(1.1);
     expect(visual.scaleX).toBeLessThan(1);
     expect(visual.angle).toBeCloseTo(22);
+    expect(visual.burst).toBe('jump');
     const landed = stepRunnerVisual(visual, { grounded: true, vy: 40, dt: 1 / 60, held: false });
     expect(landed.puff).toBe(true);
+    expect(landed.burst).toBe('land');
     expect(landed.scaleY).toBeLessThan(0.9);
     expect(landed.angle).toBe(0);
     const flying = stepRunnerVisual(visual, { grounded: false, vy: 0, dt: 0.2, held: true });

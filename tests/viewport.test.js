@@ -5,6 +5,7 @@ import {
   computeExpandSize,
   cssInsetsToGame,
   layoutHud,
+  layoutSettings,
   layoutLevelBoard,
   layoutLevelSelect,
   layoutWinPanel,
@@ -349,6 +350,64 @@ describe('全屏按钮和安全区', () => {
       expect(overlaps(buttons[0], buttons[1]), `${screenW}x${screenH} 两颗按钮`).toBe(false);
       expect(layout.stars.h).toBe(0);
     }
+  });
+});
+
+describe('设置页布局', () => {
+  it('16:9 和 20:9 上控件都在画面内，并且点得到', () => {
+    const screens = [
+      [1280, 720],
+      [1000, 450],
+    ];
+    for (const [screenW, screenH] of screens) {
+      const size = computeExpandSize(960, 540, screenW, screenH);
+      const layout = layoutSettings({
+        viewWidth: size.gameWidth,
+        viewHeight: size.gameHeight,
+      });
+      const boxes = [
+        centerBox(layout.music),
+        centerBox(layout.sfx),
+        centerBox(layout.vibrate),
+        centerBox(layout.fps),
+        centerBox(layout.reset),
+        centerBox(layout.back),
+        centerBox(layout.cancel),
+        centerBox(layout.confirm),
+        ...layout.fxButtons.map(centerBox),
+      ];
+      for (const box of boxes) {
+        expect(box.l).toBeGreaterThanOrEqual(0);
+        expect(box.r).toBeLessThanOrEqual(size.gameWidth + 0.5);
+        expect(box.t).toBeGreaterThanOrEqual(0);
+        expect(box.b).toBeLessThanOrEqual(size.gameHeight + 0.5);
+        const cssH = (box.b - box.t) * size.scale;
+        const cssW = (box.r - box.l) * size.scale;
+        expect(cssH).toBeGreaterThanOrEqual(44);
+        expect(cssW).toBeGreaterThanOrEqual(44);
+      }
+      const rows = [layout.music, layout.sfx, layout.vibrate, layout.fps, layout.reset].map(centerBox);
+      for (let i = 1; i < rows.length; i += 1) {
+        expect(overlaps(rows[i - 1], rows[i])).toBe(false);
+      }
+      const fx = layout.fxButtons.map(centerBox);
+      expect(overlaps(fx[0], fx[1])).toBe(false);
+      expect(overlaps(fx[1], fx[2])).toBe(false);
+      expect(overlaps(centerBox(layout.cancel), centerBox(layout.confirm))).toBe(false);
+      expect(overlaps(centerBox(layout.reset), centerBox(layout.back))).toBe(false);
+    }
+  });
+
+  it('主页的设置按钮挨在全屏左边，不和声音叠在一起', () => {
+    const hud = layoutHud({
+      viewWidth: 960,
+      viewHeight: 540,
+      showSettings: true,
+      showFullscreen: true,
+    });
+    expect(hud.settings.x).toBeLessThan(hud.fullscreen.x);
+    expect(hud.fullscreen.x).toBeLessThan(hud.sound.x);
+    expect(hud.fullscreen.x - hud.settings.x).toBeGreaterThanOrEqual(ICON_HIT);
   });
 });
 
