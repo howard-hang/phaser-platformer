@@ -257,5 +257,7 @@ npm run shots
 | `shots/settings.png` | 设置页 |
 | `shots/i18n-menus.png` | 五种语言的主菜单拼在一起（360×640） |
 | `shots/i18n-settings.png` | 五种语言的设置页拼在一起（360×640） |
+| `shots/settings-portrait.png` | 设置页，360×640，带安全区 |
+| `shots/settings-landscape.png` | 设置页，844×390，带安全区 |
 
 这个目录是生成物，不提交。经典四张图固定用中文。对比图按 zh、en、es、ja、ko 从左到右排。

@@ -68,7 +68,6 @@ export const effectMethods = {
     // 方块先藏起来，碎片从原来的位置炸开。刚体停住，避免特效期间又撞上别的障碍。
     this.player.setVisible(false);
     this.runner?.setVisible(false);
-    this.trail?.forEach((ghost) => ghost.setVisible(false));
     this.shield?.setVisible(false);
     this.ride?.setVisible(false);
     this.doubleMark?.setVisible(false);
@@ -138,7 +137,6 @@ export const effectMethods = {
     this.levelLabel?.setVisible(false);
     this.powerHud?.hide();
     this.runner?.setVisible(false);
-    this.trail?.forEach((ghost) => ghost.setVisible(false));
     this.shield?.setVisible(false);
     this.ride?.setVisible(false);
     this.doubleMark?.setVisible(false);
@@ -185,7 +183,6 @@ export const effectMethods = {
     this.levelLabel?.setVisible(false);
     this.powerHud?.hide();
     this.runner?.setVisible(false);
-    this.trail?.forEach((ghost) => ghost.setVisible(false));
     this.shield?.setVisible(false);
     this.ride?.setVisible(false);
     this.doubleMark?.setVisible(false);

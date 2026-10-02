@@ -370,27 +370,56 @@ export function layoutWinPanel({
 
 /**
  * 设置页。标题、两条音量、震动、特效、帧率、语言、底部两个按钮。
- * 540 高的小屏会把行高压到仍能点的高度，七行都留在画面里。
+ * 全部排在刘海和底部安全区之间。竖屏游戏像素更高，行高跟着加到手指点得到。
+ * 矮屏放不下时先压标题和间距，再整页缩小，语言行和其它行一起留在画面里。
+ * pxPerCss 是每个 CSS 像素对应多少游戏像素，和 Phaser displayScale 一致。
  */
 export function layoutSettings({
   viewWidth,
   viewHeight,
   insets = { top: 0, right: 0, bottom: 0, left: 0 },
+  pxPerCss = 1,
 } = {}) {
-  const top = (insets.top || 0) + 8;
-  const bottomInset = (insets.bottom || 0) + 8;
-  const side = Math.max(insets.left || 0, insets.right || 0) + 28;
-  const panelW = Math.max(420, Math.min(720, viewWidth - side * 2));
-  const titleH = 40;
+  const pad = 8;
+  const topInset = Math.max(0, insets.top || 0);
+  const bottomInset = Math.max(0, insets.bottom || 0);
+  const leftInset = Math.max(0, insets.left || 0);
+  const rightInset = Math.max(0, insets.right || 0);
+  const top = topInset + pad;
+  const bottomLimit = viewHeight - bottomInset - pad;
+  const avail = Math.max(1, bottomLimit - top);
+  const side = Math.max(leftInset, rightInset) + 28;
+  // 面板不能比安全区更宽，否则左右会被刘海盖住。
+  const panelW = Math.min(720, Math.max(180, viewWidth - side * 2));
+  const px = Number.isFinite(pxPerCss) && pxPerCss > 0 ? pxPerCss : 1;
+  // 44 CSS 像素大约是手指能点中的下限。竖屏上一个游戏像素更小，行要加高。
+  // 多 0.05 游戏像素，避免除回去时浮点误差掉到 44 以下。
+  const minTouch = 44 * px + 0.05;
+  // 标题下面七行：音乐、音效、震动、特效、帧率、语言、底部按钮。
   const rowCount = 7;
-  const avail = Math.max(CANDY_BUTTON_H, viewHeight - top - bottomInset);
+  let rowH = Math.max(CANDY_BUTTON_H, minTouch);
+  let titleH = 52;
   let gap = 4;
-  let rowH = CANDY_BUTTON_H;
   const blockOf = () => titleH + rowCount * rowH + rowCount * gap;
-  while (blockOf() > avail && gap > 2) gap -= 1;
-  while (blockOf() > avail && rowH > 66) rowH -= 1;
-  while (blockOf() > avail && gap > 1) gap -= 1;
-  while (blockOf() > avail && rowH > 52) rowH -= 1;
+  if (blockOf() > avail) {
+    const rows = rowCount * rowH;
+    const chromeBudget = avail - rows;
+    if (chromeBudget >= 36) {
+      // 先只压缩标题和间距，按钮高度保持能点。
+      const chrome = titleH + rowCount * gap;
+      const scale = chromeBudget / Math.max(1, chrome);
+      titleH = Math.max(22, titleH * scale);
+      gap = Math.max(1, gap * scale);
+      if (blockOf() > avail) gap = Math.max(0, (avail - titleH - rows) / rowCount);
+    } else {
+      // 安全区太矮（横屏再加语言行时会走到这里），整页按比例缩小，仍然一次排完。
+      const scale = avail / blockOf();
+      rowH *= scale;
+      titleH *= scale;
+      gap *= scale;
+    }
+    if (blockOf() > avail) rowH -= (blockOf() - avail) / rowCount;
+  }
   const block = blockOf();
   const y0 = top + Math.max(0, (avail - block) / 2);
   let cursor = y0;
@@ -435,12 +464,16 @@ export function layoutSettings({
     h: rowH,
   };
 
-  // 五种语言并排。标签窄一点，按钮仍够手指点。
+  // 五种语言并排。窄面板先收标签，让每个按钮仍有约 44 CSS 像素宽。
   const langGap = 8;
-  const langLabelW = panelW < 560 ? 108 : 150;
   const langIds = ['zh', 'en', 'es', 'ja', 'ko'];
-  const langInner = panelW - langLabelW;
-  const langW = (langInner - langGap * (langIds.length - 1)) / langIds.length;
+  const langGaps = langGap * (langIds.length - 1);
+  let langLabelW = panelW < 560 ? 108 : 150;
+  let langW = (panelW - langLabelW - langGaps) / langIds.length;
+  if (langW < minTouch) {
+    langLabelW = Math.max(64, panelW - (minTouch * langIds.length + langGaps));
+    langW = (panelW - langLabelW - langGaps) / langIds.length;
+  }
   const langButtons = langIds.map((id, index) => ({
     id,
     x: language.x - panelW / 2 + langLabelW + langW / 2 + index * (langW + langGap),
@@ -464,17 +497,20 @@ export function layoutSettings({
     h: 28,
   });
 
-  const dialogW = Math.min(560, Math.max(360, panelW));
-  const dialogH = 280;
+  const safeW = Math.max(180, viewWidth - leftInset - rightInset - 16);
+  const dialogW = Math.min(560, Math.max(280, Math.min(panelW, safeW)));
+  const dialogRow = Math.min(rowH, CANDY_BUTTON_H);
+  const safeH = Math.max(dialogRow + 80, viewHeight - topInset - bottomInset);
+  let dialogH = Math.min(280, safeH - 8);
   const dialog = {
-    x: cx - dialogW / 2,
-    y: Math.max(12, (viewHeight - dialogH) / 2),
+    x: Math.max(leftInset + 8, (viewWidth - dialogW) / 2),
+    y: topInset + Math.max(8, (safeH - dialogH) / 2),
     w: dialogW,
     h: dialogH,
   };
-  const dialogBtnY = dialog.y + dialogH - 16 - rowH / 2;
-  const cancel = { x: cx - 104, y: dialogBtnY, w: 168, h: rowH };
-  const confirm = { x: cx + 112, y: dialogBtnY, w: 188, h: rowH };
+  const dialogBtnY = dialog.y + dialogH - 16 - dialogRow / 2;
+  const cancel = { x: cx - 104, y: dialogBtnY, w: 168, h: dialogRow };
+  const confirm = { x: cx + 112, y: dialogBtnY, w: 188, h: dialogRow };
 
   return {
     title,
@@ -496,5 +532,8 @@ export function layoutSettings({
     cancel,
     confirm,
     panelW,
+    // 场景按这个字号画，避免字比格子高，贴到下一行上。
+    titleFont: titleH >= 50 ? 40 : Math.max(18, Math.round(titleH * 0.72)),
+    rowFont: Math.max(16, Math.min(36, Math.round(rowH * 0.4))),
   };
 }

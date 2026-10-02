@@ -341,14 +341,19 @@ export function createCandyButton(scene, {
       fitLabel();
       redraw();
     },
-    /** 设置页按画面宽度改按钮。圆形图标按钮不走这里。热区跟按钮一样大，避免小屏上两行叠在一起。 */
-    setSize(width, height = state.height) {
+    /**
+     * 设置页按画面宽度改按钮。圆形图标按钮不走这里。
+     * exactHit 为真时，点击区跟画出来的一样大。行高被缩小后不能再撑回 76，否则会叠到下一行。
+     */
+    setSize(width, height = state.height, exactHit = false) {
       if (shape === 'circle') return;
       state.width = width;
       state.height = height;
-      root.setSize(state.width, state.height);
-      zone.setSize(state.width, state.height);
-      hitConfig.hitArea.setSize(state.width, state.height);
+      const hitW = exactHit ? state.width : Math.max(state.width, CANDY_BUTTON_H);
+      const hitH = exactHit ? state.height : Math.max(state.height, CANDY_BUTTON_H);
+      root.setSize(hitW, hitH);
+      zone.setSize(hitW, hitH);
+      hitConfig.hitArea.setSize(hitW, hitH);
       fitLabel();
       redraw();
       syncInput();

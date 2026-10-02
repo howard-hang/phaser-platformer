@@ -45,8 +45,9 @@ export function normalizeSettings(raw) {
 }
 
 /**
- * 特效档位。灰尘数量、残影条数和镜头震动都看这里。
+ * 特效档位。灰尘数量和镜头震动看这里。
  * 高是完整效果，低少一半左右，关就什么都不画。
+ * trails 仍随档位变化，画面上不再画残影。
  */
 export function fxProfile(level) {
   if (level === 'off') return { dustPerSec: 0, burst: 0, trails: 0, shake: 0 };

@@ -46,12 +46,6 @@ function drawPlayer(ctx) {
   ctx.fillRect(13, 13, 16, 16);
 }
 
-/** 奔跑残影。只要一块淡方块，不要黑边和中心，叠在背景上才看得出。 */
-function drawPlayerGhost(ctx) {
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(6, 6, 30, 30);
-}
-
 function drawSpike(ctx) {
   ctx.beginPath();
   ctx.moveTo(18, 2);
@@ -378,7 +372,6 @@ export function generateTextures(scene) {
   };
 
   make('player', HITBOX.player.w, HITBOX.player.h, drawPlayer);
-  make('player-ghost', HITBOX.player.w, HITBOX.player.h, drawPlayerGhost);
   make('spike', HITBOX.spike.w, HITBOX.spike.h, drawSpike);
   make('spike-down', HITBOX.spike.w, HITBOX.spike.h, drawSpikeDown);
   make('block', HITBOX.block.w, HITBOX.block.h, drawBlock);
