@@ -362,18 +362,33 @@ export function showEndlessPanel(scene, stats, actions) {
     onClick: () => scene.time.delayedCall(0, actions.onHome),
   });
   const buttons = [replay, home];
+  let reviveButton = null;
+  if (actions.revive) {
+    reviveButton = createCandyButton(scene, {
+      label: actions.revive.label,
+      variant: 'grape',
+      width: 216,
+      fontSize: 24,
+      depth: 260,
+      enabled: actions.revive.enabled,
+      onClick: () => scene.time.delayedCall(0, actions.revive.onClick),
+    });
+    buttons.unshift(reviveButton);
+  }
+  const buttonWidths = actions.revive ? [216, 220, 200] : [220, 200];
   const view = {
     panel,
     title,
     body,
     buttons,
+    reviveButton,
     relayout(viewWidth, viewHeight, insets = { top: 0, right: 0, bottom: 0, left: 0 }) {
       if (!panel.scene?.sys || !panel.active) return;
       const layout = layoutWinPanel({
         viewWidth,
         viewHeight,
         insets,
-        buttonWidths: [220, 200],
+        buttonWidths,
         starRow: false,
         bodyLines: 3,
       });
@@ -387,9 +402,101 @@ export function showEndlessPanel(scene, stats, actions) {
         button.setPosition(slot.x, slot.y);
       });
     },
+    dismiss() {
+      dismissPanel(view);
+    },
   };
   view.relayout(scene.scale.width, scene.scale.height);
   return view;
+}
+
+/**
+ * 闯关死亡后的结算。安卓上可以看视频复活，也可以回到存档点。
+ * 网页不走这里，仍然直接回到存档点。
+ */
+export function showCampaignDeathPanel(scene, stats, actions) {
+  const panel = scene.add.graphics().setScrollFactor(0).setDepth(200).setData('ui', true);
+  const title = addCandyText(scene, 0, 0, t('revive.title'), {
+    size: 36,
+    color: PANEL.title,
+    stroke: '#ffffff',
+    strokeThickness: 5,
+    shadow: true,
+  }).setScrollFactor(0).setDepth(210).setData('ui', true);
+  const body = scene.add.text(0, 0, t('revive.body', {
+    score: stats.score,
+    stars: stats.stars,
+  }), textStyle({
+    size: 24,
+    color: PANEL.body,
+    stroke: '#ffffff',
+    strokeThickness: 3,
+    align: 'center',
+    lineSpacing: 8,
+    shadow: false,
+  })).setOrigin(0.5).setScrollFactor(0).setDepth(210).setData('ui', true);
+  const reviveButton = createCandyButton(scene, {
+    label: actions.revive.label,
+    variant: 'grape',
+    width: 216,
+    fontSize: 24,
+    depth: 260,
+    enabled: actions.revive.enabled,
+    onClick: () => scene.time.delayedCall(0, actions.revive.onClick),
+  });
+  const checkpoint = createCandyButton(scene, {
+    label: t('revive.checkpoint'),
+    variant: 'sky',
+    width: 200,
+    fontSize: 26,
+    depth: 260,
+    onClick: () => scene.time.delayedCall(0, actions.onCheckpoint),
+  });
+  const buttons = [reviveButton, checkpoint];
+  const view = {
+    panel,
+    title,
+    body,
+    buttons,
+    reviveButton,
+    relayout(viewWidth, viewHeight, insets = { top: 0, right: 0, bottom: 0, left: 0 }) {
+      if (!panel.scene?.sys || !panel.active) return;
+      const layout = layoutWinPanel({
+        viewWidth,
+        viewHeight,
+        insets,
+        buttonWidths: [216, 200],
+        starRow: false,
+        bodyLines: 1,
+      });
+      paintCandyPanel(panel, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
+      title.setPosition(layout.title.x, layout.title.y);
+      shrinkToWidth(title, layout.title.w, 22);
+      body.setPosition(layout.body.x, layout.body.y);
+      shrinkToWidth(body, layout.body.w, 16);
+      buttons.forEach((button, index) => {
+        const slot = layout.buttons[index];
+        button.setPosition(slot.x, slot.y);
+      });
+    },
+    dismiss() {
+      dismissPanel(view);
+    },
+  };
+  view.relayout(scene.scale.width, scene.scale.height);
+  return view;
+}
+
+/** 拆掉结算面板上的图形和热区，避免复活之后还挡着点击。 */
+function dismissPanel(view) {
+  view.buttons?.forEach((button) => {
+    button.zone?.destroy();
+    button.root?.destroy();
+  });
+  view.panel?.destroy();
+  view.title?.destroy();
+  view.body?.destroy();
+  view.buttons = [];
 }
 
 /**

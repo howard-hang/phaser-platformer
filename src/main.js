@@ -12,6 +12,7 @@ import { SettingsScene } from './scenes/SettingsScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { ErrorScene } from './scenes/ErrorScene.js';
 import { bindAndroidBack } from './platform/androidBack.js';
+import { bootRewardedAds } from './platform/rewardedAd.js';
 import { bindAudioLifecycle, getSynth } from './game/audio.js';
 import { syncFpsMeter } from './game/fpsMeter.js';
 import { applyViewportFill } from './game/viewport.js';
@@ -97,6 +98,8 @@ async function main() {
   // 网页版会立刻返回；安卓壳里改成：关卡回主页，主页退出。
   bindAndroidBack(window.__PHASER_GAME__);
   bindAudioLifecycle();
+  // 网页直接返回。安卓首次启动弹出 UMP 同意框，并预加载复活激励视频。
+  bootRewardedAds();
 }
 
 main();

@@ -217,10 +217,26 @@ class Synth {
     };
   }
 
+  /**
+   * 激励视频占着屏幕时把音乐挂起，进度留在原地。
+   * 广告结束再按原来的前后台状态恢复。
+   */
+  holdMusicForAd(holding) {
+    this.adHold = !!holding;
+    if (!this.ctx) return;
+    if (this.adHold) {
+      if (this.ctx.state === 'running') this.ctx.suspend();
+      return;
+    }
+    if (this.unlocked && this.appActive && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
   /** 安卓切到后台、或浏览器标签被藏起来时调用。 */
   setAppActive(isActive) {
     this.appActive = !!isActive;
-    if (!this.ctx) return;
+    if (!this.ctx || this.adHold) return;
     const action = audioContextAction(this.appActive);
     if (action === 'suspend') {
       if (this.ctx.state === 'running') this.ctx.suspend();

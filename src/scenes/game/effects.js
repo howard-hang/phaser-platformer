@@ -65,6 +65,7 @@ export const effectMethods = {
     this.player.angle = 0;
     const x = this.player.x;
     const y = this.player.y;
+    this._deathX = x;
     // 方块先藏起来，碎片从原来的位置炸开。刚体停住，避免特效期间又撞上别的障碍。
     this.player.setVisible(false);
     this.runner?.setVisible(false);
@@ -88,18 +89,31 @@ export const effectMethods = {
     if (!started) this.finishDeath();
   },
 
-  /** 碎裂结束。闯关回到存档点，无尽模式直接结算，不重生。 */
+  /** 碎裂结束。闯关回到存档点，无尽模式直接结算。安卓还能先看视频原地复活。 */
   finishDeath() {
     if (this.endless) {
       this.finishEndless();
       return;
     }
+    if (this.reviveOffer?.().visible) {
+      try {
+        this.openCampaignRevive();
+        return;
+      } catch {
+        // 面板没画出来就回存档点，避免停在碎裂之后。
+      }
+    }
+    this.respawnAtCheckpoint();
+  },
+
+  /** 把人放回跑道上的某个 x。闯关存档点和激励复活共用。 */
+  placeRunnerAt(x) {
     const y = playerGroundY();
     this.player.setVisible(false);
     this.runner?.setVisible(true);
     this.player.body.enable = true;
     this.player.body.setAllowGravity(true);
-    this.player.body.reset(this.activeCheckpoint, y);
+    this.player.body.reset(x, y);
     // reset 把碰撞盒放在贴图左上角，这里再对齐偏移，并清掉本帧位移，避免落地后被挤穿地面。
     this.player.body.updateFromGameObject();
     this.player.body.prev.copy(this.player.body.position);
@@ -112,7 +126,13 @@ export const effectMethods = {
     this.player.angle = 0;
     this._physicsPose = null;
     this.dying = false;
+  },
+
+  /** 闯关死亡后回到最近的存档点，给很短的无敌，避免刚落地又死一次。 */
+  respawnAtCheckpoint() {
+    this.placeRunnerAt(this.activeCheckpoint);
     this.invulnUntil = this.time.now + 120;
+    this.levelLabel?.setVisible(true);
   },
 
   /** 撞到障碍后的结算。纪录只在更远时写进本机。 */
@@ -140,6 +160,7 @@ export const effectMethods = {
     this.shield?.setVisible(false);
     this.ride?.setVisible(false);
     this.doubleMark?.setVisible(false);
+    const offer = this.reviveOffer ? this.reviveOffer() : { visible: false };
     this.winUi = showEndlessPanel(this, {
       distance: outcome.distance,
       stars: this.run.stars,
@@ -148,8 +169,14 @@ export const effectMethods = {
     }, {
       onReplay: () => this.scene.restart({ mode: 'endless' }),
       onHome: () => this.scene.start('menu'),
+      revive: offer.visible ? {
+        label: t(offer.labelKey),
+        enabled: offer.enabled,
+        onClick: () => this.watchReviveAd(),
+      } : null,
     });
     this.winUi.relayout(this.scale.width, this.scale.height, this._insets);
+    if (offer.visible) this.primeReviveAd();
   },
 
   win() {

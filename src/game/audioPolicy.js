@@ -79,3 +79,8 @@ export function cueWillPlay(name, flags) {
 export function audioContextAction(isActive) {
   return isActive ? 'resume' : 'suspend';
 }
+
+/** 激励视频开始时暂停音乐，结束、失败或中途关掉都恢复。 */
+export function adMusicPhase(phase) {
+  return phase === 'showing' ? 'pause' : 'resume';
+}

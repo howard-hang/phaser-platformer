@@ -40,6 +40,7 @@ public class MainActivity extends BridgeActivity {
         paintWindow();
         extendIntoCutout();
         hideSystemBars();
+        publishDebugApkFlag();
     }
 
     @Override
@@ -48,6 +49,7 @@ public class MainActivity extends BridgeActivity {
         extendIntoCutout();
         hideSystemBars();
         lockWebView();
+        publishDebugApkFlag();
     }
 
     @Override
@@ -142,6 +144,17 @@ public class MainActivity extends BridgeActivity {
             child.setPadding(0, 0, 0, 0);
             if (child instanceof ViewGroup) clearPaddingTree(child);
         }
+    }
+
+    /**
+     * 调试包把标记写成 true，网页因此强制用测试激励广告。
+     * 正式包不可调试，标记是 false，再配合构建变量才会请求真实广告位。
+     */
+    private void publishDebugApkFlag() {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        boolean debug = (getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        String script = "window.__FANGKUAI_DEBUG_APK__=" + debug + ";";
+        getBridge().getWebView().evaluateJavascript(script, null);
     }
 
     /** 挖孔尺寸写成 CSS 变量。网页 HUD 读取，画布不因此缩小。 */
