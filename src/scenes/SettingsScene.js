@@ -26,7 +26,8 @@ import { clampVolume } from '../game/audioPolicy.js';
 import { cssInsetsToGame, layoutDebugAdChrome, layoutSettings, readSafeAreaInsets, verticalCameraScroll } from '../game/viewport.js';
 import { LOCALES, getLocale, setLocale, t } from '../i18n/index.js';
 import { adStatusLabelKey } from '../logic/adLoad.js';
-import { isDebugAdBuild } from '../platform/admob.config.js';
+import { shouldShowDebugAdChrome } from '../platform/admob.config.js';
+import { openExternal, PRIVACY_POLICY_URL } from '../platform/externalLink.js';
 import { getAdStatus, onAdStatus, resetAdConsent } from '../platform/rewardedAd.js';
 
 const FX_KEYS = { high: 'settings.fxHigh', low: 'settings.fxLow', off: 'settings.fxOff' };
@@ -262,6 +263,15 @@ export class SettingsScene extends Phaser.Scene {
       depth: 30,
       onClick: () => this.setFx(id),
     }));
+    this.privacyBtn = createCandyButton(this, {
+      label: t('settings.privacy'),
+      variant: 'mint',
+      width: 220,
+      height: 76,
+      fontSize: 28,
+      depth: 30,
+      onClick: () => openExternal(PRIVACY_POLICY_URL),
+    });
     this.resetBtn = createCandyButton(this, {
       label: t('settings.reset'),
       variant: 'coral',
@@ -280,8 +290,8 @@ export class SettingsScene extends Phaser.Scene {
       depth: 30,
       onClick: () => this.scene.start('menu'),
     });
-    // 只有调试包能看见广告状态和重置同意。正式包不画这两项。
-    if (isDebugAdBuild()) {
+    // 只有调试包能看见广告状态和重置同意。正式包不画这两项，也不强制欧洲同意框。
+    if (shouldShowDebugAdChrome()) {
       this.adStatusText = addCandyText(this, 0, 0, '', {
         size: 14,
         color: '#ffe14a',
@@ -362,6 +372,7 @@ export class SettingsScene extends Phaser.Scene {
       fxLow: this.fxButtons[1],
       fxOff: this.fxButtons[2],
       lang: this.langButtons,
+      privacy: this.privacyBtn,
       reset: this.resetBtn,
       back: this.backBtn,
       cancel: this.cancelBtn,
@@ -385,7 +396,7 @@ export class SettingsScene extends Phaser.Scene {
 
   /** 主控件在确认框打开时停用，避免点到后面的滑条。 */
   mainControls() {
-    const controls = [this.music, this.sfx, this.vibrateBtn, this.fpsBtn, ...this.fxButtons, ...this.langButtons, this.resetBtn, this.backBtn];
+    const controls = [this.music, this.sfx, this.vibrateBtn, this.fpsBtn, ...this.fxButtons, ...this.langButtons, this.privacyBtn, this.resetBtn, this.backBtn];
     if (this.adResetBtn) controls.push(this.adResetBtn);
     return controls;
   }
@@ -518,6 +529,7 @@ export class SettingsScene extends Phaser.Scene {
       button.setLabel(t(`settings.lang.${id}`));
       button.setVariant(id === getLocale() ? 'lemon' : 'sky');
     });
+    this.privacyBtn.setLabel(t('settings.privacy'));
     this.resetBtn.setLabel(this._resetFlash ? t('settings.resetDone') : t('settings.reset'));
     this.backBtn.setLabel(t('settings.back'));
     this.dialogText.setText(t('settings.confirmBody'));
@@ -574,6 +586,7 @@ export class SettingsScene extends Phaser.Scene {
     this.langButtons.forEach((button, index) => {
       this.placeButton(button, layout.langButtons[index], layout.rowFont);
     });
+    this.placeButton(this.privacyBtn, layout.privacy, layout.rowFont);
     this.placeButton(this.resetBtn, layout.reset, layout.rowFont);
     this.placeButton(this.backBtn, layout.back, layout.rowFont);
     this.overlay.setPosition(viewW / 2, viewH / 2);

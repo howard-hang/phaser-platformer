@@ -24,6 +24,13 @@ jobs:
           sudo apt-get install -y /tmp/chrome.deb || (sudo apt-get install -y -f && sudo apt-get install -y /tmp/chrome.deb)
       - run: npm test
       - run: npm run build
+      - name: 隐私政策和 app-ads.txt 进入网页产物
+        run: |
+          test -f dist/privacy.html
+          test -f dist/app-ads.txt
+          grep -qx 'google.com, pub-3218611878548189, DIRECT, f08c47fec0942fa0' dist/app-ads.txt
+          grep -q 'AdMob' dist/privacy.html
+          grep -q '请替换为你的邮箱' dist/privacy.html
 
   # 只有 main 会发到 GitHub Pages。功能分支推上去会被环境保护规则拒绝，整条工作流变红。
   # 私有仓库的 Pages 往往不可用，预览改用分支里的 dist/。
@@ -46,6 +53,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: 隐私政策和 app-ads.txt 进入网页产物
+        run: |
+          test -f dist/privacy.html
+          test -f dist/app-ads.txt
+          grep -qx 'google.com, pub-3218611878548189, DIRECT, f08c47fec0942fa0' dist/app-ads.txt
+          grep -q 'AdMob' dist/privacy.html
+          grep -q '请替换为你的邮箱' dist/privacy.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

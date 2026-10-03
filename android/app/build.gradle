@@ -1,5 +1,28 @@
 apply plugin: 'com.android.application'
 
+// 正式签名只从环境变量来。仓库里不放密钥文件。
+// ANDROID_KEYSTORE_FILE 指向本机或 CI 解出来的上传密钥。
+def envText = { String name ->
+    def value = System.getenv(name)
+    return value != null && value.trim().length() > 0 ? value.trim() : null
+}
+def keystoreFilePath = envText('ANDROID_KEYSTORE_FILE')
+def releaseStorePassword = envText('ANDROID_KEYSTORE_PASSWORD')
+def releaseKeyAlias = envText('ANDROID_KEY_ALIAS')
+def releaseKeyPassword = envText('ANDROID_KEY_PASSWORD')
+def hasReleaseKey = keystoreFilePath != null && releaseStorePassword != null && releaseKeyAlias != null && releaseKeyPassword != null && file(keystoreFilePath).isFile()
+
+// CI 传入 github.run_number。本地没设时用 1，方便打调试包。
+def versionCodeText = envText('ANDROID_VERSION_CODE')
+def resolvedVersionCode = 1
+if (versionCodeText != null && versionCodeText.isInteger()) {
+    resolvedVersionCode = versionCodeText.toInteger()
+}
+if (resolvedVersionCode < 1 || resolvedVersionCode > 2100000000) {
+    throw new GradleException("ANDROID_VERSION_CODE 必须在 1 到 2100000000 之间，当前是 ${resolvedVersionCode}")
+}
+def resolvedVersionName = envText('ANDROID_VERSION_NAME') ?: '1.0.0'
+
 android {
     namespace = "com.fangkuai.paoku"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +30,8 @@ android {
         applicationId "com.fangkuai.paoku"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        versionCode resolvedVersionCode
+        versionName resolvedVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +39,32 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // 未压缩的原生库按 16 KB 对齐。AGP 8.5.1 起默认如此，这里写明，避免以后被改回旧打包。
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+    signingConfigs {
+        release {
+            if (hasReleaseKey) {
+                storeFile file(keystoreFilePath)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // 正式包不可调试。调试内容（广告状态、重置同意、强制欧洲）跟着这个标记关掉。
+            debuggable false
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasReleaseKey) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

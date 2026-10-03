@@ -31,6 +31,7 @@
   "settings.reset": "データ消去",
   "settings.resetDone": "消去済み",
   "settings.back": "戻る",
+  "settings.privacy": "プライバシー",
   "settings.confirmBody": "スター、解放、エンドレス記録を消しますか？",
   "settings.cancel": "キャンセル",
   "settings.ok": "消去",

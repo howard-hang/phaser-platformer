@@ -42,12 +42,46 @@ export function rewardedAdSelection(options) {
   };
 }
 
-function viteTestFlag() {
+/**
+ * 这次网页构建是正式广告还是测试广告。
+ * 打进包里的字面量是 live-rewarded 或 test-rewarded，CI 用它区分两种包。
+ */
+export function adBuildMode(flag) {
+  return flag === 'false' ? 'live-rewarded' : 'test-rewarded';
+}
+
+/**
+ * 读 Vite 注入的开关。
+ * 必须写成 import.meta.env.NAME。可选链不会被替换，正式包会一直落到测试广告。
+ */
+function readViteTestFlag() {
   try {
-    return import.meta.env?.VITE_ADMOB_USE_TEST_ADS;
+    return import.meta.env.VITE_ADMOB_USE_TEST_ADS;
   } catch {
     return undefined;
   }
+}
+
+function viteTestFlag() {
+  return readViteTestFlag();
+}
+
+/** 构建时写死。正式包是 live-rewarded，调试包和本地开发是 test-rewarded。 */
+export const BAKED_AD_MODE = adBuildMode(readViteTestFlag());
+
+/**
+ * 设置页的广告状态和「重置广告同意」只给调试包。
+ * 正式网页构建即使被打进可调试壳，也不再画这两项。
+ */
+export function showDebugAdChrome({ debugBuild = false, bakedMode = 'test-rewarded' } = {}) {
+  return debugBuild === true && bakedMode !== 'live-rewarded';
+}
+
+export function shouldShowDebugAdChrome() {
+  return showDebugAdChrome({
+    debugBuild: isDebugAdBuild(),
+    bakedMode: BAKED_AD_MODE,
+  });
 }
 
 /**

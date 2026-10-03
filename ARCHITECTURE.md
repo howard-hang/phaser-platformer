@@ -13,7 +13,7 @@
 | `boot` | `src/scenes/BootScene.js` | 烤贴图，然后进标题。配置不合法时进错误页 |
 | `menu` | `src/scenes/MenuScene.js` | 标题。选关、无尽模式、右上角设置 |
 | `select` | `src/scenes/SelectScene.js` | 翻页选关，按累计星星解锁 |
-| `settings` | `src/scenes/SettingsScene.js` | 音量、震动、特效、帧率、语言、重置进度 |
+| `settings` | `src/scenes/SettingsScene.js` | 音量、震动、特效、帧率、语言、隐私政策、重置进度 |
 | `game` | `src/scenes/GameScene.js` | 闯关和无尽。本身不实现障碍和手感 |
 | `error` | `src/scenes/ErrorScene.js` | 把关卡 JSON 的错误写成中文，避免白屏 |
 
@@ -193,6 +193,7 @@ JSON 由 `src/game/levelSchema.js` 对照 `src/levels/level.schema.json` 检查�
 | `src/game/` | 贴图、主题、视差、HUD、音频、死亡和灰尘特效、关卡编译、无尽拼图、设置、震动、视口。可以引用 Phaser |
 | `src/scenes/` | 把上面两部分接到场景生命周期上 |
 | `src/platform/androidBack.js` | 返回键：闯关回选关，无尽和选关回标题，标题退出 |
+| `src/platform/externalLink.js` | 设置页打开隐私政策。只允许 `howard-hang.github.io` 的 https 链接 |
 | `src/platform/admob.config.js` | 激励视频的应用 ID、广告位和测试开关。正式 ID 只写在这里 |
 | `src/platform/rewardedAd.js` | 安卓 AdMob：UMP 同意、加载和播放复活激励视频。网页不加载 |
 | `src/logic/revive.js` | 复活落点、次数、广告回调和按钮状态。不引用 Phaser |
@@ -212,7 +213,7 @@ JSON 由 `src/game/levelSchema.js` 对照 `src/levels/level.schema.json` 检查�
 
 预加载从开局开始，最多 `AD_LOAD_MAX_ATTEMPTS`（4）次，两次之间隔 `AD_LOAD_RETRY_MS`（3 秒）。每一步和 AdMob 的错误码都打 `[admob]` 日志。复活按钮订阅状态，不用再死一次才变可点。
 
-UMP 平时只对欧洲和英国弹框。调试包在 `MainActivity` 里读取广告 ID，写成大写 MD5 放到 `window.__FANGKUAI_AD_TEST_DEVICE__`，请求同意时带 `debugGeography=EEA` 和这个测试设备，用来强制弹出同意框。设置页只在调试包显示一行「广告状态：未初始化 / 同意中 / 加载中 / 已就绪 / 失败(错误码)」，以及「重置广告同意」。正式包没有这两项。
+UMP 平时只对欧洲和英国弹框。调试包在 `MainActivity` 里读取广告 ID，写成大写 MD5 放到 `window.__FANGKUAI_AD_TEST_DEVICE__`，请求同意时带 `debugGeography=EEA` 和这个测试设备，用来强制弹出同意框。设置页只在调试包显示一行「广告状态：未初始化 / 同意中 / 加载中 / 已就绪 / 失败(错误码)」，以及「重置广告同意」。正式包没有这两项，也不会带 `debugGeography`。`showDebugAdChrome` 在正式网页构建（`live-rewarded`）上直接为 false，所以这两项不会画出来。
 
 安卓壳用 `isNativeShell`（`androidBridge` 或 WebView 的 UA）判断。就算 Capacitor 把平台判成网页，壳上仍会调用 AdMob，避免按钮出现了却从没初始化。
 
@@ -228,13 +229,15 @@ UMP 平时只对欧洲和英国弹框。调试包在 `MainActivity` 里读取广
 
 - 默认、`vite` 开发版、以及没设变量的构建，都用测试位，并且 `isTesting: true`。CI 的 `android-apk` 打的是调试包，不会请求正式位。
 - 调试 APK 还会在 `MainActivity` 写入 `window.__FANGKUAI_DEBUG_APK__ = true`。即使构建变量关错了，调试包仍走测试广告。
-- 正式 release 包要在构建网页时加上 `VITE_ADMOB_USE_TEST_ADS=false`，并且不要用可调试的签名。这时才用 `REWARDED_AD_UNIT_ID`，`isTesting` 为 false。
+- 正式 release 包要在构建网页时加上 `VITE_ADMOB_USE_TEST_ADS=false`，并且 `debuggable` 为 false。这时才用 `REWARDED_AD_UNIT_ID`，`isTesting` 为 false。开关必须写成 `import.meta.env.VITE_ADMOB_USE_TEST_ADS`，Vite 才会收成字面量。包里的 `BAKED_AD_MODE` 是 `live-rewarded` 或 `test-rewarded`。
 
 ```bash
 VITE_ADMOB_USE_TEST_ADS=false npm run build
 npx cap sync android
-cd android && ./gradlew assembleRelease
+cd android && ./gradlew bundleRelease assembleRelease
 ```
+
+签名、versionCode、隐私政策和商店表单写在 [PLAY_STORE.md](PLAY_STORE.md)。设置页的「隐私政策」走 `openExternal`，安卓上由 `MainActivity` 的 `FangkuaiLinks` 用系统浏览器打开。
 
 截图可以让浏览器带上安卓 WebView 的 UA（含 `Android` 和 `; wv)`），再设置 `window.__FANGKUAI_AD_MOCK__`。不要同时写 `window.androidBridge`，那会让 Capacitor 以为自己在真机上，假回调会被丢掉。真机不吃这个假对象。`outcome` 用 `rewarded`、`dismissed` 或 `error`，`ready: false` 就是暂无广告。
 
@@ -267,6 +270,7 @@ Node 里直接跑，不打开浏览器，也不依赖墙钟。碰撞、计分、
 | `tests/i18n.test.js` | 五种语言文件对齐，切换后文案变化 |
 | `tests/i18n.browser.test.js` | 菜单和设置页跟着语言变，小屏不溢出 |
 | `tests/revive.test.js` | 复活落点、一局一次、假广告回调、测试和正式广告位 |
+| `tests/playStore.test.js` | 隐私政策、app-ads.txt、R8、CI 的 release 清单检查、商店图尺寸 |
 
 ### 浏览器
 
@@ -284,7 +288,7 @@ npx vitest run tests/winPanel.browser.test.js
 
 浏览器用例需要本机的 Chrome 或 Chromium。`npm test` 会一起跑这两类。
 
-GitHub Actions 里只有 `test-and-pages` 跑测试并发布网页。`android-apk` 只安装依赖、构建网页、同步 Capacitor、打调试 APK。推到 `main` 时仍会更新固定的 `android-debug` Release。
+GitHub Actions 里只有 `test-and-pages` 跑测试并发布网页。网页产物里有 `privacy.html` 和 `app-ads.txt`。`android-apk` 安装依赖、构建网页、同步 Capacitor、打调试 APK，再用真实广告位打 release（AAB 和 APK）并检查清单。上传密钥四个 Secrets 都空着时，release 只用一次性密钥做检查，不上传；四个都有才上传 `fangkuai-paoku-release`。推到 `main` 时仍会更新固定的 `android-debug` Release。
 
 ## 截图
 
@@ -305,4 +309,12 @@ npm run shots
 | `shots/settings-portrait.png` | 设置页，360×640，带安全区 |
 | `shots/settings-landscape.png` | 设置页，844×390，带安全区 |
 
-这个目录是生成物，不提交。经典四张图固定用中文。对比图按 zh、en、es、ja、ko 从左到右排。
+`shots/` 是生成物，不提交。经典四张图固定用中文。对比图按 zh、en、es、ja、ko 从左到右排。
+
+同一条命令还会把 Play 商店图写到 `store/`，这些要提交：
+
+| 文件 | 尺寸 |
+| --- | --- |
+| `store/icon-512.png` | 512×512 图标 |
+| `store/feature-1024x500.png` | 1024×500 宣传图 |
+| `store/phone-01-menu.png` 到 `phone-04-settings.png` | 1920×1080 手机截图 |

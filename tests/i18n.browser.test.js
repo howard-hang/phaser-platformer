@@ -77,6 +77,7 @@ describe('界面语言', () => {
       const settings = await page.evaluate(() => readScene('settings'));
       expect(settings.title).toBe(copy['settings.title']);
       expect(settings.language).toBe(copy['settings.language']);
+      expect(settings.privacy).toBe(copy['settings.privacy']);
       expect(settings.overflow, JSON.stringify(settings.overflow)).toEqual([]);
     } finally {
       await page.close();
@@ -131,6 +132,33 @@ describe('界面语言', () => {
       await page.close();
     }
   }, 120000);
+
+  it('设置页点隐私政策，把 Pages 地址交给外链', async () => {
+    const page = await browser.newPage();
+    try {
+      await page.evaluateOnNewDocument(() => {
+        window.__opened = [];
+        window.FangkuaiLinks = {
+          open(url) { window.__opened.push(url); },
+        };
+      });
+      await openLocale(page, baseUrl, 'zh');
+      await page.evaluate(() => window.__PHASER_GAME__.scene.start('settings'));
+      await page.waitForFunction(() => window.__PHASER_GAME__.scene.getScene('settings')?.scene?.isActive?.(), { timeout: WAIT_MS });
+      await waitFrames(page, 2);
+      const spot = await page.evaluate(() => {
+        const button = window.__PHASER_GAME__.scene.getScene('settings').privacyBtn;
+        return { x: button.zone.x, y: button.zone.y, label: button.caption.text };
+      });
+      expect(spot.label).toBe('隐私政策');
+      await clickGame(page, spot.x, spot.y);
+      await page.waitForFunction(() => window.__opened?.length > 0, { timeout: WAIT_MS });
+      const opened = await page.evaluate(() => window.__opened.slice());
+      expect(opened).toEqual(['https://howard-hang.github.io/phaser-platformer/privacy.html']);
+    } finally {
+      await page.close();
+    }
+  }, 120000);
 });
 
 async function installReader(page) {
@@ -176,6 +204,7 @@ async function installReader(page) {
         subtitle: scene.subtitle?.text || '',
         title: scene.title?.text || document.title,
         language: scene.langLabel?.text || '',
+        privacy: scene.privacyBtn?.caption?.text || '',
         overflow,
       };
     };
