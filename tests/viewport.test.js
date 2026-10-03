@@ -370,6 +370,7 @@ describe('设置页布局', () => {
         centerBox(layout.sfx),
         centerBox(layout.vibrate),
         centerBox(layout.fps),
+        centerBox(layout.privacy),
         centerBox(layout.reset),
         centerBox(layout.back),
         centerBox(layout.cancel),
@@ -401,6 +402,7 @@ describe('设置页布局', () => {
         expect(overlaps(langs[i - 1], langs[i])).toBe(false);
       }
       expect(overlaps(centerBox(layout.cancel), centerBox(layout.confirm))).toBe(false);
+      expect(overlaps(centerBox(layout.privacy), centerBox(layout.reset))).toBe(false);
       expect(overlaps(centerBox(layout.reset), centerBox(layout.back))).toBe(false);
     }
   });
@@ -419,6 +421,7 @@ describe('设置页布局', () => {
       centerBox(layout.vibrate),
       centerBox(layout.fps),
       centerBox(layout.language),
+      centerBox(layout.privacy),
       centerBox(layout.reset),
       centerBox(layout.back),
       ...layout.fxButtons.map(centerBox),
@@ -476,6 +479,7 @@ describe('设置页布局', () => {
       for (let i = 1; i < stack.length; i += 1) {
         expect(overlaps(stack[i - 1], stack[i]), `${phone.w}x${phone.h} 第 ${i} 行`).toBe(false);
       }
+      expect(overlaps(centerBox(layout.privacy), centerBox(layout.reset)), `${phone.w}x${phone.h} 隐私和重置`).toBe(false);
       expect(overlaps(centerBox(layout.reset), centerBox(layout.back))).toBe(false);
       const fx = layout.fxButtons.map(centerBox);
       expect(overlaps(centerBox(layout.fxLabel), fx[0])).toBe(false);

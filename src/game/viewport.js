@@ -369,7 +369,7 @@ export function layoutWinPanel({
 }
 
 /**
- * 设置页。标题、两条音量、震动、特效、帧率、语言、底部两个按钮。
+ * 设置页。标题、两条音量、震动、特效、帧率、语言、底部三个按钮。
  * 全部排在刘海和底部安全区之间。竖屏游戏像素更高，行高跟着加到手指点得到。
  * 矮屏放不下时先压标题和间距，再整页缩小，语言行和其它行一起留在画面里。
  * pxPerCss 是每个 CSS 像素对应多少游戏像素，和 Phaser displayScale 一致。
@@ -395,7 +395,7 @@ export function layoutSettings({
   // 44 CSS 像素大约是手指能点中的下限。竖屏上一个游戏像素更小，行要加高。
   // 多 0.05 游戏像素，避免除回去时浮点误差掉到 44 以下。
   const minTouch = 44 * px + 0.05;
-  // 标题下面七行：音乐、音效、震动、特效、帧率、语言、底部按钮。
+  // 标题下面七行：音乐、音效、震动、特效、帧率、语言、底部按钮。隐私政策和重置、返回挤在同一行。
   const rowCount = 7;
   let rowH = Math.max(CANDY_BUTTON_H, minTouch);
   let titleH = 52;
@@ -439,12 +439,18 @@ export function layoutSettings({
   const language = row();
   const actions = row();
 
-  const actionGap = 16;
-  const resetW = Math.min(280, Math.floor((panelW - actionGap) * 0.56));
-  const backW = Math.min(220, panelW - actionGap - resetW);
-  const pair = resetW + actionGap + backW;
-  const reset = { x: cx - pair / 2 + resetW / 2, y: actions.y, w: resetW, h: rowH };
-  const back = { x: cx + pair / 2 - backW / 2, y: actions.y, w: backW, h: rowH };
+  // 隐私政策、重置、返回并排。再加一行的话，横屏安全区里按钮会矮于 44 CSS 像素。
+  const actionGap = 12;
+  const actionW = (panelW - actionGap * 2) / 3;
+  const actionAt = (index) => ({
+    x: cx - panelW / 2 + actionW / 2 + index * (actionW + actionGap),
+    y: actions.y,
+    w: actionW,
+    h: rowH,
+  });
+  const privacy = actionAt(0);
+  const reset = actionAt(1);
+  const back = actionAt(2);
 
   const fxGap = 12;
   const fxLabelW = 168;
@@ -526,6 +532,7 @@ export function layoutSettings({
     language,
     langLabel,
     langButtons,
+    privacy,
     reset,
     back,
     dialog,
