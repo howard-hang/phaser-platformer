@@ -13,6 +13,9 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.BridgeActivity;
+import com.google.android.gms.ads.identifier.AdvertisingIdClient;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Locale;
 
 /**
@@ -22,6 +25,10 @@ import java.util.Locale;
 public class MainActivity extends BridgeActivity {
 
     private static final int SKY = Color.parseColor("#c026d3");
+
+    /** 广告 ID 的 MD5。空串表示查过了但没有，null 表示还没查。 */
+    private String cachedTestDeviceHash;
+    private boolean testDeviceLookupStarted;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +47,7 @@ public class MainActivity extends BridgeActivity {
         paintWindow();
         extendIntoCutout();
         hideSystemBars();
+        publishDebugApkFlag();
     }
 
     @Override
@@ -48,6 +56,7 @@ public class MainActivity extends BridgeActivity {
         extendIntoCutout();
         hideSystemBars();
         lockWebView();
+        publishDebugApkFlag();
     }
 
     @Override
@@ -142,6 +151,66 @@ public class MainActivity extends BridgeActivity {
             child.setPadding(0, 0, 0, 0);
             if (child instanceof ViewGroup) clearPaddingTree(child);
         }
+    }
+
+    /**
+     * 调试包把标记写成 true，网页因此强制用测试激励广告。
+     * 正式包不可调试，标记是 false，再配合构建变量才会请求真实广告位。
+     * 调试包还会把广告 ID 的 MD5 交给网页，UMP 才能按欧洲地理弹出同意框。
+     */
+    private void publishDebugApkFlag() {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        boolean debug = (getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        String script = "window.__FANGKUAI_DEBUG_APK__=" + debug + ";";
+        getBridge().getWebView().evaluateJavascript(script, null);
+        if (debug) publishTestDeviceHash();
+    }
+
+    /**
+     * UMP 的测试设备是广告 ID 的大写 MD5，和 logcat 里那串哈希一样。
+     * AdvertisingIdClient 不能在主线程调用。
+     */
+    private void publishTestDeviceHash() {
+        if (cachedTestDeviceHash != null) {
+            injectTestDevice(cachedTestDeviceHash);
+            return;
+        }
+        if (testDeviceLookupStarted) return;
+        testDeviceLookupStarted = true;
+        new Thread(() -> {
+            String hash = "";
+            try {
+                AdvertisingIdClient.Info info = AdvertisingIdClient.getAdvertisingIdInfo(getApplicationContext());
+                if (info != null && info.getId() != null) {
+                    hash = md5Upper(info.getId());
+                }
+            } catch (Exception ex) {
+                android.util.Log.w("admob", "读取广告 ID 失败", ex);
+            }
+            cachedTestDeviceHash = hash;
+            final String value = hash;
+            runOnUiThread(() -> injectTestDevice(value));
+        }, "admob-test-device").start();
+    }
+
+    /** 写成字符串。空串也要写，网页才能停止等待。 */
+    private void injectTestDevice(String hash) {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        String safe = hash == null ? "" : hash.replace("'", "");
+        String script = "window.__FANGKUAI_AD_TEST_DEVICE__='" + safe + "';";
+        getBridge().getWebView().evaluateJavascript(script, null);
+        android.util.Log.i("admob", "testDevice " + safe);
+    }
+
+    /** 广告 ID 转成 UMP 要的测试设备哈希。 */
+    private static String md5Upper(String raw) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("MD5");
+        byte[] bytes = digest.digest(raw.getBytes(StandardCharsets.UTF_8));
+        StringBuilder out = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) {
+            out.append(String.format(Locale.US, "%02X", b & 0xff));
+        }
+        return out.toString();
     }
 
     /** 挖孔尺寸写成 CSS 变量。网页 HUD 读取，画布不因此缩小。 */

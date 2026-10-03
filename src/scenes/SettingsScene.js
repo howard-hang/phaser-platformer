@@ -23,8 +23,11 @@ import {
   updateSettings,
 } from '../game/settings.js';
 import { clampVolume } from '../game/audioPolicy.js';
-import { cssInsetsToGame, layoutSettings, readSafeAreaInsets, verticalCameraScroll } from '../game/viewport.js';
+import { cssInsetsToGame, layoutDebugAdChrome, layoutSettings, readSafeAreaInsets, verticalCameraScroll } from '../game/viewport.js';
 import { LOCALES, getLocale, setLocale, t } from '../i18n/index.js';
+import { adStatusLabelKey } from '../logic/adLoad.js';
+import { isDebugAdBuild } from '../platform/admob.config.js';
+import { getAdStatus, onAdStatus, resetAdConsent } from '../platform/rewardedAd.js';
 
 const FX_KEYS = { high: 'settings.fxHigh', low: 'settings.fxLow', off: 'settings.fxOff' };
 
@@ -277,6 +280,26 @@ export class SettingsScene extends Phaser.Scene {
       depth: 30,
       onClick: () => this.scene.start('menu'),
     });
+    // 只有调试包能看见广告状态和重置同意。正式包不画这两项。
+    if (isDebugAdBuild()) {
+      this.adStatusText = addCandyText(this, 0, 0, '', {
+        size: 14,
+        color: '#ffe14a',
+        stroke: '#3b0764',
+        strokeThickness: 3,
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(32);
+      this.adResetBtn = createCandyButton(this, {
+        label: t('settings.adReset'),
+        variant: 'grape',
+        width: 180,
+        height: 44,
+        fontSize: 16,
+        depth: 32,
+        onClick: () => this.resetAds(),
+      });
+      this.refreshAdStatus();
+      this._stopAdStatus = onAdStatus(() => this.refreshAdStatus());
+    }
 
     this.overlay = this.add.rectangle(0, 0, 4, 4, 0x2a0840, 0.55)
       .setOrigin(0.5)
@@ -348,6 +371,8 @@ export class SettingsScene extends Phaser.Scene {
     this.scale.on('resize', this.applyViewport, this);
     this.events.once('shutdown', () => {
       this.scale.off('resize', this.applyViewport, this);
+      this._stopAdStatus?.();
+      this._stopAdStatus = null;
     });
     this.refreshFpsLabel();
     this.applyViewport();
@@ -360,7 +385,9 @@ export class SettingsScene extends Phaser.Scene {
 
   /** 主控件在确认框打开时停用，避免点到后面的滑条。 */
   mainControls() {
-    return [this.music, this.sfx, this.vibrateBtn, this.fpsBtn, ...this.fxButtons, ...this.langButtons, this.resetBtn, this.backBtn];
+    const controls = [this.music, this.sfx, this.vibrateBtn, this.fpsBtn, ...this.fxButtons, ...this.langButtons, this.resetBtn, this.backBtn];
+    if (this.adResetBtn) controls.push(this.adResetBtn);
+    return controls;
   }
 
   refreshAudioLabels() {
@@ -438,6 +465,31 @@ export class SettingsScene extends Phaser.Scene {
     });
   }
 
+  /** 调试行：广告状态：未初始化 / 同意中 / 加载中 / 已就绪 / 失败(错误码)。 */
+  refreshAdStatus() {
+    if (!this.adStatusText) return;
+    const snap = getAdStatus();
+    const detail = snap.phase === 'failed'
+      ? t('settings.adFailed', { code: snap.code || 'unknown' })
+      : t(adStatusLabelKey(snap.phase));
+    this.adStatusText.setText(t('settings.adStatus', { status: detail }));
+    if (this._adStatusWidth) shrinkToWidth(this.adStatusText, this._adStatusWidth, 10);
+  }
+
+  /** 清掉同意记录，方便在真机上再看一次隐私框。 */
+  resetAds() {
+    if (this.confirming || this._resettingAds) return;
+    this._resettingAds = true;
+    this.adResetBtn?.setEnabled(false);
+    resetAdConsent().catch((error) => {
+      console.log('[admob] 重置失败', error);
+    }).finally(() => {
+      this._resettingAds = false;
+      if (this.adResetBtn) this.adResetBtn.setEnabled(!this.confirming);
+      this.refreshAdStatus();
+    });
+  }
+
   /** 设置里改语言。这一页立刻换字，其它场景下次进来时用新语言。 */
   chooseLocale(id) {
     if (this.confirming || id === getLocale()) return;
@@ -471,6 +523,8 @@ export class SettingsScene extends Phaser.Scene {
     this.dialogText.setText(t('settings.confirmBody'));
     this.cancelBtn.setLabel(t('settings.cancel'));
     this.confirmBtn.setLabel(t('settings.ok'));
+    this.adResetBtn?.setLabel(t('settings.adReset'));
+    this.refreshAdStatus();
     if (this.layout) this.applyViewport();
   }
 
@@ -494,6 +548,16 @@ export class SettingsScene extends Phaser.Scene {
     this.layout = layout;
     this.title.setFontSize(layout.titleFont);
     this.title.setPosition(layout.title.x, layout.title.y);
+    if (this.adResetBtn && this.adStatusText) {
+      const chrome = layoutDebugAdChrome(layout.title);
+      this.placeButton(this.adResetBtn, chrome.reset, Math.max(12, Math.round(chrome.reset.h * 0.36)));
+      this.adStatusText.setFontSize(Math.max(11, Math.round(chrome.status.h * 0.34)));
+      this.adStatusText.setPosition(chrome.status.x, chrome.status.y);
+      this._adStatusWidth = chrome.status.w - 4;
+      shrinkToWidth(this.adStatusText, this._adStatusWidth, 10);
+      const mid = layout.title.w - chrome.reset.w - chrome.status.w - 16;
+      shrinkToWidth(this.title, Math.max(40, mid), 14);
+    }
     this.music.setLayout(layout.music, layout.musicTrack);
     this.sfx.setLayout(layout.sfx, layout.sfxTrack);
     this.placeButton(this.vibrateBtn, layout.vibrate, layout.rowFont);

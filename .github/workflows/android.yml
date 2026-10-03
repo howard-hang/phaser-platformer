@@ -81,6 +81,9 @@ jobs:
           grep -q "assets/public/assets/game-font" apk-list.txt
           grep -q "assets/public/assets/.*\.ogg" apk-list.txt
           grep -q "ic_launcher.png" apk-list.txt
+          # cap sync 必须把 AdMob 写进插件清单，清单里也要有应用 ID。
+          grep -q "com.getcapacitor.community.admob.AdMob" android/app/src/main/assets/capacitor.plugins.json
+          grep -q "com.google.android.gms.ads.APPLICATION_ID" manifest.txt
 
       - uses: actions/upload-artifact@v4
         with:

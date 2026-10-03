@@ -42,6 +42,7 @@ import {
   createPowerState,
   isOutOfMap,
 } from '../logic/powerups.js';
+import { createReviveBudget } from '../logic/revive.js';
 import {
   createRunState,
   noteProgress,
@@ -54,6 +55,7 @@ import { effectMethods } from './game/effects.js';
 import { hudMethods } from './game/hud.js';
 import { inputMethods } from './game/input.js';
 import { itemMethods } from './game/items.js';
+import { reviveMethods } from './game/revive.js';
 import { physicsMethods } from './game/physics.js';
 
 export class GameScene extends Phaser.Scene {
@@ -126,6 +128,9 @@ export class GameScene extends Phaser.Scene {
     this.invulnUntil = 0;
     this.dying = false;
     this._deathToken = 0;
+    this._reviveBusy = false;
+    // 每一局只有一次看视频复活。重开一局才重新计数。
+    this.reviveBudget = createReviveBudget();
     this.activeCheckpoint = this.level.checkpoints[0];
     this.airTimeMs = sampleJump().airTime * 1000;
     this._insets = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -265,5 +270,6 @@ Object.assign(
   effectMethods,
   inputMethods,
   hudMethods,
+  reviveMethods,
 );
 

@@ -537,3 +537,34 @@ export function layoutSettings({
     rowFont: Math.max(16, Math.min(36, Math.round(rowH * 0.4))),
   };
 }
+
+/**
+ * 调试包的广告状态和「重置广告同意」。
+ * 塞在标题这一行的左右两边，不另占一行，避免横屏把原来的按钮压到点不着。
+ */
+export function layoutDebugAdChrome(title) {
+  if (!title) return null;
+  let resetW = Math.min(210, Math.max(72, title.w * 0.3));
+  let statusW = Math.min(280, Math.max(72, title.w * 0.36));
+  const gap = 12;
+  if (resetW + statusW + gap > title.w) {
+    const scale = Math.max(0.2, (title.w - gap) / (resetW + statusW));
+    resetW *= scale;
+    statusW *= scale;
+  }
+  const h = Math.max(24, title.h * 0.72);
+  return {
+    reset: {
+      x: title.x - title.w / 2 + resetW / 2,
+      y: title.y,
+      w: resetW,
+      h,
+    },
+    status: {
+      x: title.x + title.w / 2 - statusW / 2,
+      y: title.y,
+      w: statusW,
+      h,
+    },
+  };
+}

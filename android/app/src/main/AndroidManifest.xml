@@ -13,6 +13,11 @@
         <!-- 长屏（20:9 及以上）不要被最大宽高比裁成左右黑边。 -->
         <meta-data android:name="android.max_aspect" android:value="2.4" />
 
+        <!-- 必须与 src/platform/admob.config.js 的 ADMOB_APP_ID 一致。 -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3218611878548189~9810569030" />
+
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
@@ -45,6 +50,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 调试包读取广告 ID，算出 UMP 测试设备哈希。广告库本身也会合并这条权限。 -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
     <!-- 死亡、护甲碎裂和吃到道具时的轻微震动。网页不支持时会跳过。 -->
     <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>
