@@ -316,5 +316,5 @@ npm run shots
 | 文件 | 尺寸 |
 | --- | --- |
 | `store/icon-512.png` | 512×512 图标 |
-| `store/feature-1024x500.png` | 1024×500 宣传图 |
+| `store/feature-1024x500.png` | 1024×500 宣传图。中间是标题、方块和障碍，背景用游戏里的紫色视差。脚本会拒绝整张同色的图 |
 | `store/phone-01-menu.png` 到 `phone-04-settings.png` | 1920×1080 手机截图 |
