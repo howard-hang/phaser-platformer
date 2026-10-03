@@ -196,6 +196,13 @@ function drawLock(ctx) {
   ctx.fillRect(30.5, 39, 3, 7);
 }
 
+/** 暂停。两道竖条，和其它按钮一样是白线，不用表情符号。 */
+function drawPause(ctx) {
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(18, 14, 8, 36);
+  ctx.fillRect(38, 14, 8, 36);
+}
+
 /** 设置。一圈齿轮，线条和主页、声音图标一样粗，不用表情符号。 */
 function drawSettings(ctx) {
   ctx.strokeStyle = '#ffffff';
@@ -381,6 +388,7 @@ export function generateTextures(scene) {
   make('ui-star-empty', 64, 64, drawStarOutline);
   make('ui-lock', 64, 64, drawLock);
   make('icon-home', 64, 64, drawHome);
+  make('icon-pause', 64, 64, drawPause);
   make('icon-settings', 64, 64, drawSettings);
   make('icon-sound', 64, 64, (ctx) => drawSpeaker(ctx, false));
   make('icon-mute', 64, 64, (ctx) => drawSpeaker(ctx, true));

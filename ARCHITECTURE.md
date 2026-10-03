@@ -39,19 +39,23 @@
 | `src/scenes/game/input.js` | 点按和空格起跳。右上角按钮区不起跳 |
 | `src/scenes/game/physics.js` | 刚体外推、跑动贴图、贴地和贴天花板、反重力、飞机高度。`applyHitbox` 也从这里导出，跑道创建时共用 |
 | `src/scenes/game/revive.js` | 死亡结算上的「看视频复活」。看完从死亡点往回退再继续跑 |
+| `src/scenes/game/pause.js` | 右上角暂停、冻结、继续倒数，以及切后台自动暂停 |
+| `src/scenes/game/starter.js` | 安卓开局前看广告领一件道具。网页不显示 |
 
 当前行数（`wc -l`，含注释。每个文件都不超过 400 行）：
 
 | 文件 | 行数 |
 | --- | --- |
-| `src/scenes/GameScene.js` | 275 |
+| `src/scenes/GameScene.js` | 295 |
 | `src/scenes/game/course.js` | 340 |
+| `src/scenes/game/pause.js` | 319 |
 | `src/scenes/game/physics.js` | 259 |
-| `src/scenes/game/effects.js` | 247 |
+| `src/scenes/game/starter.js` | 254 |
+| `src/scenes/game/effects.js` | 250 |
 | `src/scenes/game/items.js` | 155 |
-| `src/scenes/game/revive.js` | 139 |
-| `src/scenes/game/input.js` | 59 |
-| `src/scenes/game/hud.js` | 46 |
+| `src/scenes/game/revive.js` | 152 |
+| `src/scenes/game/input.js` | 67 |
+| `src/scenes/game/hud.js` | 51 |
 
 ## 数据从哪来
 
@@ -208,7 +212,19 @@ JSON 由 `src/game/levelSchema.js` 对照 `src/levels/level.schema.json` 检查�
 
 广告还在同意或加载时，按钮显示「加载中」并且不可点。加载成功后按钮马上变成「看视频复活」。失败重试完、没网或中途关掉：不复活，按钮变成「暂无广告」并且不可点。其它按钮仍能回存档点、再来一次或回主页。播放期间 `holdMusicForAd(true)` 暂停音乐，结束一定恢复。
 
-这一单只有复活激励视频。不接开屏、横幅和插屏。`bootRewardedAds` 在启动时就执行，不等死亡。顺序是 `AdMob.initialize`、`requestConsentInfo`，状态是 `REQUIRED` 且表单可用时 `showConsentForm`。同意接口失败、用户关掉框、或者地区不需要同意（`NOT_REQUIRED`），都会继续 `prepareRewardVideoAd`。不再拿 `canRequestAds` 当开关。
+复活和开局领道具共用这一套激励视频。不接开屏、横幅和插屏。`bootRewardedAds` 在启动时就执行，不等死亡。顺序是 `AdMob.initialize`、`requestConsentInfo`，状态是 `REQUIRED` 且表单可用时 `showConsentForm`。同意接口失败、用户关掉框、或者地区不需要同意（`NOT_REQUIRED`），都会继续 `prepareRewardVideoAd`。不再拿 `canRequestAds` 当开关。
+
+开局领道具的正式广告位是 `POWERUP_REWARDED_AD_UNIT_ID`。现在它等于 `revive_rewarded`。以后单独建 `powerup_rewarded` 时只改这一项。播放、测试广告、同意和加载重试仍走 `rewardedAd.js`，调用时传入 `powerup`。领道具的次数在 `src/logic/starterPower.js`，和 `reviveBudget` 互不影响。
+
+## 暂停
+
+闯关和无尽的右上角都有暂停按钮，位置算进安全区，死亡面板和过关面板出现时藏掉。暂停冻结刚体、关卡计时、道具倒计时和音乐。面板上是继续、重新开始、返回菜单、设置。继续之后先倒数 3 秒（游戏时间，单帧最多记 50 毫秒），再恢复。
+
+网页用 Esc 或 P。安卓壳在 Capacitor `pause` / `appStateChange` 或 `visibilitychange` 变成隐藏时自动暂停，回到前台不自动继续。看复活广告时用同一套冻结，但不盖暂停面板。设置从暂停里打开时盖在睡着的关卡上，返回只关掉设置。
+
+## 开局领道具
+
+只有安卓壳会在起跑前停住，面板上有「开始」和「看广告领道具」。网页不画这个按钮，进关就跑。看完并拿到奖励后，从二段跳、护甲、飞机里随机给一个，立刻 `grantPower`，倒计时等开跑后才走，数值和跑道上捡到的一样。每局成功领一次，按钮变成「已领取」。加载失败或中途关掉只提示，不扣这次，也不扣复活次数。
 
 预加载从开局开始，最多 `AD_LOAD_MAX_ATTEMPTS`（4）次，两次之间隔 `AD_LOAD_RETRY_MS`（3 秒）。每一步和 AdMob 的错误码都打 `[admob]` 日志。复活按钮订阅状态，不用再死一次才变可点。
 
@@ -267,6 +283,8 @@ Node 里直接跑，不打开浏览器，也不依赖墙钟。碰撞、计分、
 | `tests/i18n.test.js` | 五种语言文件对齐，切换后文案变化 |
 | `tests/i18n.browser.test.js` | 菜单和设置页跟着语言变，小屏不溢出 |
 | `tests/revive.test.js` | 复活落点、一局一次、假广告回调、测试和正式广告位 |
+| `tests/pause.test.js` | 暂停冻结、继续倒数、领道具限次、失败不扣次数、广告位配置 |
+| `tests/pause.browser.test.js` | 暂停后若干游戏帧内人和道具时钟不动，倒数从 3 开始 |
 
 ### 浏览器
 

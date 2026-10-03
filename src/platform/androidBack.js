@@ -4,8 +4,19 @@
  * 网页版没有这个按键。只有安卓 WebView 壳才会注册，普通浏览器不会加载 Capacitor。
  */
 
-/** 根据当前画面决定返回键的下一步。关卡优先于选关，无尽模式直接回标题。设置页回到标题。 */
-export function androidBackAction({ gameActive, selectActive, settingsActive = false, endless = false }) {
+/**
+ * 根据当前画面决定返回键的下一步。
+ * 关卡优先于选关，无尽模式直接回标题。设置页回到标题。
+ * 暂停面板上打开的设置盖在睡着的关卡上，返回只关掉设置。
+ */
+export function androidBackAction({
+  gameActive,
+  selectActive,
+  settingsActive = false,
+  endless = false,
+  settingsOverGame = false,
+}) {
+  if (settingsOverGame) return 'wake-game';
   if (gameActive && endless) return 'menu';
   if (gameActive) return 'select';
   if (selectActive) return 'menu';
@@ -43,13 +54,21 @@ export async function bindAndroidBack(game) {
       try {
         const gameScene = game.scene.getScene('game');
         const settingsActive = !!game.scene?.isActive('settings');
+        const settingsOverGame = settingsActive && !!gameScene?.scene?.isSleeping?.();
         const endless = !!(game.scene?.isActive('game') && gameScene?.endless);
         const action = androidBackAction({
           gameActive: !!game.scene?.isActive('game'),
           selectActive: !!game.scene?.isActive('select'),
           settingsActive,
+          settingsOverGame,
           endless,
         });
+        if (action === 'wake-game') {
+          const settingsScene = game.scene.getScene('settings');
+          settingsScene?.scene.stop();
+          if (gameScene?.scene.isSleeping()) gameScene.scene.wake();
+          return;
+        }
         if (action === 'select') {
           // 必须从关卡场景切走。直接用 SceneManager.start 不会停掉正在跑的关卡。
           if (gameScene) {

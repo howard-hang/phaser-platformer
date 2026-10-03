@@ -1,10 +1,11 @@
 /**
  * 安卓激励视频。网页不加载 AdMob。
- * 只准备复活这一个广告位。开局就预加载，不等到死亡。
+ * 复活和开局领道具共用这一套同意、预加载和重试。广告位各自从配置里读。
+ * 开局就预加载复活位，不等到死亡。领道具如果还是同一个 ID，就直接播这条。
  * 同意失败、或者地区不需要同意，也照样请求广告。
  */
 import { isNativeShell } from './androidBack.js';
-import { currentRewardedSelection, isDebugAdBuild } from './admob.config.js';
+import { currentPowerupSelection, currentRewardedSelection, isDebugAdBuild } from './admob.config.js';
 import { interpretRewardedCallbacks } from '../logic/revive.js';
 import {
   AD_LOAD_MAX_ATTEMPTS,
@@ -26,6 +27,13 @@ let loadGen = 0;
 let exhausted = false;
 /** 启动流程开始之后，播完一条可以再加载。启动前的未初始化不能自己去加载。 */
 let sessionStarted = false;
+/** 当前这条加载对应复活还是领道具。两个位的 ID 一样时可以共用已就绪的广告。 */
+let loadSlot = 'revive';
+let preparedAdId = '';
+
+function selectionFor(slot = loadSlot) {
+  return slot === 'powerup' ? currentPowerupSelection() : currentRewardedSelection();
+}
 
 function admobLog(message, extra) {
   if (extra === undefined) console.log(`[admob] ${message}`);
@@ -97,7 +105,7 @@ export function isRewardedReady() {
 }
 
 async function loadOnce(attempt) {
-  const selection = currentRewardedSelection();
+  const selection = selectionFor(loadSlot);
   const { AdMob, RewardAdPluginEvents } = await import('@capacitor-community/admob');
   let code = '';
   // 拒绝的 Promise 往往不带数字码，数字码在 FailedToLoad 上。
@@ -113,6 +121,7 @@ async function loadOnce(attempt) {
       immersiveMode: true,
     });
     admobLog('prepareRewardVideoAd 成功');
+    preparedAdId = selection.adId;
     return { ok: true };
   } catch (error) {
     const resolved = code || adErrorCode(error);
@@ -152,18 +161,26 @@ function shellCanCallPlugin() {
 }
 
 /**
- * 预先加载一条激励视频。
+ * 预先加载一条激励视频。slot 为 powerup 时读领道具广告位，其余读复活位。
  * 同意还没走完时不另开一条加载。次数用尽后停在失败，等重置或下次启动。
+ * 两个位的 ID 相同，并且已经就绪时，不再重新请求。
  */
-export function prepareRewarded() {
+export function prepareRewarded(slot = 'revive') {
   const mock = mockAds();
   if (mock) return Promise.resolve(!!mock.ready);
   if (!shellCanCallPlugin()) return Promise.resolve(false);
-  if (state.phase === 'ready') return Promise.resolve(true);
-  if (exhausted) return Promise.resolve(false);
-  if (loadPromise) return loadPromise;
+  const selection = selectionFor(slot);
+  if (state.phase === 'ready' && preparedAdId === selection.adId) return Promise.resolve(true);
+  if (loadPromise && loadSlot === slot) return loadPromise;
+  if (exhausted && loadSlot === slot) return Promise.resolve(false);
   // 同意还没结束，或启动流程还没开始，不要另开一条加载。
   if (state.phase === 'consent' || !sessionStarted) return Promise.resolve(false);
+  if (state.phase === 'ready' && preparedAdId && preparedAdId !== selection.adId) {
+    exhausted = false;
+    setStatus('uninitialized');
+  }
+  loadSlot = slot;
+  exhausted = false;
   return startLoad(bootGen);
 }
 
@@ -173,14 +190,16 @@ function rewardCounts(item) {
   return typeof item.type === 'string' && item.type.length > 0;
 }
 
-/** 这条已经播过。清掉「已就绪」，下次死亡可以再加载。 */
+/** 这条已经播过。清掉「已就绪」，下次可以按各自的广告位再加载。 */
 function markAdConsumed() {
   exhausted = false;
+  preparedAdId = '';
   if (state.phase === 'ready') setStatus('uninitialized');
 }
 
 async function showNative() {
-  const prepared = await prepareRewarded();
+  const selection = selectionFor(loadSlot);
+  const prepared = await prepareRewarded(loadSlot);
   if (!prepared || !isRewardedReady()) return interpretRewardedCallbacks({ prepared: false });
   let AdMob;
   let RewardAdPluginEvents;
@@ -190,7 +209,6 @@ async function showNative() {
     admobLog(`加载插件失败 code=${adErrorCode(error)}`);
     return interpretRewardedCallbacks({ failed: true });
   }
-  const selection = currentRewardedSelection();
   const handles = [];
   const drop = () => {
     handles.forEach((handle) => {
@@ -264,10 +282,14 @@ function showMock() {
   });
 }
 
-/** 播放激励视频。返回值和复活逻辑用的是同一种结果。 */
-export async function showRewarded() {
+/**
+ * 播放激励视频。slot 为 powerup 时用领道具广告位，默认仍是复活。
+ * 返回值和复活逻辑用的是同一种结果。
+ */
+export async function showRewarded(slot = 'revive') {
   if (mockAds()) return showMock();
   if (!shellCanCallPlugin()) return interpretRewardedCallbacks({ prepared: false });
+  loadSlot = slot;
   try {
     return await showNative();
   } catch (error) {

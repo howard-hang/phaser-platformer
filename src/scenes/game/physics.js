@@ -43,7 +43,7 @@ export const physicsMethods = {
 
   /** 刚体已经同步完，按剩余时间把方块画到两次物理步之间。 */
   extrapolatePlayerPose() {
-    if (this.dying || this.won) return;
+    if (this.dying || this.won || this._simHeld) return;
     const body = this.player?.body;
     if (!body) return;
     const pose = {

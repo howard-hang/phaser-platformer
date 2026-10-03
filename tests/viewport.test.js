@@ -124,6 +124,22 @@ describe('全屏按钮和安全区', () => {
     expect(hud.power.x + hud.power.w).toBeLessThan(hud.home.x - 40);
   });
 
+  it('暂停按钮排在主页左边，并让开右侧安全区', () => {
+    const hud = layoutHud({
+      viewWidth: 1170,
+      viewHeight: 540,
+      insets: { top: 24, right: 36, bottom: 0, left: 0 },
+      showHome: true,
+      showFullscreen: true,
+      showPause: true,
+    });
+    expect(hud.pause.x).toBeLessThan(hud.home.x);
+    expect(hud.home.x).toBeLessThan(hud.fullscreen.x);
+    expect(hud.pause.y).toBeGreaterThanOrEqual(24);
+    expect(hud.sound.x).toBeLessThanOrEqual(1170 - 36);
+    expect(hud.jumpGuard.left).toBeLessThan(hud.pause.x);
+  });
+
   it('HUD 让开刘海和圆角安全区', () => {
     const hud = layoutHud({
       viewWidth: 1170,

@@ -161,6 +161,7 @@ export function layoutHud({
   showHome = false,
   showFullscreen = false,
   showSettings = false,
+  showPause = false,
   showFps = false,
 } = {}) {
   const top = (insets.top || 0) + HUD_MARGIN_Y;
@@ -174,11 +175,14 @@ export function layoutHud({
   if (showHome) cursor -= BUTTON_GAP;
   // 设置在主页按钮左边。主页没有主页按钮时，它就挨着全屏或声音。
   const settings = showSettings ? { x: cursor, y: top + 32 } : null;
+  if (showSettings) cursor -= BUTTON_GAP;
+  // 暂停在这一排最左边，仍然让开刘海和圆角。
+  const pause = showPause ? { x: cursor, y: top + 32 } : null;
 
   // ?fps 计数器占左上角一条，计数文字往下让，避免盖住 SCORE。
   const fps = showFps ? { x: left, y: top, w: 96, h: 26 } : null;
   const statsTop = top + (fps ? fps.h + 10 : 0);
-  const leftmost = settings?.x ?? home?.x ?? fullscreen?.x ?? sound.x;
+  const leftmost = pause?.x ?? settings?.x ?? home?.x ?? fullscreen?.x ?? sound.x;
   return {
     score: { x: left, y: statsTop },
     deaths: { x: left, y: statsTop + HUD_LINE },
@@ -195,6 +199,7 @@ export function layoutHud({
     fullscreen,
     home,
     settings,
+    pause,
     centerX: viewWidth / 2,
     centerY: viewHeight / 2,
     // 右上角整块按钮区。点这里只按按钮，不起跳。

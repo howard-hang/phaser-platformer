@@ -43,6 +43,8 @@ import {
   isOutOfMap,
 } from '../logic/powerups.js';
 import { createReviveBudget } from '../logic/revive.js';
+import { createPauseState } from '../logic/pause.js';
+import { createStarterOffer } from '../logic/starterPower.js';
 import {
   createRunState,
   noteProgress,
@@ -57,6 +59,8 @@ import { inputMethods } from './game/input.js';
 import { itemMethods } from './game/items.js';
 import { reviveMethods } from './game/revive.js';
 import { physicsMethods } from './game/physics.js';
+import { pauseMethods } from './game/pause.js';
+import { starterMethods } from './game/starter.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -148,9 +152,18 @@ export class GameScene extends Phaser.Scene {
       this.createFinish();
     }
     this.bindInput();
+    this.pauseState = createPauseState();
+    this._pauseFrames = 0;
+    this._simHeld = false;
+    this._adFreeze = false;
+    this.holdingStart = false;
+    this.starterOffer = createStarterOffer();
+    this.pauseUi = null;
+    this.startUi = null;
     this.hud = createHud(this, {
       variant: this.endless ? 'endless' : 'campaign',
       onHome: () => this.scene.start(this.endless ? 'menu' : 'select'),
+      onPause: () => this.requestUserPause(),
     });
     this.powerHud = createPowerHud(this);
     this.blastFx = createBlastFx(this);
@@ -179,6 +192,9 @@ export class GameScene extends Phaser.Scene {
       this.deathFx?.cancel();
     });
     this.applyViewport();
+    this.bindRunPause();
+    // 安卓壳停在起跑线，可以先看广告领道具。网页直接开跑。
+    this.openStartGate();
 
     this.physics.world.off('worldstep', this.onWorldStep, this);
     this.physics.world.on('worldstep', this.onWorldStep, this);
@@ -195,6 +211,8 @@ export class GameScene extends Phaser.Scene {
 
   update(_time, delta) {
     this.suppressJump = false;
+    // 暂停、倒数、开局等待和复活广告期间不推进计时、障碍和道具。
+    if (this.stepPause(delta)) return;
     this.deathFx?.update(delta);
     this.blastFx?.update(delta);
     this.runnerFx?.update(delta);
@@ -271,5 +289,7 @@ Object.assign(
   inputMethods,
   hudMethods,
   reviveMethods,
+  pauseMethods,
+  starterMethods,
 );
 

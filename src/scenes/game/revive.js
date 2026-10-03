@@ -7,6 +7,7 @@ import { showCampaignDeathPanel } from '../../game/hud.js';
 import { t } from '../../i18n/index.js';
 import { isNativeShell } from '../../platform/androidBack.js';
 import { isRewardedReady, onAdStatus, prepareRewarded, rewardedPhase, showRewarded } from '../../platform/rewardedAd.js';
+import { simulationFrozen } from '../../logic/pause.js';
 import {
   applyReviveDecision,
   keepRunOnRevive,
@@ -72,6 +73,7 @@ export const reviveMethods = {
       },
     });
     this.winUi.relayout(this.scale.width, this.scale.height, this._insets);
+    this.syncPauseButton?.();
     this.primeReviveAd();
   },
 
@@ -105,6 +107,8 @@ export const reviveMethods = {
       return;
     }
     this._reviveBusy = true;
+    this._adFreeze = true;
+    this.holdSimulation?.();
     this.setSettlementLocked(true);
     this.refreshReviveButton();
     const token = this._deathToken;
@@ -116,6 +120,8 @@ export const reviveMethods = {
       },
     });
     this._reviveBusy = false;
+    this._adFreeze = false;
+    if (!simulationFrozen(this.pauseState) && !this.holdingStart) this.releaseSimulation?.();
     if (token !== this._deathToken || !this.sys?.isActive?.() || !this.player?.body) return;
     const decision = applyReviveDecision(this.reviveBudget, outcome);
     this.reviveBudget = decision.budget;

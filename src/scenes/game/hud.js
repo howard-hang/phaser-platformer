@@ -41,6 +41,11 @@ export const hudMethods = {
     this.deathFx?.layoutFlash();
     this.levelLabel?.setPosition(viewW / 2, viewH - (insets.bottom || 0) - 18);
     this.winUi?.relayout(viewW, viewH, insets);
+    this.pauseUi?.relayout(viewW, viewH, insets);
+    this.startUi?.relayout(viewW, viewH, insets);
+    if (this.countdownText?.visible) {
+      this.countdownText.setPosition(viewW / 2, viewH / 2);
+    }
     this.syncBackdrop();
   },
 };
