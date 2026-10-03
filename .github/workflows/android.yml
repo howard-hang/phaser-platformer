@@ -84,11 +84,157 @@ jobs:
           # cap sync 必须把 AdMob 写进插件清单，清单里也要有应用 ID。
           grep -q "com.getcapacitor.community.admob.AdMob" android/app/src/main/assets/capacitor.plugins.json
           grep -q "com.google.android.gms.ads.APPLICATION_ID" manifest.txt
+          grep -q "com.google.android.gms.permission.AD_ID" manifest.txt
+          mkdir -p /tmp/debug-web
+          unzip -o fangkuai-paoku-debug.apk 'assets/public/assets/*.js' -d /tmp/debug-web >/dev/null
+          cat /tmp/debug-web/assets/public/assets/*.js > /tmp/debug-web.js
+          # 调试构建没有把开关收成字符串 false。两个模式的函数体都会留在包里，不能靠缺哪个词来判断。
+          if grep -q 'return`false`' /tmp/debug-web.js; then
+            echo '调试包不应把 VITE_ADMOB_USE_TEST_ADS 收成 false'
+            exit 1
+          fi
+          grep -q 'test-rewarded' /tmp/debug-web.js
 
       - uses: actions/upload-artifact@v4
         with:
           name: fangkuai-paoku-debug
           path: fangkuai-paoku-debug.apk
+          if-no-files-found: error
+
+      # 四个密钥都空着：用一次性密钥把 release 打出来做清单检查，产物不上传。
+      # 只填了一部分：失败，避免把临时密钥当成上传密钥。
+      - name: 准备正式签名
+        id: signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          present=0
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -n "${!name}" ]; then present=$((present + 1)); fi
+          done
+          mkdir -p "$RUNNER_TEMP"
+          if [ "$present" -eq 4 ]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/upload.keystore"
+            {
+              echo "ANDROID_KEYSTORE_PASSWORD<<EOF"
+              echo "$ANDROID_KEYSTORE_PASSWORD"
+              echo "EOF"
+              echo "ANDROID_KEY_ALIAS<<EOF"
+              echo "$ANDROID_KEY_ALIAS"
+              echo "EOF"
+              echo "ANDROID_KEY_PASSWORD<<EOF"
+              echo "$ANDROID_KEY_PASSWORD"
+              echo "EOF"
+            } >> "$GITHUB_ENV"
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          elif [ "$present" -eq 0 ]; then
+            keytool -genkeypair -v \
+              -keystore "$RUNNER_TEMP/upload.keystore" \
+              -storetype PKCS12 \
+              -alias ci-ephemeral \
+              -keyalg RSA -keysize 2048 -validity 1 \
+              -storepass ci-ephemeral -keypass ci-ephemeral \
+              -dname "CN=CI Ephemeral, OU=CI, O=CI, L=CI, ST=CI, C=US"
+            echo "ANDROID_KEYSTORE_PASSWORD=ci-ephemeral" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_ALIAS=ci-ephemeral" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_PASSWORD=ci-ephemeral" >> "$GITHUB_ENV"
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "未配置上传密钥，只检查 release 清单，不上传 AAB。"
+          else
+            echo "签名 Secrets 只填了一部分。四个都要有，或者都留空。"
+            exit 1
+          fi
+          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/upload.keystore" >> "$GITHUB_ENV"
+          echo "ANDROID_VERSION_CODE=${{ github.run_number }}" >> "$GITHUB_ENV"
+          echo "ANDROID_VERSION_NAME=1.0.0" >> "$GITHUB_ENV"
+
+      - name: 用真实广告位构建网页并打 release
+        env:
+          VITE_ADMOB_USE_TEST_ADS: 'false'
+        run: |
+          npm run build
+          npx cap sync android
+          cd android && ./gradlew bundleRelease assembleRelease --stacktrace
+
+      - name: 检查 release 清单
+        run: |
+          cp android/app/build/outputs/bundle/release/app-release.aab fangkuai-paoku-release.aab
+          cp android/app/build/outputs/apk/release/app-release.apk fangkuai-paoku-release.apk
+          test -s fangkuai-paoku-release.aab
+          test -s fangkuai-paoku-release.apk
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -name zipalign -type f | sort -V | tail -1)"
+          test -x "$AAPT"
+          test -x "$ZIPALIGN"
+          "$AAPT" dump badging fangkuai-paoku-release.apk | tee release-badging.txt
+          grep -q "package: name='com.fangkuai.paoku' versionCode='${{ github.run_number }}' versionName='1.0.0'" release-badging.txt
+          grep -q "sdkVersion:'24'" release-badging.txt
+          grep -q "targetSdkVersion:'36'" release-badging.txt
+          if grep -q 'application-debuggable' release-badging.txt; then
+            echo 'release 包不能是 debuggable'
+            exit 1
+          fi
+          "$AAPT" dump permissions fangkuai-paoku-release.apk | tee release-perms.txt
+          grep -q "com.google.android.gms.permission.AD_ID" release-perms.txt
+          grep -q "android.permission.INTERNET" release-perms.txt
+          grep -q "android.permission.VIBRATE" release-perms.txt
+          for bad in ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION READ_PHONE_STATE WRITE_EXTERNAL_STORAGE READ_EXTERNAL_STORAGE CAMERA RECORD_AUDIO REQUEST_INSTALL_PACKAGES QUERY_ALL_PACKAGES GET_ACCOUNTS READ_CONTACTS; do
+            if grep -q "$bad" release-perms.txt; then
+              echo "多余权限 $bad"
+              exit 1
+            fi
+          done
+          "$AAPT" dump xmltree fangkuai-paoku-release.apk AndroidManifest.xml | tee release-manifest.txt
+          grep -q 'android:debuggable' release-manifest.txt && { echo '清单里不应出现 debuggable'; exit 1; } || true
+          grep -q "com.google.android.gms.ads.APPLICATION_ID" release-manifest.txt
+          grep -q "ca-app-pub-3218611878548189~9810569030" release-manifest.txt
+          mkdir -p /tmp/release-web
+          unzip -o fangkuai-paoku-release.apk 'assets/public/assets/*.js' -d /tmp/release-web >/dev/null
+          cat /tmp/release-web/assets/public/assets/*.js > /tmp/release-web.js
+          # readViteTestFlag 被收成 return`false`。调试包标志仍会在运行时盖过它。
+          grep -q 'return`false`' /tmp/release-web.js
+          grep -q 'live-rewarded' /tmp/release-web.js
+          grep -q 'ca-app-pub-3218611878548189/5871324026' /tmp/release-web.js
+          # 16 KB：未压缩的 .so 在 APK 里按页对齐。没有原生库时 zipalign -P 16 仍应通过。
+          "$ZIPALIGN" -c -P 16 4 fangkuai-paoku-release.apk
+          python3 - << 'PY'
+          import struct, sys, zipfile
+          z = zipfile.ZipFile('fangkuai-paoku-release.apk')
+          sos = [n for n in z.namelist() if n.endswith('.so')]
+          print('native libs', len(sos))
+          bad = []
+          for name in sos:
+              data = z.read(name)
+              if data[:4] != b'\x7fELF' or data[4] != 2:
+                  bad.append((name, 'not-elf64'))
+                  continue
+              e_phoff = struct.unpack_from('<Q', data, 32)[0]
+              e_phentsize = struct.unpack_from('<H', data, 54)[0]
+              e_phnum = struct.unpack_from('<H', data, 56)[0]
+              for i in range(e_phnum):
+                  off = e_phoff + i * e_phentsize
+                  p_type, = struct.unpack_from('<I', data, off)
+                  if p_type != 1:
+                      continue
+                  p_align, = struct.unpack_from('<Q', data, off + 48)
+                  if p_align < 16384:
+                      bad.append((name, p_align))
+          if bad:
+              print('16KB ELF alignment failed', bad)
+              sys.exit(1)
+          print('16KB ELF alignment OK')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: steps.signing.outputs.configured == 'true'
+        with:
+          name: fangkuai-paoku-release
+          path: |
+            fangkuai-paoku-release.aab
+            fangkuai-paoku-release.apk
           if-no-files-found: error
 
   release:

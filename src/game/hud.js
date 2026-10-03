@@ -163,6 +163,8 @@ export function createHud(scene, {
         scene.time.delayedCall(0, onPause);
       },
     });
+    // 圆按钮默认图标偏小，两条竖线放大后才和房子、全屏、声音分得开。
+    pauseBtn.icon?.setDisplaySize(46, 46);
   }
 
   let home = null;

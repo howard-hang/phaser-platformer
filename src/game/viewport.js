@@ -313,7 +313,10 @@ export function layoutLevelBoard({
   };
 }
 
-/** 通关面板。标题、星星、正文、按钮从上往下排，短屏幕上也不会叠在一起。 */
+/**
+ * 通关面板。标题、星星、正文、按钮从上往下排，短屏幕上也不会叠在一起。
+ * compact 时高度贴着内容。iconCount 和 hintLine 只在紧凑模式占一行。
+ */
 export function layoutWinPanel({
   viewWidth,
   viewHeight,
@@ -323,6 +326,9 @@ export function layoutWinPanel({
   buttonGap = 14,
   starRow = true,
   bodyLines = 2,
+  compact = false,
+  iconCount = 0,
+  hintLine = false,
 } = {}) {
   const topLimit = (insets.top || 0) + 96;
   const bottomLimit = viewHeight - ((insets.bottom || 0) + 12);
@@ -341,22 +347,104 @@ export function layoutWinPanel({
   const availH = Math.max(220, bottomLimit - topLimit);
   const pad = 18;
   const titleH = 52;
+  const legacyBodyH = bodyLines > 2 ? 96 : 62;
+  const legacyH = Math.min(372 + (bodyLines > 2 ? 34 : 0), availH);
+  // 过关和无尽结算仍用原来的高度。暂停和准备出发走紧凑高度。
+  if (!compact) {
+    const bodyH = legacyBodyH;
+    const h = legacyH;
+    const x = (viewWidth - w) / 2;
+    const y = topLimit + Math.max(0, (availH - h) / 2);
+    let cursorY = y + pad;
+    const title = { x: viewWidth / 2, y: cursorY + titleH / 2, w: w - 48, h: titleH };
+    cursorY += titleH + 8;
+    const starH = starRow ? 46 : 0;
+    const stars = { x: viewWidth / 2, y: cursorY + starH / 2, w: 196, h: starH };
+    cursorY += starH + 8;
+    const body = { x: viewWidth / 2, y: cursorY + bodyH / 2, w: w - 56, h: bodyH };
+    const by = y + h - pad - buttonHeight / 2;
+    const buttonTop = by - buttonHeight / 2;
+    const bodyBottom = body.y + body.h / 2;
+    if (bodyBottom + 8 > buttonTop) {
+      body.y -= bodyBottom + 8 - buttonTop;
+    }
+    let cursorX = viewWidth / 2 - buttonsTotal / 2;
+    const buttons = widths.map((bw) => {
+      const item = { x: cursorX + bw / 2, y: by, w: bw, h: buttonHeight };
+      cursorX += bw + buttonGap;
+      return item;
+    });
+    return {
+      panel: { x, y, w, h },
+      title,
+      stars,
+      body,
+      buttons,
+    };
+  }
+
+  const bodyH = bodyLines > 2 ? 96 : (bodyLines > 0 ? 62 : 0);
   const starH = starRow ? 46 : 0;
-  const bodyH = bodyLines > 2 ? 96 : 62;
-  const h = Math.min(372 + (bodyLines > 2 ? 34 : 0), availH);
+  const showIcons = iconCount > 0;
+  const iconH = showIcons ? 72 : 0;
+  const hintH = hintLine ? 26 : 0;
+  const flow = [titleH];
+  if (starH) flow.push(starH);
+  if (bodyH) flow.push(bodyH);
+  if (iconH) flow.push(iconH);
+  if (hintH) flow.push(hintH);
+  flow.push(buttonHeight);
+  const stackH = pad * 2 + flow.reduce((sum, item) => sum + item, 0) + 8 * (flow.length - 1);
+  const h = Math.min(stackH, availH);
   const x = (viewWidth - w) / 2;
   const y = topLimit + Math.max(0, (availH - h) / 2);
   let cursorY = y + pad;
-  const title = { x: viewWidth / 2, y: cursorY + titleH / 2, w: w - 48, h: titleH };
-  cursorY += titleH + 8;
-  const stars = { x: viewWidth / 2, y: cursorY + starH / 2, w: 196, h: starH };
-  cursorY += starH + 8;
-  const body = { x: viewWidth / 2, y: cursorY + bodyH / 2, w: w - 56, h: bodyH };
+  const take = (blockH) => {
+    const center = cursorY + blockH / 2;
+    cursorY += blockH + 8;
+    return center;
+  };
+  const title = { x: viewWidth / 2, y: take(titleH), w: w - 48, h: titleH };
+  const stars = {
+    x: viewWidth / 2,
+    y: starH ? take(starH) : cursorY,
+    w: 196,
+    h: starH,
+  };
+  const body = {
+    x: viewWidth / 2,
+    y: bodyH ? take(bodyH) : cursorY,
+    w: w - 56,
+    h: bodyH,
+  };
+  const icons = [];
+  if (showIcons) {
+    const iconY = take(iconH);
+    const slotW = Math.min(128, (w - 40) / iconCount);
+    let ix = viewWidth / 2 - (slotW * iconCount) / 2;
+    for (let i = 0; i < iconCount; i += 1) {
+      icons.push({ x: ix + slotW / 2, y: iconY, w: slotW, h: iconH });
+      ix += slotW;
+    }
+  }
+  const hint = hintH
+    ? { x: viewWidth / 2, y: take(hintH), w: w - 56, h: hintH }
+    : null;
   const by = y + h - pad - buttonHeight / 2;
   const buttonTop = by - buttonHeight / 2;
-  const bodyBottom = body.y + body.h / 2;
-  if (bodyBottom + 8 > buttonTop) {
-    body.y -= bodyBottom + 8 - buttonTop;
+  const contentBottom = Math.max(
+    title.y + title.h / 2,
+    body.y + body.h / 2,
+    ...icons.map((item) => item.y + item.h / 2),
+    hint ? hint.y + hint.h / 2 : 0,
+  );
+  const overflow = contentBottom + 8 - buttonTop;
+  if (overflow > 0) {
+    body.y -= overflow;
+    icons.forEach((item) => {
+      item.y -= overflow;
+    });
+    if (hint) hint.y -= overflow;
   }
   let cursorX = viewWidth / 2 - buttonsTotal / 2;
   const buttons = widths.map((bw) => {
@@ -370,11 +458,13 @@ export function layoutWinPanel({
     stars,
     body,
     buttons,
+    icons,
+    hint,
   };
 }
 
 /**
- * 设置页。标题、两条音量、震动、特效、帧率、语言、底部两个按钮。
+ * 设置页。标题、两条音量、震动、特效、帧率、语言、底部三个按钮。
  * 全部排在刘海和底部安全区之间。竖屏游戏像素更高，行高跟着加到手指点得到。
  * 矮屏放不下时先压标题和间距，再整页缩小，语言行和其它行一起留在画面里。
  * pxPerCss 是每个 CSS 像素对应多少游戏像素，和 Phaser displayScale 一致。
@@ -400,7 +490,7 @@ export function layoutSettings({
   // 44 CSS 像素大约是手指能点中的下限。竖屏上一个游戏像素更小，行要加高。
   // 多 0.05 游戏像素，避免除回去时浮点误差掉到 44 以下。
   const minTouch = 44 * px + 0.05;
-  // 标题下面七行：音乐、音效、震动、特效、帧率、语言、底部按钮。
+  // 标题下面七行：音乐、音效、震动、特效、帧率、语言、底部按钮。隐私政策和重置、返回挤在同一行。
   const rowCount = 7;
   let rowH = Math.max(CANDY_BUTTON_H, minTouch);
   let titleH = 52;
@@ -444,12 +534,18 @@ export function layoutSettings({
   const language = row();
   const actions = row();
 
-  const actionGap = 16;
-  const resetW = Math.min(280, Math.floor((panelW - actionGap) * 0.56));
-  const backW = Math.min(220, panelW - actionGap - resetW);
-  const pair = resetW + actionGap + backW;
-  const reset = { x: cx - pair / 2 + resetW / 2, y: actions.y, w: resetW, h: rowH };
-  const back = { x: cx + pair / 2 - backW / 2, y: actions.y, w: backW, h: rowH };
+  // 隐私政策、重置、返回并排。再加一行的话，横屏安全区里按钮会矮于 44 CSS 像素。
+  const actionGap = 12;
+  const actionW = (panelW - actionGap * 2) / 3;
+  const actionAt = (index) => ({
+    x: cx - panelW / 2 + actionW / 2 + index * (actionW + actionGap),
+    y: actions.y,
+    w: actionW,
+    h: rowH,
+  });
+  const privacy = actionAt(0);
+  const reset = actionAt(1);
+  const back = actionAt(2);
 
   const fxGap = 12;
   const fxLabelW = 168;
@@ -531,6 +627,7 @@ export function layoutSettings({
     language,
     langLabel,
     langButtons,
+    privacy,
     reset,
     back,
     dialog,

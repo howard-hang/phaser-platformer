@@ -196,11 +196,17 @@ function drawLock(ctx) {
   ctx.fillRect(30.5, 39, 3, 7);
 }
 
-/** 暂停。两道竖条，和其它按钮一样是白线，不用表情符号。 */
+/** 暂停。两条等宽圆头竖线，缩到圆按钮上仍然认得出，不用表情符号。 */
 function drawPause(ctx) {
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(18, 14, 8, 36);
-  ctx.fillRect(38, 14, 8, 36);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(20, 16);
+  ctx.lineTo(20, 48);
+  ctx.moveTo(44, 16);
+  ctx.lineTo(44, 48);
+  ctx.stroke();
 }
 
 /** 设置。一圈齿轮，线条和主页、声音图标一样粗，不用表情符号。 */

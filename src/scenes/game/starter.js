@@ -82,6 +82,20 @@ export const starterMethods = {
       strokeThickness: 4,
       align: 'center',
     })).setOrigin(0.5).setScrollFactor(0).setDepth(300);
+    // 三种可能领到的道具，用现有贴图，不另画一套。
+    const powers = ['double', 'armor', 'plane'].map((kind) => {
+      const icon = this.add.image(0, 0, `power-${kind}`)
+        .setDisplaySize(40, 40)
+        .setScrollFactor(0)
+        .setDepth(300);
+      const label = this.add.text(0, 0, t(`power.${kind}`), textStyle({
+        size: 16,
+        color: '#ffffff',
+        stroke: '#2a0840',
+        strokeThickness: 3,
+      })).setOrigin(0.5).setScrollFactor(0).setDepth(300);
+      return { icon, label };
+    });
     const go = createCandyButton(this, {
       label: t('start.go'),
       variant: 'mint',
@@ -111,6 +125,7 @@ export const starterMethods = {
       title,
       body,
       hint,
+      powers,
       go,
       watch,
       buttons: offer.visible ? [watch, go] : [go],
@@ -126,15 +141,29 @@ export const starterMethods = {
           buttonWidths: widths,
           starRow: false,
           bodyLines: 2,
+          compact: true,
+          iconCount: powers.length,
+          hintLine: !!hint.text,
         });
         paintCandyPanel(panel, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
         title.setPosition(layout.title.x, layout.title.y);
         shrinkToWidth(title, layout.title.w, 22);
         body.setPosition(layout.body.x, layout.body.y);
         shrinkToWidth(body, layout.body.w, 16);
-        const anchor = this.buttons[0];
-        hint.setPosition(layout.body.x, (anchor ? layout.buttons[0].y : layout.body.y) - 58);
-        shrinkToWidth(hint, layout.body.w, 14);
+        powers.forEach((item, index) => {
+          const slot = layout.icons[index];
+          if (!slot) return;
+          item.icon.setPosition(slot.x, slot.y - 14);
+          item.label.setPosition(slot.x, slot.y + 20);
+          shrinkToWidth(item.label, slot.w - 8, 12);
+        });
+        if (layout.hint) {
+          hint.setVisible(true);
+          hint.setPosition(layout.hint.x, layout.hint.y);
+          shrinkToWidth(hint, layout.hint.w, 14);
+        } else {
+          hint.setVisible(false);
+        }
         this.buttons.forEach((button, index) => {
           const slot = layout.buttons[index];
           if (slot) button.setPosition(slot.x, slot.y);
@@ -241,6 +270,10 @@ export const starterMethods = {
     view.title?.destroy();
     view.body?.destroy();
     view.hint?.destroy();
+    view.powers?.forEach((item) => {
+      item.icon?.destroy();
+      item.label?.destroy();
+    });
     this.startUi = null;
   },
 

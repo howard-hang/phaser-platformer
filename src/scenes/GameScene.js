@@ -162,7 +162,16 @@ export class GameScene extends Phaser.Scene {
     this.startUi = null;
     this.hud = createHud(this, {
       variant: this.endless ? 'endless' : 'campaign',
-      onHome: () => this.scene.start(this.endless ? 'menu' : 'select'),
+      // 跑动中房子先暂停，回菜单从暂停面板进，避免误触直接离开。
+      // 已经暂停或倒数时房子不再离开。死亡和过关仍走原来的去向。
+      onHome: () => {
+        const phase = this.pauseState?.phase || 'running';
+        if (phase === 'paused' || phase === 'countdown') return;
+        const before = phase;
+        this.requestUserPause();
+        if (this.pauseState?.phase === 'paused' && before !== 'paused') return;
+        this.scene.start(this.endless ? 'menu' : 'select');
+      },
       onPause: () => this.requestUserPause(),
     });
     this.powerHud = createPowerHud(this);

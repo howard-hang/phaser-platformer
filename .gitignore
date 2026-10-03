@@ -5,3 +5,6 @@ node_modules/
 .cursor/
 dist-local/
 shots/
+*.jks
+*.keystore
+android/keystore.properties

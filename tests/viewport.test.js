@@ -367,6 +367,51 @@ describe('全屏按钮和安全区', () => {
       expect(layout.stars.h).toBe(0);
     }
   });
+
+  it('暂停面板按标题和按钮收高，中间不再留出整块空白', () => {
+    const layout = layoutWinPanel({
+      viewWidth: 1280,
+      viewHeight: 720,
+      buttonWidths: [136, 160, 160, 128],
+      starRow: false,
+      bodyLines: 0,
+      compact: true,
+    });
+    const title = centerBox(layout.title);
+    const buttons = layout.buttons.map(centerBox);
+    const panel = cornerBox(layout.panel);
+    expect(layout.panel.h).toBeLessThan(220);
+    expect(buttons).toHaveLength(4);
+    expect(overlaps(title, buttons[0])).toBe(false);
+    for (const button of buttons) {
+      expect(button.t).toBeGreaterThan(title.b);
+      expect(button.b).toBeLessThanOrEqual(panel.b);
+      expect(button.l).toBeGreaterThanOrEqual(panel.l);
+      expect(button.r).toBeLessThanOrEqual(panel.r);
+    }
+  });
+
+  it('准备出发面板把三种道具排在正文和按钮之间', () => {
+    const layout = layoutWinPanel({
+      viewWidth: 1280,
+      viewHeight: 720,
+      buttonWidths: [240, 180],
+      starRow: false,
+      bodyLines: 2,
+      compact: true,
+      iconCount: 3,
+    });
+    const body = centerBox(layout.body);
+    const icons = layout.icons.map(centerBox);
+    const buttons = layout.buttons.map(centerBox);
+    expect(icons).toHaveLength(3);
+    expect(overlaps(body, icons[0])).toBe(false);
+    expect(overlaps(icons[0], buttons[0])).toBe(false);
+    expect(icons[0].t).toBeGreaterThan(body.b);
+    expect(buttons[0].t).toBeGreaterThan(icons[0].b);
+    expect(overlaps(icons[0], icons[1])).toBe(false);
+    expect(layout.panel.h).toBeLessThan(400);
+  });
 });
 
 describe('设置页布局', () => {
@@ -386,6 +431,7 @@ describe('设置页布局', () => {
         centerBox(layout.sfx),
         centerBox(layout.vibrate),
         centerBox(layout.fps),
+        centerBox(layout.privacy),
         centerBox(layout.reset),
         centerBox(layout.back),
         centerBox(layout.cancel),
@@ -417,6 +463,7 @@ describe('设置页布局', () => {
         expect(overlaps(langs[i - 1], langs[i])).toBe(false);
       }
       expect(overlaps(centerBox(layout.cancel), centerBox(layout.confirm))).toBe(false);
+      expect(overlaps(centerBox(layout.privacy), centerBox(layout.reset))).toBe(false);
       expect(overlaps(centerBox(layout.reset), centerBox(layout.back))).toBe(false);
     }
   });
@@ -435,6 +482,7 @@ describe('设置页布局', () => {
       centerBox(layout.vibrate),
       centerBox(layout.fps),
       centerBox(layout.language),
+      centerBox(layout.privacy),
       centerBox(layout.reset),
       centerBox(layout.back),
       ...layout.fxButtons.map(centerBox),
@@ -492,6 +540,7 @@ describe('设置页布局', () => {
       for (let i = 1; i < stack.length; i += 1) {
         expect(overlaps(stack[i - 1], stack[i]), `${phone.w}x${phone.h} 第 ${i} 行`).toBe(false);
       }
+      expect(overlaps(centerBox(layout.privacy), centerBox(layout.reset)), `${phone.w}x${phone.h} 隐私和重置`).toBe(false);
       expect(overlaps(centerBox(layout.reset), centerBox(layout.back))).toBe(false);
       const fx = layout.fxButtons.map(centerBox);
       expect(overlaps(centerBox(layout.fxLabel), fx[0])).toBe(false);

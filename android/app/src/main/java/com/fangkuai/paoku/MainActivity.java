@@ -1,6 +1,8 @@
 package com.fangkuai.paoku;
 
+import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -48,6 +50,7 @@ public class MainActivity extends BridgeActivity {
         extendIntoCutout();
         hideSystemBars();
         publishDebugApkFlag();
+        attachExternalLinks();
     }
 
     @Override
@@ -57,6 +60,7 @@ public class MainActivity extends BridgeActivity {
         hideSystemBars();
         lockWebView();
         publishDebugApkFlag();
+        attachExternalLinks();
     }
 
     @Override
@@ -211,6 +215,37 @@ public class MainActivity extends BridgeActivity {
             out.append(String.format(Locale.US, "%02X", b & 0xff));
         }
         return out.toString();
+    }
+
+    /**
+     * 设置页打开隐私政策。JavascriptInterface 跑在后台线程，跳转必须回到主线程。
+     * 只允许本仓库的 GitHub Pages，避免变成任意网址跳转。
+     */
+    public static final class ExternalLinkBridge {
+        private final MainActivity activity;
+
+        ExternalLinkBridge(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        @android.webkit.JavascriptInterface
+        public void open(String url) {
+            if (!allowed(url)) return;
+            final Uri uri = Uri.parse(url);
+            activity.runOnUiThread(() -> activity.startActivity(new Intent(Intent.ACTION_VIEW, uri)));
+        }
+
+        static boolean allowed(String url) {
+            if (url == null || url.isEmpty()) return false;
+            Uri uri = Uri.parse(url);
+            return "https".equals(uri.getScheme()) && "howard-hang.github.io".equals(uri.getHost());
+        }
+    }
+
+    /** 网页里的 window.FangkuaiLinks。WebView 重建后要再挂一次。 */
+    private void attachExternalLinks() {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        getBridge().getWebView().addJavascriptInterface(new ExternalLinkBridge(this), "FangkuaiLinks");
     }
 
     /** 挖孔尺寸写成 CSS 变量。网页 HUD 读取，画布不因此缩小。 */

@@ -5,7 +5,12 @@
  * 同意失败、或者地区不需要同意，也照样请求广告。
  */
 import { isNativeShell } from './androidBack.js';
-import { currentPowerupSelection, currentRewardedSelection, isDebugAdBuild } from './admob.config.js';
+import {
+  BAKED_AD_MODE,
+  currentPowerupSelection,
+  currentRewardedSelection,
+  isDebugAdBuild,
+} from './admob.config.js';
 import { interpretRewardedCallbacks } from '../logic/revive.js';
 import {
   AD_LOAD_MAX_ATTEMPTS,
@@ -342,7 +347,7 @@ export async function bootRewardedAds() {
   }
   const shell = isNativeShell();
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-  admobLog(`平台 shell=${shell} native=${nativePlatform} plugin=${pluginAvailable} debug=${isDebugAdBuild()} bridge=${typeof window !== 'undefined' && !!window.androidBridge} ua=${ua}`);
+  admobLog(`平台 shell=${shell} native=${nativePlatform} plugin=${pluginAvailable} debug=${isDebugAdBuild()} mode=${BAKED_AD_MODE} bridge=${typeof window !== 'undefined' && !!window.androidBridge} ua=${ua}`);
   if (!shouldStartAds({ shell, nativePlatform })) {
     admobLog('网页环境，不初始化广告');
     return;

@@ -11,8 +11,10 @@ import {
   REWARDED_AD_UNIT_ID,
   REWARDED_AMOUNT,
   TEST_REWARDED_AD_UNIT_ID,
+  adBuildMode,
   rewardedAdSelection,
   shouldUseTestAds,
+  showDebugAdChrome,
 } from '../src/platform/admob.config.js';
 import {
   REVIVE_BACK_PX,
@@ -195,6 +197,18 @@ describe('广告位配置', () => {
     const manifest = fs.readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
     expect(manifest).toContain('android:name="com.google.android.gms.ads.APPLICATION_ID"');
     expect(manifest).toContain(`android:value="${ADMOB_APP_ID}"`);
+  });
+
+  it('正式开关收成 live-rewarded，调试界面不会出现在正式构建里', () => {
+    expect(adBuildMode('false')).toBe('live-rewarded');
+    expect(adBuildMode(undefined)).toBe('test-rewarded');
+    expect(adBuildMode('true')).toBe('test-rewarded');
+    expect(showDebugAdChrome({ debugBuild: true, bakedMode: 'test-rewarded' })).toBe(true);
+    expect(showDebugAdChrome({ debugBuild: true, bakedMode: 'live-rewarded' })).toBe(false);
+    expect(showDebugAdChrome({ debugBuild: false, bakedMode: 'test-rewarded' })).toBe(false);
+    const source = fs.readFileSync('src/platform/admob.config.js', 'utf8');
+    expect(source).toContain('import.meta.env.VITE_ADMOB_USE_TEST_ADS');
+    expect(source).not.toContain('import.meta.env?.VITE_ADMOB_USE_TEST_ADS');
   });
 
   it('CI 会 cap sync，Gradle 依赖了 AdMob 插件', () => {

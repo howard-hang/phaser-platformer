@@ -1,5 +1,7 @@
 ext {
+    // AdMob 插件 8 要求 API 24。GMA SDK 24 起最低是 23，24 两边都满足。
     minSdkVersion = 24
+    // 2026-08-31 起，新应用和更新必须 target Android 16（API 36）。compileSdk 与之相同。
     compileSdkVersion = 36
     targetSdkVersion = 36
     androidxActivityVersion = '1.11.0'
@@ -13,4 +15,7 @@ ext {
     androidxJunitVersion = '1.3.0'
     androidxEspressoCoreVersion = '3.7.0'
     cordovaAndroidVersion = '14.0.1'
+    // 与 gradle.properties 里的同名属性一致。插件用 hasProperty 判断，再用这里的 ext。
+    playServicesAdsVersion = '25.4.0'
+    userMessagingPlatformVersion = '4.0.0'
 }

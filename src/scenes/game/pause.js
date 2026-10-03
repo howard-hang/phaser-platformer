@@ -187,6 +187,8 @@ export const pauseMethods = {
           buttonWidths: [136, 160, 160, 128],
           starRow: false,
           bodyLines: 0,
+          // 只有标题和四颗按钮，面板收到内容高度。
+          compact: true,
         });
         paintCandyPanel(panel, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h);
         title.setPosition(layout.title.x, layout.title.y);
