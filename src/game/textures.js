@@ -196,6 +196,19 @@ function drawLock(ctx) {
   ctx.fillRect(30.5, 39, 3, 7);
 }
 
+/** 暂停。两条等宽圆头竖线，缩到圆按钮上仍然认得出，不用表情符号。 */
+function drawPause(ctx) {
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(20, 16);
+  ctx.lineTo(20, 48);
+  ctx.moveTo(44, 16);
+  ctx.lineTo(44, 48);
+  ctx.stroke();
+}
+
 /** 设置。一圈齿轮，线条和主页、声音图标一样粗，不用表情符号。 */
 function drawSettings(ctx) {
   ctx.strokeStyle = '#ffffff';
@@ -381,6 +394,7 @@ export function generateTextures(scene) {
   make('ui-star-empty', 64, 64, drawStarOutline);
   make('ui-lock', 64, 64, drawLock);
   make('icon-home', 64, 64, drawHome);
+  make('icon-pause', 64, 64, drawPause);
   make('icon-settings', 64, 64, drawSettings);
   make('icon-sound', 64, 64, (ctx) => drawSpeaker(ctx, false));
   make('icon-mute', 64, 64, (ctx) => drawSpeaker(ctx, true));

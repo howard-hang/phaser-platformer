@@ -23,14 +23,21 @@ export const inputMethods = {
     });
 
     if (this.input.keyboard) {
-      this.input.keyboard.addCapture(['SPACE', 'UP']);
+      this.input.keyboard.addCapture(['SPACE', 'UP', 'ESC', 'P']);
       const onKey = (event) => {
         if (event.repeat) return;
         getSynth().unlock();
         this.tryJump();
       };
+      const onPauseKey = (event) => {
+        if (event.repeat) return;
+        this.requestUserPause();
+      };
       this.input.keyboard.on('keydown-SPACE', onKey);
       this.input.keyboard.on('keydown-UP', onKey);
+      // 网页用 Esc 或 P 暂停。安卓没有键盘时这两行不会注册。
+      this.input.keyboard.on('keydown-ESC', onPauseKey);
+      this.input.keyboard.on('keydown-P', onPauseKey);
     }
   },
 
@@ -39,6 +46,7 @@ export const inputMethods = {
    * 二段跳生效时，空中还能再起跳一次，初速度仍是普通跳的那一档。
    */
   tryJump() {
+    if (this.isRunFrozen?.()) return;
     if (this.won || this.dying || this.time.now < this.invulnUntil) return;
     if (this.power?.kind === 'plane') return;
     const grounded = this.isGrounded();

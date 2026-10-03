@@ -58,6 +58,7 @@ export const effectMethods = {
     this._powerQueue.length = 0;
     this._touchGuard = false;
     this.dying = true;
+    this.syncPauseButton?.();
     this.run = noteDeath(this.run);
     this.activeCheckpoint = pickCheckpoint(this.level.checkpoints, this.player.x);
     this.rotating = false;
@@ -176,6 +177,7 @@ export const effectMethods = {
       } : null,
     });
     this.winUi.relayout(this.scale.width, this.scale.height, this._insets);
+    this.syncPauseButton?.();
     if (offer.visible) this.primeReviveAd();
   },
 
@@ -230,6 +232,7 @@ export const effectMethods = {
       nextEnabled,
     });
     this.winUi.relayout(this.scale.width, this.scale.height, this._insets);
+    this.syncPauseButton?.();
   },
 
   /** 视差跟着镜头走。色调按最远进度分档，死亡退回存档点也不会闪回。 */

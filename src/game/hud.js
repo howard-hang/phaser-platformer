@@ -65,6 +65,7 @@ export function createHud(scene, {
   variant = 'campaign',
   showSettings = false,
   onSettings = null,
+  onPause = null,
 } = {}) {
   const showFullscreen = shouldShowFullscreenButton(isNativeShell());
   const endless = variant === 'endless';
@@ -146,6 +147,26 @@ export function createHud(scene, {
     });
   }
 
+  let pauseBtn = null;
+  if (onPause) {
+    pauseBtn = createCandyButton(scene, {
+      x: 508,
+      y: 48,
+      width: 62,
+      height: 62,
+      shape: 'circle',
+      variant: 'grape',
+      iconKey: 'icon-pause',
+      depth: 250,
+      onClick: () => {
+        getSynth().unlock();
+        scene.time.delayedCall(0, onPause);
+      },
+    });
+    // 圆按钮默认图标偏小，两条竖线放大后才和房子、全屏、声音分得开。
+    pauseBtn.icon?.setDisplaySize(46, 46);
+  }
+
   let home = null;
   if (onHome) {
     home = createCandyButton(scene, {
@@ -189,6 +210,7 @@ export function createHud(scene, {
         showHome: !!onHome,
         showFullscreen,
         showSettings,
+        showPause: !!onPause,
         // 计数器出现时，左上角分数往下让一截。设置里的开关优先于网址上的 ?fps。
         showFps: typeof window !== 'undefined'
           && shouldShowFps(currentSettings(), window.location.search),
@@ -202,13 +224,25 @@ export function createHud(scene, {
       fullscreen?.setPosition(layout.fullscreen.x, layout.fullscreen.y);
       home?.setPosition(layout.home.x, layout.home.y);
       settingsBtn?.setPosition(layout.settings.x, layout.settings.y);
+      pauseBtn?.setPosition(layout.pause.x, layout.pause.y);
       hud.jumpGuard = layout.jumpGuard;
       return layout;
+    },
+    /** 死亡、过关、暂停面板和倒数时藏起右上角的暂停键。状态没变就不要重绑热区。 */
+    setPauseVisible(shown) {
+      if (!pauseBtn) return;
+      const next = !!shown;
+      if (hud._pauseShown === next) return;
+      hud._pauseShown = next;
+      pauseBtn.root.setVisible(next);
+      pauseBtn.zone.setVisible(next);
+      pauseBtn.setEnabled(next);
     },
     home,
     sound,
     fullscreen,
     settings: settingsBtn,
+    pause: pauseBtn,
   };
   return hud;
 }

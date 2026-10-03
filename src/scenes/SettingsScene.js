@@ -197,6 +197,22 @@ export class SettingsScene extends Phaser.Scene {
     super('settings');
   }
 
+  init(data) {
+    // 从暂停面板打开时，返回要回到还停着的那一局，而不是标题。
+    this.returnTo = data?.returnTo === 'game' ? 'game' : 'menu';
+  }
+
+  /** 标题里的设置回到主页。暂停里的设置只关掉自己，游戏仍停在暂停面板。 */
+  closeSettings() {
+    if (this.returnTo === 'game') {
+      this.scene.stop();
+      const game = this.scene.get('game');
+      if (game?.scene.isSleeping()) game.scene.wake();
+      return;
+    }
+    this.scene.start('menu');
+  }
+
   create() {
     this.cameras.main.setBackgroundColor(THEME.gap);
     this.parallax = createParallax(this);
@@ -288,7 +304,7 @@ export class SettingsScene extends Phaser.Scene {
       height: 76,
       fontSize: 30,
       depth: 30,
-      onClick: () => this.scene.start('menu'),
+      onClick: () => this.closeSettings(),
     });
     // 只有调试包能看见广告状态和重置同意。正式包不画这两项，也不强制欧洲同意框。
     if (shouldShowDebugAdChrome()) {

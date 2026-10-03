@@ -124,6 +124,22 @@ describe('全屏按钮和安全区', () => {
     expect(hud.power.x + hud.power.w).toBeLessThan(hud.home.x - 40);
   });
 
+  it('暂停按钮排在主页左边，并让开右侧安全区', () => {
+    const hud = layoutHud({
+      viewWidth: 1170,
+      viewHeight: 540,
+      insets: { top: 24, right: 36, bottom: 0, left: 0 },
+      showHome: true,
+      showFullscreen: true,
+      showPause: true,
+    });
+    expect(hud.pause.x).toBeLessThan(hud.home.x);
+    expect(hud.home.x).toBeLessThan(hud.fullscreen.x);
+    expect(hud.pause.y).toBeGreaterThanOrEqual(24);
+    expect(hud.sound.x).toBeLessThanOrEqual(1170 - 36);
+    expect(hud.jumpGuard.left).toBeLessThan(hud.pause.x);
+  });
+
   it('HUD 让开刘海和圆角安全区', () => {
     const hud = layoutHud({
       viewWidth: 1170,
@@ -350,6 +366,51 @@ describe('全屏按钮和安全区', () => {
       expect(overlaps(buttons[0], buttons[1]), `${screenW}x${screenH} 两颗按钮`).toBe(false);
       expect(layout.stars.h).toBe(0);
     }
+  });
+
+  it('暂停面板按标题和按钮收高，中间不再留出整块空白', () => {
+    const layout = layoutWinPanel({
+      viewWidth: 1280,
+      viewHeight: 720,
+      buttonWidths: [136, 160, 160, 128],
+      starRow: false,
+      bodyLines: 0,
+      compact: true,
+    });
+    const title = centerBox(layout.title);
+    const buttons = layout.buttons.map(centerBox);
+    const panel = cornerBox(layout.panel);
+    expect(layout.panel.h).toBeLessThan(220);
+    expect(buttons).toHaveLength(4);
+    expect(overlaps(title, buttons[0])).toBe(false);
+    for (const button of buttons) {
+      expect(button.t).toBeGreaterThan(title.b);
+      expect(button.b).toBeLessThanOrEqual(panel.b);
+      expect(button.l).toBeGreaterThanOrEqual(panel.l);
+      expect(button.r).toBeLessThanOrEqual(panel.r);
+    }
+  });
+
+  it('准备出发面板把三种道具排在正文和按钮之间', () => {
+    const layout = layoutWinPanel({
+      viewWidth: 1280,
+      viewHeight: 720,
+      buttonWidths: [240, 180],
+      starRow: false,
+      bodyLines: 2,
+      compact: true,
+      iconCount: 3,
+    });
+    const body = centerBox(layout.body);
+    const icons = layout.icons.map(centerBox);
+    const buttons = layout.buttons.map(centerBox);
+    expect(icons).toHaveLength(3);
+    expect(overlaps(body, icons[0])).toBe(false);
+    expect(overlaps(icons[0], buttons[0])).toBe(false);
+    expect(icons[0].t).toBeGreaterThan(body.b);
+    expect(buttons[0].t).toBeGreaterThan(icons[0].b);
+    expect(overlaps(icons[0], icons[1])).toBe(false);
+    expect(layout.panel.h).toBeLessThan(400);
   });
 });
 

@@ -161,6 +161,7 @@ export function layoutHud({
   showHome = false,
   showFullscreen = false,
   showSettings = false,
+  showPause = false,
   showFps = false,
 } = {}) {
   const top = (insets.top || 0) + HUD_MARGIN_Y;
@@ -174,11 +175,14 @@ export function layoutHud({
   if (showHome) cursor -= BUTTON_GAP;
   // 设置在主页按钮左边。主页没有主页按钮时，它就挨着全屏或声音。
   const settings = showSettings ? { x: cursor, y: top + 32 } : null;
+  if (showSettings) cursor -= BUTTON_GAP;
+  // 暂停在这一排最左边，仍然让开刘海和圆角。
+  const pause = showPause ? { x: cursor, y: top + 32 } : null;
 
   // ?fps 计数器占左上角一条，计数文字往下让，避免盖住 SCORE。
   const fps = showFps ? { x: left, y: top, w: 96, h: 26 } : null;
   const statsTop = top + (fps ? fps.h + 10 : 0);
-  const leftmost = settings?.x ?? home?.x ?? fullscreen?.x ?? sound.x;
+  const leftmost = pause?.x ?? settings?.x ?? home?.x ?? fullscreen?.x ?? sound.x;
   return {
     score: { x: left, y: statsTop },
     deaths: { x: left, y: statsTop + HUD_LINE },
@@ -195,6 +199,7 @@ export function layoutHud({
     fullscreen,
     home,
     settings,
+    pause,
     centerX: viewWidth / 2,
     centerY: viewHeight / 2,
     // 右上角整块按钮区。点这里只按按钮，不起跳。
@@ -308,7 +313,10 @@ export function layoutLevelBoard({
   };
 }
 
-/** 通关面板。标题、星星、正文、按钮从上往下排，短屏幕上也不会叠在一起。 */
+/**
+ * 通关面板。标题、星星、正文、按钮从上往下排，短屏幕上也不会叠在一起。
+ * compact 时高度贴着内容。iconCount 和 hintLine 只在紧凑模式占一行。
+ */
 export function layoutWinPanel({
   viewWidth,
   viewHeight,
@@ -318,6 +326,9 @@ export function layoutWinPanel({
   buttonGap = 14,
   starRow = true,
   bodyLines = 2,
+  compact = false,
+  iconCount = 0,
+  hintLine = false,
 } = {}) {
   const topLimit = (insets.top || 0) + 96;
   const bottomLimit = viewHeight - ((insets.bottom || 0) + 12);
@@ -336,22 +347,104 @@ export function layoutWinPanel({
   const availH = Math.max(220, bottomLimit - topLimit);
   const pad = 18;
   const titleH = 52;
+  const legacyBodyH = bodyLines > 2 ? 96 : 62;
+  const legacyH = Math.min(372 + (bodyLines > 2 ? 34 : 0), availH);
+  // 过关和无尽结算仍用原来的高度。暂停和准备出发走紧凑高度。
+  if (!compact) {
+    const bodyH = legacyBodyH;
+    const h = legacyH;
+    const x = (viewWidth - w) / 2;
+    const y = topLimit + Math.max(0, (availH - h) / 2);
+    let cursorY = y + pad;
+    const title = { x: viewWidth / 2, y: cursorY + titleH / 2, w: w - 48, h: titleH };
+    cursorY += titleH + 8;
+    const starH = starRow ? 46 : 0;
+    const stars = { x: viewWidth / 2, y: cursorY + starH / 2, w: 196, h: starH };
+    cursorY += starH + 8;
+    const body = { x: viewWidth / 2, y: cursorY + bodyH / 2, w: w - 56, h: bodyH };
+    const by = y + h - pad - buttonHeight / 2;
+    const buttonTop = by - buttonHeight / 2;
+    const bodyBottom = body.y + body.h / 2;
+    if (bodyBottom + 8 > buttonTop) {
+      body.y -= bodyBottom + 8 - buttonTop;
+    }
+    let cursorX = viewWidth / 2 - buttonsTotal / 2;
+    const buttons = widths.map((bw) => {
+      const item = { x: cursorX + bw / 2, y: by, w: bw, h: buttonHeight };
+      cursorX += bw + buttonGap;
+      return item;
+    });
+    return {
+      panel: { x, y, w, h },
+      title,
+      stars,
+      body,
+      buttons,
+    };
+  }
+
+  const bodyH = bodyLines > 2 ? 96 : (bodyLines > 0 ? 62 : 0);
   const starH = starRow ? 46 : 0;
-  const bodyH = bodyLines > 2 ? 96 : 62;
-  const h = Math.min(372 + (bodyLines > 2 ? 34 : 0), availH);
+  const showIcons = iconCount > 0;
+  const iconH = showIcons ? 72 : 0;
+  const hintH = hintLine ? 26 : 0;
+  const flow = [titleH];
+  if (starH) flow.push(starH);
+  if (bodyH) flow.push(bodyH);
+  if (iconH) flow.push(iconH);
+  if (hintH) flow.push(hintH);
+  flow.push(buttonHeight);
+  const stackH = pad * 2 + flow.reduce((sum, item) => sum + item, 0) + 8 * (flow.length - 1);
+  const h = Math.min(stackH, availH);
   const x = (viewWidth - w) / 2;
   const y = topLimit + Math.max(0, (availH - h) / 2);
   let cursorY = y + pad;
-  const title = { x: viewWidth / 2, y: cursorY + titleH / 2, w: w - 48, h: titleH };
-  cursorY += titleH + 8;
-  const stars = { x: viewWidth / 2, y: cursorY + starH / 2, w: 196, h: starH };
-  cursorY += starH + 8;
-  const body = { x: viewWidth / 2, y: cursorY + bodyH / 2, w: w - 56, h: bodyH };
+  const take = (blockH) => {
+    const center = cursorY + blockH / 2;
+    cursorY += blockH + 8;
+    return center;
+  };
+  const title = { x: viewWidth / 2, y: take(titleH), w: w - 48, h: titleH };
+  const stars = {
+    x: viewWidth / 2,
+    y: starH ? take(starH) : cursorY,
+    w: 196,
+    h: starH,
+  };
+  const body = {
+    x: viewWidth / 2,
+    y: bodyH ? take(bodyH) : cursorY,
+    w: w - 56,
+    h: bodyH,
+  };
+  const icons = [];
+  if (showIcons) {
+    const iconY = take(iconH);
+    const slotW = Math.min(128, (w - 40) / iconCount);
+    let ix = viewWidth / 2 - (slotW * iconCount) / 2;
+    for (let i = 0; i < iconCount; i += 1) {
+      icons.push({ x: ix + slotW / 2, y: iconY, w: slotW, h: iconH });
+      ix += slotW;
+    }
+  }
+  const hint = hintH
+    ? { x: viewWidth / 2, y: take(hintH), w: w - 56, h: hintH }
+    : null;
   const by = y + h - pad - buttonHeight / 2;
   const buttonTop = by - buttonHeight / 2;
-  const bodyBottom = body.y + body.h / 2;
-  if (bodyBottom + 8 > buttonTop) {
-    body.y -= bodyBottom + 8 - buttonTop;
+  const contentBottom = Math.max(
+    title.y + title.h / 2,
+    body.y + body.h / 2,
+    ...icons.map((item) => item.y + item.h / 2),
+    hint ? hint.y + hint.h / 2 : 0,
+  );
+  const overflow = contentBottom + 8 - buttonTop;
+  if (overflow > 0) {
+    body.y -= overflow;
+    icons.forEach((item) => {
+      item.y -= overflow;
+    });
+    if (hint) hint.y -= overflow;
   }
   let cursorX = viewWidth / 2 - buttonsTotal / 2;
   const buttons = widths.map((bw) => {
@@ -365,6 +458,8 @@ export function layoutWinPanel({
     stars,
     body,
     buttons,
+    icons,
+    hint,
   };
 }
 

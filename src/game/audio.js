@@ -9,7 +9,6 @@ import shatterUrl from '../assets/sfx/shatter.wav';
 import { isNativeShell } from '../platform/androidBack.js';
 import { renderShatterPcm } from './shatterSynth.js';
 import {
-  audioContextAction,
   cueWillPlay,
   loadMutePreference,
   musicOutputGain,
@@ -219,32 +218,34 @@ class Synth {
 
   /**
    * 激励视频占着屏幕时把音乐挂起，进度留在原地。
-   * 广告结束再按原来的前后台状态恢复。
+   * 广告结束再按暂停和前后台状态决定要不要恢复。
    */
   holdMusicForAd(holding) {
     this.adHold = !!holding;
+    this.syncMusicHold();
+  }
+
+  /** 暂停、倒数和开局等待时挂起音乐。解除后如果还在看广告或在后台，仍然不响。 */
+  holdMusicForPause(holding) {
+    this.pauseHold = !!holding;
+    this.syncMusicHold();
+  }
+
+  /** 广告、暂停、切后台只要占着一个，音乐就停在当前进度。 */
+  syncMusicHold() {
     if (!this.ctx) return;
-    if (this.adHold) {
+    const suspend = !!this.adHold || !!this.pauseHold || !this.appActive;
+    if (suspend) {
       if (this.ctx.state === 'running') this.ctx.suspend();
       return;
     }
-    if (this.unlocked && this.appActive && this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
+    if (this.unlocked && this.ctx.state === 'suspended') this.ctx.resume();
   }
 
   /** 安卓切到后台、或浏览器标签被藏起来时调用。 */
   setAppActive(isActive) {
     this.appActive = !!isActive;
-    if (!this.ctx || this.adHold) return;
-    const action = audioContextAction(this.appActive);
-    if (action === 'suspend') {
-      if (this.ctx.state === 'running') this.ctx.suspend();
-      return;
-    }
-    if (this.unlocked && this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
+    this.syncMusicHold();
   }
 
   play(name) {

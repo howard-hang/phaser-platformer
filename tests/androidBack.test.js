@@ -24,4 +24,13 @@ describe('安卓返回键', () => {
     expect(androidBackAction({ gameActive: false, selectActive: false, settingsActive: true })).toBe('menu');
     expect(androidBackAction({ gameActive: true, selectActive: false, settingsActive: true })).toBe('select');
   });
+
+  it('暂停中打开的设置，返回只关掉设置', () => {
+    expect(androidBackAction({
+      gameActive: false,
+      selectActive: false,
+      settingsActive: true,
+      settingsOverGame: true,
+    })).toBe('wake-game');
+  });
 });

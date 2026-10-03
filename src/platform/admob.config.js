@@ -1,6 +1,9 @@
 /**
- * AdMob 只接复活这一个激励视频位。正式 ID 只写在这个文件里。
+ * AdMob 激励视频。正式 ID 只写在这个文件里。
  * 应用 ID 还要出现在 AndroidManifest 的 APPLICATION_ID，测试会核对两边一致。
+ *
+ * 复活和开局领道具各有一个配置项。领道具目前复用 revive_rewarded 的正式 ID，
+ * 以后单独建 powerup_rewarded 时，只改 POWERUP_REWARDED_AD_UNIT_ID。
  *
  * 开发版和调试 APK 用 Google 官方测试激励位，并打开 isTesting。
  * 正式 release 包才用真实广告位：构建时设 VITE_ADMOB_USE_TEST_ADS=false。
@@ -18,7 +21,15 @@ export const REWARDED_AD_NAME = 'revive_rewarded';
 
 export const REWARDED_AMOUNT = 1;
 
-/** Google 官方 Android 激励视频测试位。 */
+/**
+ * 开局领道具的正式广告位。现在和复活是同一个 revive_rewarded。
+ * 另建 powerup_rewarded 之后，把这一行换成新 ID 即可，播放逻辑不用改。
+ */
+export const POWERUP_REWARDED_AD_UNIT_ID = REWARDED_AD_UNIT_ID;
+
+export const POWERUP_REWARDED_NAME = 'powerup_rewarded';
+
+/** Google 官方 Android 激励视频测试位。复活和领道具调试时都用它。 */
 export const TEST_REWARDED_AD_UNIT_ID = 'ca-app-pub-3940256099942544/5224354917';
 
 /**
@@ -102,9 +113,28 @@ function debugApkFlag() {
   return undefined;
 }
 
-/** 读构建变量和调试包标记，得到这一次该请求的广告位。 */
+/** 开局领道具这一次该用的广告位。测试开关和复活相同。 */
+export function powerupAdSelection(options) {
+  const testing = shouldUseTestAds(options);
+  return {
+    adId: testing ? TEST_REWARDED_AD_UNIT_ID : POWERUP_REWARDED_AD_UNIT_ID,
+    isTesting: testing,
+    name: POWERUP_REWARDED_NAME,
+    rewardAmount: REWARDED_AMOUNT,
+  };
+}
+
+/** 读构建变量和调试包标记，得到这一次该请求的复活广告位。 */
 export function currentRewardedSelection() {
   return rewardedAdSelection({
+    flag: viteTestFlag(),
+    debugApk: debugApkFlag(),
+  });
+}
+
+/** 读构建变量和调试包标记，得到这一次该请求的领道具广告位。 */
+export function currentPowerupSelection() {
+  return powerupAdSelection({
     flag: viteTestFlag(),
     debugApk: debugApkFlag(),
   });

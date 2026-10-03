@@ -120,6 +120,50 @@ async function shootSettings(page, width, height, file, insets) {
   await page.screenshot({ path: path.join(outDir, file) });
 }
 
+/** 安卓壳的开局面板：加载中、可领取、已领取。网页不画这个按钮。 */
+async function shootStarter(browser) {
+  const page = await browser.newPage();
+  await page.setUserAgent('Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/120.0.0.0 Mobile Safari/537.36 ; wv)');
+  await page.setViewport({ width: 1280, height: 720 });
+  page.on('pageerror', (error) => {
+    console.error(error);
+  });
+  await page.evaluateOnNewDocument(() => {
+    localStorage.setItem('fangkuai-paoku-locale', 'zh');
+    window.__FANGKUAI_AD_MOCK__ = { ready: false, phase: 'loading', outcome: 'rewarded' };
+  });
+  await page.goto('http://127.0.0.1:4191/', { waitUntil: 'domcontentloaded', timeout: WAIT_MS });
+  await waitScene(page, 'menu');
+  await waitFrames(page, 4);
+  await page.evaluate(() => {
+    window.__PHASER_GAME__.scene.start('game', { levelId: 'level-1' });
+  });
+  await page.waitForFunction(() => {
+    const scene = window.__PHASER_GAME__.scene.getScene('game');
+    const label = scene?.startUi?.watch?.caption?.text || '';
+    return scene?.holdingStart === true && label.length > 0;
+  }, { timeout: WAIT_MS });
+  await waitFrames(page, 4);
+  await page.screenshot({ path: path.join(outDir, 'powerup-loading.png') });
+  await page.evaluate(() => {
+    const mock = window.__FANGKUAI_AD_MOCK__;
+    mock.ready = true;
+    mock.phase = 'ready';
+    window.__PHASER_GAME__.scene.getScene('game').refreshStarterButton();
+  });
+  await waitFrames(page, 2);
+  await page.screenshot({ path: path.join(outDir, 'powerup-ready.png') });
+  await page.screenshot({ path: path.join(outDir, 'start-ready.png') });
+  await page.evaluate(() => window.__PHASER_GAME__.scene.getScene('game').watchStarterAd());
+  await page.waitForFunction(() => {
+    const scene = window.__PHASER_GAME__.scene.getScene('game');
+    return scene?.starterOffer?.claimed === true;
+  }, { timeout: WAIT_MS });
+  await waitFrames(page, 2);
+  await page.screenshot({ path: path.join(outDir, 'powerup-claimed.png') });
+  await page.close();
+}
+
 /** 宣传图和截图去掉透明通道，符合 Play 的 24 位 PNG。 */
 function flattenPng(file) {
   const tmp = `${file}.flat.png`;
@@ -627,6 +671,20 @@ async function main() {
       return scene.player.x >= origin + 180;
     }, { timeout: WAIT_MS }, startX);
     await page.screenshot({ path: path.join(outDir, 'playing.png') });
+    copyFileSync(path.join(outDir, 'playing.png'), path.join(artifactDir, 'hud-playing.png'));
+
+    // 暂停面板和继续倒数。等的是游戏帧，不是墙上的三秒。
+    await page.evaluate(() => {
+      window.__PHASER_GAME__.scene.getScene('game').openPause();
+    });
+    await waitFrames(page, 3);
+    await page.screenshot({ path: path.join(outDir, 'pause-panel.png') });
+    copyFileSync(path.join(outDir, 'pause-panel.png'), path.join(artifactDir, 'pause-panel-compact.png'));
+    await page.evaluate(() => {
+      window.__PHASER_GAME__.scene.getScene('game').beginResume();
+    });
+    await waitFrames(page, 2);
+    await page.screenshot({ path: path.join(outDir, 'pause-countdown.png') });
 
     await page.evaluate(() => {
       window.__PHASER_GAME__.scene.start('settings');
@@ -654,6 +712,16 @@ async function main() {
     });
     copyFileSync(path.join(outDir, 'settings-portrait.png'), path.join(artifactDir, 'settings-portrait.png'));
     copyFileSync(path.join(outDir, 'settings-landscape.png'), path.join(artifactDir, 'settings-landscape.png'));
+    await shootStarter(browser);
+    for (const name of [
+      'pause-countdown.png',
+      'powerup-loading.png',
+      'powerup-ready.png',
+      'powerup-claimed.png',
+      'start-ready.png',
+    ]) {
+      copyFileSync(path.join(outDir, name), path.join(artifactDir, name));
+    }
   } finally {
     await browser.close();
     await server.close();
