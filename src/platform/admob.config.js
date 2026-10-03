@@ -50,9 +50,20 @@ function viteTestFlag() {
   }
 }
 
-function debugApkFlag() {
-  if (typeof window === 'undefined') return undefined;
+/**
+ * 调试包。Capacitor.DEBUG 在页面脚本之前就写好了，比 MainActivity 再注入的标记更早。
+ * 正式包两个都是 false。
+ */
+export function isDebugAdBuild() {
+  if (typeof window === 'undefined') return false;
   if (window.__FANGKUAI_DEBUG_APK__ === true) return true;
+  if (window.Capacitor?.DEBUG === true) return true;
+  return false;
+}
+
+function debugApkFlag() {
+  if (isDebugAdBuild()) return true;
+  if (typeof window === 'undefined') return undefined;
   if (window.__FANGKUAI_DEBUG_APK__ === false) return false;
   return undefined;
 }

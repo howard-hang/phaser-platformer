@@ -152,6 +152,11 @@ describe('广告回调', () => {
     expect(empty).toEqual({ visible: true, enabled: false, labelKey: 'revive.unavailable' });
     const ready = reviveButtonState({ native: true, budget, adReady: true });
     expect(ready).toEqual({ visible: true, enabled: true, labelKey: 'revive.watch' });
+    const loading = reviveButtonState({ native: true, budget, phase: 'loading' });
+    expect(loading).toEqual({ visible: true, enabled: false, labelKey: 'revive.loading' });
+    const consenting = reviveButtonState({ native: true, budget, phase: 'consent' });
+    expect(consenting.labelKey).toBe('revive.loading');
+    expect(consenting.enabled).toBe(false);
     const used = applyReviveDecision(budget, { granted: true }).budget;
     expect(reviveButtonState({ native: true, budget: used, adReady: true }).visible).toBe(false);
   });
@@ -190,5 +195,18 @@ describe('广告位配置', () => {
     const manifest = fs.readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
     expect(manifest).toContain('android:name="com.google.android.gms.ads.APPLICATION_ID"');
     expect(manifest).toContain(`android:value="${ADMOB_APP_ID}"`);
+  });
+
+  it('CI 会 cap sync，Gradle 依赖了 AdMob 插件', () => {
+    const yml = fs.readFileSync('.github/workflows/android.yml', 'utf8');
+    expect(yml).toContain('npx cap sync android');
+    expect(yml).toContain('com.getcapacitor.community.admob.AdMob');
+    expect(yml).toContain('com.google.android.gms.ads.APPLICATION_ID');
+    const settings = fs.readFileSync('android/capacitor.settings.gradle', 'utf8');
+    expect(settings).toContain("include ':capacitor-community-admob'");
+    const gradle = fs.readFileSync('android/app/capacitor.build.gradle', 'utf8');
+    expect(gradle).toContain("implementation project(':capacitor-community-admob')");
+    const manifest = fs.readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
+    expect(manifest).toContain('com.google.android.gms.permission.AD_ID');
   });
 });

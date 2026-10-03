@@ -6,7 +6,7 @@ import { adMusicPhase } from '../../game/audioPolicy.js';
 import { showCampaignDeathPanel } from '../../game/hud.js';
 import { t } from '../../i18n/index.js';
 import { isNativeShell } from '../../platform/androidBack.js';
-import { isRewardedReady, prepareRewarded, showRewarded } from '../../platform/rewardedAd.js';
+import { isRewardedReady, onAdStatus, prepareRewarded, rewardedPhase, showRewarded } from '../../platform/rewardedAd.js';
 import {
   applyReviveDecision,
   keepRunOnRevive,
@@ -21,7 +21,7 @@ export const reviveMethods = {
     return reviveButtonState({
       native: isNativeShell(),
       budget: this.reviveBudget,
-      adReady: isRewardedReady(),
+      phase: rewardedPhase(),
     });
   },
 
@@ -49,6 +49,8 @@ export const reviveMethods = {
   },
 
   dismissSettlement() {
+    this.watchAdStatus?.();
+    this.watchAdStatus = null;
     this.winUi?.dismiss?.();
     this.winUi = null;
   },
@@ -79,8 +81,13 @@ export const reviveMethods = {
     this.respawnAtCheckpoint();
   },
 
-  /** 后台再要一条广告。要到了才把按钮放开。 */
+  /** 开局已经在预加载。这里盯着状态，加载成功后马上把按钮放开。 */
   primeReviveAd() {
+    this.watchAdStatus?.();
+    this.watchAdStatus = onAdStatus(() => {
+      if (!this.sys?.isActive?.() || !this.winUi) return;
+      this.refreshReviveButton();
+    });
     prepareRewarded().then(() => {
       if (!this.sys?.isActive?.() || !this.winUi) return;
       this.refreshReviveButton();

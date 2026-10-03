@@ -36,16 +36,21 @@ export function revivePoint(deathX, startX, backPx = REVIVE_BACK_PX) {
 
 /**
  * 结算按钮该怎么画。网页不显示。次数用完也不显示。
- * 广告没准备好时仍占着按钮，文案改成暂无广告，并且不可点。
+ * 还在同意或加载时显示「加载中」。次数用尽或加载失败才是「暂无广告」。
+ * 只传 adReady 时，false 当成已经失败，兼容旧调用。
  */
-export function reviveButtonState({ native, budget, adReady }) {
+export function reviveButtonState({ native, budget, adReady, phase } = {}) {
   if (!native || !reviveStillAvailable(budget)) {
     return { visible: false, enabled: false, labelKey: null };
   }
-  if (!adReady) {
+  const resolved = phase || (adReady ? 'ready' : 'failed');
+  if (resolved === 'ready') {
+    return { visible: true, enabled: true, labelKey: 'revive.watch' };
+  }
+  if (resolved === 'failed') {
     return { visible: true, enabled: false, labelKey: 'revive.unavailable' };
   }
-  return { visible: true, enabled: true, labelKey: 'revive.watch' };
+  return { visible: true, enabled: false, labelKey: 'revive.loading' };
 }
 
 /**

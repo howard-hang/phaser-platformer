@@ -196,6 +196,7 @@ JSON 由 `src/game/levelSchema.js` 对照 `src/levels/level.schema.json` 检查�
 | `src/platform/admob.config.js` | 激励视频的应用 ID、广告位和测试开关。正式 ID 只写在这里 |
 | `src/platform/rewardedAd.js` | 安卓 AdMob：UMP 同意、加载和播放复活激励视频。网页不加载 |
 | `src/logic/revive.js` | 复活落点、次数、广告回调和按钮状态。不引用 Phaser |
+| `src/logic/adLoad.js` | 同意失败也要请求广告、预加载重试次数和调试地理。不引用 Phaser |
 
 改手感只动 `TUNING` 或某一关的 `speed`。改画法不要改 `logic/` 的判定。
 
@@ -205,9 +206,15 @@ JSON 由 `src/game/levelSchema.js` 对照 `src/levels/level.schema.json` 检查�
 
 玩家死亡后，结算面板上多一个「看视频复活」。无尽模式加在原来的结算面板上，闯关模式先弹出「倒在这里」，旁边仍有「回到存档点」。看完并拿到奖励后，从死亡位置往回退 `REVIVE_BACK_PX`（180 像素，不超过起跑线），再无敌 `REVIVE_INVULN_MS`（1000 毫秒，用游戏时间，不另起墙钟）。星星、最远距离和分数留在 `this.run` 里。每一局 `reviveBudget.used` 最多加到 1，用完就不再显示按钮。
 
-广告没加载好、加载失败、没网或中途关掉：不复活，按钮变成「暂无广告」并且不可点。其它按钮仍能回存档点、再来一次或回主页。播放期间 `holdMusicForAd(true)` 暂停音乐，结束一定恢复。
+广告还在同意或加载时，按钮显示「加载中」并且不可点。加载成功后按钮马上变成「看视频复活」。失败重试完、没网或中途关掉：不复活，按钮变成「暂无广告」并且不可点。其它按钮仍能回存档点、再来一次或回主页。播放期间 `holdMusicForAd(true)` 暂停音乐，结束一定恢复。
 
-这一单只有复活激励视频。不接开屏、横幅和插屏。首次启动在 `bootRewardedAds` 里走 AdMob 自带的 UMP：`initialize`、`requestConsentInfo`，需要时 `showConsentForm`。`canRequestAds` 为真才 `prepareRewardVideoAd`。
+这一单只有复活激励视频。不接开屏、横幅和插屏。`bootRewardedAds` 在启动时就执行，不等死亡。顺序是 `AdMob.initialize`、`requestConsentInfo`，状态是 `REQUIRED` 且表单可用时 `showConsentForm`。同意接口失败、用户关掉框、或者地区不需要同意（`NOT_REQUIRED`），都会继续 `prepareRewardVideoAd`。不再拿 `canRequestAds` 当开关。
+
+预加载从开局开始，最多 `AD_LOAD_MAX_ATTEMPTS`（4）次，两次之间隔 `AD_LOAD_RETRY_MS`（3 秒）。每一步和 AdMob 的错误码都打 `[admob]` 日志。复活按钮订阅状态，不用再死一次才变可点。
+
+UMP 平时只对欧洲和英国弹框。调试包在 `MainActivity` 里读取广告 ID，写成大写 MD5 放到 `window.__FANGKUAI_AD_TEST_DEVICE__`，请求同意时带 `debugGeography=EEA` 和这个测试设备，用来强制弹出同意框。设置页只在调试包显示一行「广告状态：未初始化 / 同意中 / 加载中 / 已就绪 / 失败(错误码)」，以及「重置广告同意」。正式包没有这两项。
+
+安卓壳用 `isNativeShell`（`androidBridge` 或 WebView 的 UA）判断。就算 Capacitor 把平台判成网页，壳上仍会调用 AdMob，避免按钮出现了却从没初始化。
 
 广告 ID 和开关都在 `src/platform/admob.config.js`：
 
