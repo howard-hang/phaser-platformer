@@ -102,7 +102,7 @@ function pngVariety(file) {
 }
 
 describe('Play 上架材料', () => {
-  it('隐私政策页是中英双语，并留着邮箱占位', () => {
+  it('隐私政策页是中英双语，并写了联系邮箱', () => {
     const html = fs.readFileSync('public/privacy.html', 'utf8');
     expect(html).toContain('方块跑酷隐私政策');
     expect(html).toContain('Block Runner Privacy Policy');
@@ -111,8 +111,12 @@ describe('Play 上架材料', () => {
     expect(html).toContain('Advertising ID');
     expect(html).toContain('UMP');
     expect(html).toContain('本地存储');
-    expect(html).toContain('[请替换为你的邮箱]');
-    expect(html).toContain('[replace with your email]');
+    // 联系邮箱必须是真实地址，不能再留中英文占位。
+    expect(html).toContain('zhanghang2357@gmail.com');
+    expect(html).not.toContain('请替换为你的邮箱');
+    expect(html).not.toContain('your@email.com');
+    expect(html).not.toContain('example@');
+    expect(html).not.toContain('[replace with your email]');
     expect(html).toContain('ca-app-pub-3218611878548189~9810569030');
   });
 
