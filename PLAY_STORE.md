@@ -108,7 +108,7 @@ Play 要的是 AAB。上传密钥要在 Play Console 的「应用完整性」里
 
 https://howard-hang.github.io/phaser-platformer/privacy.html
 
-中文和英文在同一页。写了 AdMob、广告 ID、UMP 同意、本地存档。联系邮箱现在是占位 **`[请替换为你的邮箱]`**。上架前改掉 `public/privacy.html` 里的两处占位（中文和英文），再推一次 `main`，等 Pages 更新后再把这个网址填进 Play Console 的隐私政策。
+中文和英文在同一页。写了 AdMob、广告 ID、UMP 同意、本地存档。联系邮箱已经是 **zhanghang2357@gmail.com**。隐私政策网址是 https://howard-hang.github.io/phaser-platformer/privacy.html，填进 Play Console 的隐私政策即可。
 
 游戏设置页五种语言都有「隐私政策」。安卓上由 `FangkuaiLinks` 用系统浏览器打开上面的网址。
 
@@ -232,7 +232,7 @@ Progress, volume, and language stay on this device. Privacy Policy is in Setting
 
 1. 注册 Google Play 开发者账号。一次性注册费 25 美元，并完成身份验证。组织账号和个人账号的材料不一样。
 2. 用上面的 `keytool` 生成上传密钥，备份好，把四个 Secrets 填进 GitHub。不要把密钥文件提交到仓库。
-3. 把 `public/privacy.html` 里的邮箱占位换成你的邮箱，等 Pages 部署完成后，在商店资料里填写隐私政策网址。
+3. 联系邮箱已经是 zhanghang2357@gmail.com。在商店资料里填写隐私政策网址 https://howard-hang.github.io/phaser-platformer/privacy.html。
 4. 按上一节放好域名根目录的 `app-ads.txt`，在 Play Console 填写同一个开发者网站，并在 AdMob 里确认爬虫看到了文件。
 5. 在 Play Console 创建应用，上传 CI 里带正式签名的 `.aab`（不是调试 APK，也不是 Secrets 未配置时的一次性包）。
 6. 填写数据安全、内容分级、目标受众、广告声明、类别和商店文案，上传 `store/` 里的图标、宣传图和截图。
